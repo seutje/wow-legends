@@ -32,7 +32,7 @@ Conventions
 - [x] Tests: model creation, serialization, zone movement rules, validation failures.
 
 ## Phase 3 — Rules Engine (Turn/Phases/Actions)
-- [ ] Implement `systems/turns.js` with phases: Start, Resource, Main, Combat, End.
+- [x] Implement `systems/turns.js` with phases: Start, Resource, Main, Combat, End.
 - [ ] Implement action queue/stack resolver (`systems/stack.js`) with priority, interrupts, resolution order.
 - [ ] Implement resource system: pitching cards as resources; per-turn placement rules; cost payment API.
 - [ ] Implement targeting: selectors, legality checks, prompts.
