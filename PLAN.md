@@ -20,7 +20,7 @@ Conventions
 - [x] `utils/id.js`: Short id generator for entities/cards.
 - [x] `utils/events.js`: Simple typed event bus (subscribe, publish, once) for game systems.
 - [x] `utils/logger.js`: Namespaced logger with levels; no-op in production.
-- [ ] `utils/assert.js`: Dev-time invariant checks and error helpers.
+- [x] `utils/assert.js`: Dev-time invariant checks and error helpers.
 - [ ] Tests for all utilities (determinism, edge cases, event ordering).
 
 ## Phase 2 — Data Models & Schemas
