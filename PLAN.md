@@ -16,7 +16,7 @@ Conventions
 - [x] Add sample smoke test for environment (ESM + Jest sanity) in `__tests__/env.test.mjs`.
 
 ## Phase 1 — Core Utilities
-- [ ] `utils/rng.js`: Seedable RNG with deterministic sequence, `randomInt`, `pick`, `shuffle`.
+- [x] `utils/rng.js`: Seedable RNG with deterministic sequence, `randomInt`, `pick`, `shuffle`.
 - [ ] `utils/id.js`: Short id generator for entities/cards.
 - [ ] `utils/events.js`: Simple typed event bus (subscribe, publish, once) for game systems.
 - [ ] `utils/logger.js`: Namespaced logger with levels; no-op in production.
