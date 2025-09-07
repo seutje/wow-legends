@@ -8,8 +8,13 @@
       html, body { height: 100%; margin: 0; font-family: system-ui, sans-serif; background: #0b0f14; color: #e5eef8; }
       #app { min-height: 100%; display: flex; flex-direction: column; }
       header { padding: 8px 12px; background: #111923; border-bottom: 1px solid #203040; }
-      main { flex: 1; padding: 12px; }
+      main { flex: 1; padding: 12px; display: grid; grid-template-columns: 3fr 1fr; gap: 12px; }
       footer { padding: 8px 12px; font-size: 12px; opacity: 0.7; border-top: 1px solid #203040; }
+      .row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+      .zone { background: #10171f; padding: 8px; border: 1px solid #203040; border-radius: 4px; }
+      ul.zone-list { margin: 0; padding: 0; list-style: none; }
+      ul.zone-list li { padding: 4px 6px; margin: 2px 0; background: #172230; cursor: pointer; border-radius: 3px; }
+      .controls { margin: 8px 0; }
     </style>
   </head>
   <body>
@@ -19,6 +24,7 @@
       </header>
       <main>
         <div id="root" aria-live="polite"></div>
+        <aside id="sidebar"></aside>
       </main>
       <footer>
         <span id="status" aria-live="polite">Ready.</span>

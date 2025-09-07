@@ -1,8 +1,7 @@
 import Game from './game.js';
-import { renderBoard, wireInteractions } from './ui/board.js';
-import Player from './entities/player.js';
 import { renderDeckBuilder } from './ui/deckbuilder.js';
 import { renderOptions } from './ui/options.js';
+import { renderPlay } from './ui/play.js';
 
 function qs(sel) { return document.querySelector(sel); }
 
@@ -42,26 +41,19 @@ setStatus('Initialized');
 // Render a minimal board for demo
 const board = document.createElement('div');
 root.appendChild(board);
-const player = new Player({ name: 'You' });
-// Seed a small library
-import('./entities/card.js').then(({ default: Card }) => {
-  player.library.add(new Card({ type: 'ally', name: 'Footman' }));
-  player.library.add(new Card({ type: 'ally', name: 'Archer' }));
-  renderBoard(board, player);
-});
-
-wireInteractions(board, player, { onChange: () => renderBoard(board, player) });
+const rerender = () => renderPlay(board, game, { onUpdate: rerender });
+rerender();
 
 // Deck Builder + Options
-const sidebar = document.createElement('aside');
+const sidebar = document.querySelector('#sidebar') || document.createElement('aside');
 const deckRoot = document.createElement('div');
 const optsRoot = document.createElement('div');
 sidebar.appendChild(deckRoot);
 sidebar.appendChild(optsRoot);
-root.appendChild(sidebar);
+if (!sidebar.parentElement) root.appendChild(sidebar);
 
 const deck = [];
 const rerenderDeck = () => renderDeckBuilder(deckRoot, { deck, onChange: rerenderDeck });
 rerenderDeck();
 let logsOn = true;
-renderOptions(optsRoot, { onReset: () => { deck.length = 0; rerenderDeck(); }, onToggleLogs: () => { logsOn = !logsOn; setStatus(logsOn ? 'Logs ON' : 'Logs OFF'); } });
+renderOptions(optsRoot, { onReset: () => { deck.length = 0; rerenderDeck(); game.reset(); rerender(); }, onToggleLogs: () => { logsOn = !logsOn; setStatus(logsOn ? 'Logs ON' : 'Logs OFF'); } });
