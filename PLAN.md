@@ -39,7 +39,7 @@ Conventions
 - [x] Tests: turn progression, illegal action rejection, priority passing, resource payment.
 
 ## Phase 4 — Combat System
-- [ ] `systems/combat.js`: Declare attackers, assign blockers, damage assignment, simultaneous resolution.
+- [x] `systems/combat.js`: Declare attackers, assign blockers, damage assignment, simultaneous resolution.
 - [ ] Implement damage, armor, lethal, overflow routing; freeze/stun turns remaining.
 - [ ] Implement hero attacks and equipment interactions (durability loss on attack/block).
 - [ ] Tests: single-unit combat, multi-block, trample/overflow-like effects where applicable, armor interactions.
