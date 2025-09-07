@@ -29,7 +29,7 @@ Conventions
 - [x] Create `entities/deck.js`, `entities/hand.js`, `entities/zone.js` (draw pile, discard, battlefield, removed).
 - [x] Create `entities/player.js` (hero reference, health/armor, resources, status, collection).
 - [x] Define JSON schema validators for card data (runtime validation in dev).
-- [ ] Tests: model creation, serialization, zone movement rules, validation failures.
+- [x] Tests: model creation, serialization, zone movement rules, validation failures.
 
 ## Phase 3 — Rules Engine (Turn/Phases/Actions)
 - [ ] Implement `systems/turns.js` with phases: Start, Resource, Main, Combat, End.
