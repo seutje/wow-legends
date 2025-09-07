@@ -9,7 +9,7 @@ Conventions
 
 ## Phase 0 — Project Bootstrap
 - [x] Scaffold directories: `src/js/utils/`, `src/js/entities/`, `src/js/systems/`, `src/assets/`, `__tests__/`.
-- [ ] Add minimal `index.html` with root container and script tags loading `src/js/main.js`.
+- [x] Add minimal `index.html` with root container and script tags loading `src/js/main.js`.
 - [ ] Implement lightweight client poller for `live-reload.json` (if not already present) that reloads when `time` changes.
 - [ ] Add `src/js/game.js` with Game shell (lifecycle: init, start, update, reset, dispose).
 - [ ] Add `src/js/main.js` that instantiates `Game`, attaches it to `window.game`, and wires basic UI hooks.
