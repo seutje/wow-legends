@@ -96,11 +96,11 @@ Conventions
 - [ ] Lint configs (if desired) and CI script examples (local instructions only).
 
 ## Phase 12 — Balancing & Polish (Minimize Human Time)
-- [ ] Auto-run simulations across archetypes and seeds to generate balance reports.
+- [x] Auto-run simulations across archetypes and seeds to generate balance reports.
 - [ ] Auto-suggest balance tweaks (cost/ATK/HP) via heuristics; produce diff proposals.
 - [ ] Performance pass: profile hot paths (effects resolution, AI search) and optimize.
-- [ ] Accessibility pass: keyboard navigation and readable contrasts.
-- [ ] Localization scaffold: string table with fallbacks (no translations required yet).
+- [x] Accessibility pass: keyboard navigation and readable contrasts.
+- [x] Localization scaffold: string table with fallbacks (no translations required yet).
 
 ## Phase 13 — Human Review & Launch Prep (Human-Focused)
 - [ ] Human: Lore/art/audio review for Warcraft flavor; replace placeholders.
