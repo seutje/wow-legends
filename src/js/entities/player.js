@@ -9,11 +9,12 @@ export class Player {
     this.hero = hero; // Hero reference or object
     this.health = 30;
     this.armor = 0;
-    this.resources = 0;
+    this.resources = 0; // legacy numeric; use resourceZone + pool
     this.status = {};
 
     this.library = new Deck('library');
     this.hand = new Hand('hand');
+    this.resourcesZone = new Zone('resources');
     this.graveyard = new Zone('graveyard');
     this.battlefield = new Zone('battlefield');
     this.removed = new Zone('removed');
@@ -21,4 +22,3 @@ export class Player {
 }
 
 export default Player;
-
