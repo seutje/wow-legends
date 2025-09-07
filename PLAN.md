@@ -43,6 +43,7 @@ Conventions
 - [x] Implement damage, armor, lethal, overflow routing; freeze/stun turns remaining.
 - [x] Implement hero attacks and equipment interactions (durability loss on attack/block).
 - [ ] Tests: single-unit combat, multi-block, trample/overflow-like effects where applicable, armor interactions.
+ - [x] Placeholder images added under `src/assets/`.
 
 ## Phase 5 — Keyword & Effect Framework
 - [ ] Create keyword registry `systems/keywords.js` mapping names → hooks (play, death, damage, upkeep, etc.).

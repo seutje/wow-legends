@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <circle cx="64" cy="48" r="24" fill="#30465d" stroke="#3a5169"/>
+  <rect x="28" y="72" width="72" height="40" rx="10" ry="10" fill="#1b2735" stroke="#3a5169"/>
+  <text x="64" y="98" fill="#e5eef8" font-size="12" text-anchor="middle">Hero</text>
+</svg>
