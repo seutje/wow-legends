@@ -76,10 +76,10 @@ Conventions
 - [x] Tests: sample card parsed equals expected JSON; invalid data surfaced with clear errors.
 
 ## Phase 9 — Persistence & Profile
-- [ ] `systems/save.js`: Save/load profile, collection, decks, campaign progress using `localStorage` namespaced keys.
-- [ ] Export/import deck codes (base64/short text) for sharing.
-- [ ] Versioned migrations for save data.
-- [ ] Tests: round-trip save/load, migration from older versions.
+- [x] `systems/save.js`: Save/load profile, collection, decks, campaign progress using `localStorage` namespaced keys.
+- [x] Export/import deck codes (base64/short text) for sharing.
+- [x] Versioned migrations for save data.
+- [x] Tests: round-trip save/load, migration from older versions.
 
 ## Phase 10 — UI/UX (First Playable)
 - [ ] Render board (DOM/Canvas) with zones: deck, hand, battlefield, hero, graveyard, resources.

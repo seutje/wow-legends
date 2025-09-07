@@ -8,13 +8,14 @@ function parse(md) {
   const out = [];
   for (const line of lines) {
     // Very naive pattern: "- Name (Type) - Cost X"
-    const m = line.match(/^\s*-\s*([^\(\-]+)\s*\(([^\)]+)\).*?(?:Cost\s*(\d+))?/i);
+    const m = line.match(/^\s*-\s*([^\(\-]+)\s*\(([^\)]+)\)/i);
     if (m) {
       const name = m[1].trim();
       const typeRaw = m[2].trim().toLowerCase();
       const map = { ally: 'ally', spell: 'spell', equipment: 'equipment', quest: 'quest', consumable: 'consumable' };
       const type = map[typeRaw] || 'spell';
-      const cost = m[3] ? Number(m[3]) : undefined;
+      const cm = line.match(/cost\s*(\d+)/i);
+      const cost = cm ? Number(cm[1]) : undefined;
       out.push({ id: `${type}-${name.toLowerCase().replace(/\s+/g,'-')}` , name, type, ...(cost!=null?{cost}:{}), keywords: [] });
     }
   }
@@ -34,4 +35,3 @@ function main() {
 
 if (process.argv[1] && process.argv[1].endsWith('cards-ingest.mjs')) main();
 export { parse };
-
