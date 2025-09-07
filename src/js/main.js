@@ -9,7 +9,7 @@ const root = qs('#root');
 const statusEl = qs('#status');
 
 const game = new Game(root);
-game.init();
+await game.init();
 
 // Expose for quick dev console hooks
 window.game = game;
@@ -26,7 +26,7 @@ function makeBtn(label, onClick) {
 const controls = document.createElement('div');
 controls.append(
   makeBtn('Start', () => { game.start(); setStatus('Running'); }),
-  makeBtn('Reset', () => { game.reset(); setStatus('Reset'); }),
+  makeBtn('Reset', async () => { await game.reset(); setStatus('Reset'); }),
   makeBtn('Dispose', () => { game.dispose(); setStatus('Disposed'); }),
 );
 
@@ -56,4 +56,4 @@ const deck = [];
 const rerenderDeck = () => renderDeckBuilder(deckRoot, { deck, onChange: rerenderDeck });
 rerenderDeck();
 let logsOn = true;
-renderOptions(optsRoot, { onReset: () => { deck.length = 0; rerenderDeck(); game.reset(); rerender(); }, onToggleLogs: () => { logsOn = !logsOn; setStatus(logsOn ? 'Logs ON' : 'Logs OFF'); } });
+renderOptions(optsRoot, { onReset: async () => { deck.length = 0; rerenderDeck(); await game.reset(); rerender(); }, onToggleLogs: () => { logsOn = !logsOn; setStatus(logsOn ? 'Logs ON' : 'Logs OFF'); } });

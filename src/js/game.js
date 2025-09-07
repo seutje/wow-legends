@@ -4,10 +4,7 @@ import Card from './entities/card.js';
 import TurnSystem from './systems/turns.js';
 import ResourceSystem from './systems/resources.js';
 import CombatSystem from './systems/combat.js';
-
-function makeAlly(name, cost, atk, hp) {
-  return new Card({ type: 'ally', name, cost, data: { attack: atk, health: hp } });
-}
+import { validateCardData } from './systems/content.js';
 
 export default class Game {
   constructor(rootEl, opts = {}) {
@@ -32,25 +29,32 @@ export default class Game {
     this.state = { frame: 0, startedAt: 0 };
   }
 
-  init() {
+  async init() {
     if (this.rootEl && !this.rootEl.dataset.bound) {
       this.rootEl.innerHTML = '<p>Game initialized. Press Start.</p>';
       this.rootEl.dataset.bound = '1';
     }
-    this.setupMatch();
+    await this.setupMatch();
   }
 
-  setupMatch() {
-    // Simple libraries
-    const lib = [
-      makeAlly('Footman', 1, 1, 2),
-      makeAlly('Archer', 2, 2, 1),
-      makeAlly('Knight', 3, 3, 3),
-      makeAlly('Mage', 2, 3, 1),
-      makeAlly('Golem', 4, 4, 5),
-    ];
-    for (const c of lib) this.player.library.add(c);
-    for (const c of lib.map((x)=> makeAlly(x.name, x.cost, x.data.attack, x.data.health))) this.opponent.library.add(c);
+  async setupMatch() {
+    // Load initial libraries from card data
+    let allCards;
+    if (typeof window === 'undefined') {
+      const fs = await import('fs/promises');
+      const path = new URL('../../data/cards.json', import.meta.url);
+      const txt = await fs.readFile(path, 'utf8');
+      allCards = JSON.parse(txt);
+    } else {
+      const res = await fetch(new URL('../../data/cards.json', import.meta.url));
+      allCards = await res.json();
+    }
+    const libData = allCards.filter(c => c.type !== 'hero').slice(0, 5);
+    for (const c of libData) validateCardData(c);
+    const playerLib = libData.map(c => new Card(c));
+    const opponentLib = libData.map(c => new Card(c));
+    for (const c of playerLib) this.player.library.add(c);
+    for (const c of opponentLib) this.opponent.library.add(c);
     this.turns.setActivePlayer(this.player);
     this.turns.startTurn();
     this.resources.startTurn(this.player);
@@ -154,13 +158,13 @@ export default class Game {
     this.draw(this.player, 1);
   }
 
-  reset() {
+  async reset() {
     this.state.frame = 0;
     this.state.startedAt = 0;
     this.player = new Player({ name: 'You' });
     this.opponent = new Player({ name: 'AI' });
     this.attacking.clear();
-    this.setupMatch();
+    await this.setupMatch();
   }
 
   dispose() {
