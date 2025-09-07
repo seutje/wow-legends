@@ -13,7 +13,7 @@ Conventions
 - [x] Implement lightweight client poller for `live-reload.json` (if not already present) that reloads when `time` changes.
 - [x] Add `src/js/game.js` with Game shell (lifecycle: init, start, update, reset, dispose).
 - [x] Add `src/js/main.js` that instantiates `Game`, attaches it to `window.game`, and wires basic UI hooks.
-- [ ] Add sample smoke test for environment (ESM + Jest sanity) in `__tests__/env.test.mjs`.
+- [x] Add sample smoke test for environment (ESM + Jest sanity) in `__tests__/env.test.mjs`.
 
 ## Phase 1 — Core Utilities
 - [ ] `utils/rng.js`: Seedable RNG with deterministic sequence, `randomInt`, `pick`, `shuffle`.
