@@ -33,7 +33,7 @@ Conventions
 
 ## Phase 3 — Rules Engine (Turn/Phases/Actions)
 - [x] Implement `systems/turns.js` with phases: Start, Resource, Main, Combat, End.
-- [ ] Implement action queue/stack resolver (`systems/stack.js`) with priority, interrupts, resolution order.
+- [x] Implement action queue/stack resolver (`systems/stack.js`) with priority, interrupts, resolution order.
 - [ ] Implement resource system: pitching cards as resources; per-turn placement rules; cost payment API.
 - [ ] Implement targeting: selectors, legality checks, prompts.
 - [ ] Tests: turn progression, illegal action rejection, priority passing, resource payment.
