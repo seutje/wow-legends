@@ -11,6 +11,7 @@
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
     "test:coverage": "npm run test -- --coverage",
     "simulate": "node tools/simulate.mjs",
+    "ingest": "node tools/cards-ingest.mjs",
     "lint": "htmlhint index.html"
   },
   "keywords": [],
