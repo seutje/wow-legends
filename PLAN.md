@@ -25,10 +25,10 @@ Conventions
 
 ## Phase 2 — Data Models & Schemas
 - [x] Define Type-like JSDoc typedefs for: `Card`, `Hero`, `Ability`, `Ally`, `Equipment`, `Quest`, `Consumable`, `Keyword`.
-- [ ] Create `entities/card.js` base class and per-type specializations (or composition via `type` field + behavior registry).
-- [ ] Create `entities/deck.js`, `entities/hand.js`, `entities/zone.js` (draw pile, discard, battlefield, removed).
-- [ ] Create `entities/player.js` (hero reference, health/armor, resources, status, collection).
-- [ ] Define JSON schema validators for card data (runtime validation in dev).
+- [x] Create `entities/card.js` base class and per-type specializations (or composition via `type` field + behavior registry).
+- [x] Create `entities/deck.js`, `entities/hand.js`, `entities/zone.js` (draw pile, discard, battlefield, removed).
+- [x] Create `entities/player.js` (hero reference, health/armor, resources, status, collection).
+- [x] Define JSON schema validators for card data (runtime validation in dev).
 - [ ] Tests: model creation, serialization, zone movement rules, validation failures.
 
 ## Phase 3 — Rules Engine (Turn/Phases/Actions)
