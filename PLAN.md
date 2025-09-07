@@ -46,10 +46,10 @@ Conventions
  - [x] Placeholder images added under `src/assets/`.
 
 ## Phase 5 — Keyword & Effect Framework
-- [ ] Create keyword registry `systems/keywords.js` mapping names → hooks (play, death, damage, upkeep, etc.).
-- [ ] Implement core keywords from DESIGN/CARDS: Taunt, Stealth, Freeze, Overload, Combo, Lifesteal, Silence, Summon, Burn/DoT, Enrage, Armor, Choose One, Spell Damage, Unique.
-- [ ] Implement continuous effects and layered modification ordering.
-- [ ] Tests: each keyword’s core behavior and edge cases (silence removes auras, etc.).
+- [x] Create keyword registry `systems/keywords.js` mapping names → hooks (play, death, damage, upkeep, etc.).
+- [x] Implement core keywords from DESIGN/CARDS: Taunt, Stealth, Freeze, Overload, Combo, Lifesteal, Silence, Summon, Burn/DoT, Enrage, Armor, Choose One, Spell Damage, Unique.
+- [x] Implement continuous effects and layered modification ordering.
+- [x] Tests: each keyword’s core behavior and edge cases (silence removes auras, etc.).
 
 ## Phase 6 — Progression Layer
 - [ ] `systems/progression/xp.js`: XP gain, level thresholds per hero.

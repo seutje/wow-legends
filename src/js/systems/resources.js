@@ -4,11 +4,15 @@ export class ResourceSystem {
   constructor() {
     this._placedThisTurn = new WeakMap(); // player -> boolean
     this._pool = new WeakMap(); // player -> number
+    this._overloadNext = new WeakMap(); // player -> number
   }
 
   startTurn(player) {
     this._placedThisTurn.set(player, false);
-    this._pool.set(player, this.available(player));
+    const avail = this.available(player);
+    const ol = this._overloadNext.get(player) || 0;
+    this._pool.set(player, Math.max(0, avail - ol));
+    this._overloadNext.set(player, 0);
   }
 
   available(player) {
@@ -47,7 +51,11 @@ export class ResourceSystem {
     this._pool.set(player, p - cost);
     return true;
   }
+
+  addOverloadNextTurn(player, amount) {
+    const cur = this._overloadNext.get(player) || 0;
+    this._overloadNext.set(player, cur + amount);
+  }
 }
 
 export default ResourceSystem;
-
