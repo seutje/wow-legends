@@ -60,11 +60,11 @@ Conventions
 - [x] Tests: XP math, talent application modifies costs/effects, loot drops deterministic under seeded RNG.
 
 ## Phase 7 — Game Modes & AI
-- [ ] Skirmish (local): Player vs basic AI using heuristic action/value scoring.
-- [ ] Campaign scaffold: quest chain representation, narrative hooks, rewards on completion.
-- [ ] Dungeon/Raid encounters: boss script interface (abilities, enrage timers, phases) + sample boss (e.g., Ragnaros).
-- [ ] Co-op placeholder: hot-seat or simulated ally support in engine (UI can land later).
-- [ ] Tests: encounter scripts run, victory/defeat conditions, AI turn completes in bounded time.
+- [x] Skirmish (local): Player vs basic AI using heuristic action/value scoring.
+- [x] Campaign scaffold: quest chain representation, narrative hooks, rewards on completion.
+- [x] Dungeon/Raid encounters: boss script interface (abilities, enrage timers, phases) + sample boss (e.g., Ragnaros).
+- [x] Co-op placeholder: hot-seat or simulated ally support in engine (UI can land later).
+- [x] Tests: encounter scripts run, victory/defeat conditions, AI turn completes in bounded time.
 
 ## Phase 8 — Content Pipeline (Cards/Data)
 - [ ] Define card data format `data/cards/*.json` (or `.mjs` data modules) aligned with schemas.
