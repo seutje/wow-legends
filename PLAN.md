@@ -35,8 +35,8 @@ Conventions
 - [x] Implement `systems/turns.js` with phases: Start, Resource, Main, Combat, End.
 - [x] Implement action queue/stack resolver (`systems/stack.js`) with priority, interrupts, resolution order.
 - [x] Implement resource system: pitching cards as resources; per-turn placement rules; cost payment API.
-- [ ] Implement targeting: selectors, legality checks, prompts.
-- [ ] Tests: turn progression, illegal action rejection, priority passing, resource payment.
+- [x] Implement targeting: selectors, legality checks, prompts.
+- [x] Tests: turn progression, illegal action rejection, priority passing, resource payment.
 
 ## Phase 4 — Combat System
 - [ ] `systems/combat.js`: Declare attackers, assign blockers, damage assignment, simultaneous resolution.
