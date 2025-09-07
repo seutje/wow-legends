@@ -90,9 +90,9 @@ Conventions
 - [x] Tests: interaction unit tests with DOM harness where feasible; integration scenarios via simulation.
 
 ## Phase 11 — Dev Tooling & QA
-- [ ] Add simulation CLI `tools/simulate.mjs` to run headless games for AI/regression.
-- [ ] Ensure `npm run dev` live-reload works end-to-end; document in README.
-- [ ] Add coverage reporting and a few golden scenario tests (deterministic seeds).
+- [x] Add simulation CLI `tools/simulate.mjs` to run headless games for AI/regression.
+- [x] Ensure `npm run dev` live-reload works end-to-end; document in README.
+- [x] Add coverage reporting and a few golden scenario tests (deterministic seeds).
 - [ ] Lint configs (if desired) and CI script examples (local instructions only).
 
 ## Phase 12 — Balancing & Polish (Minimize Human Time)

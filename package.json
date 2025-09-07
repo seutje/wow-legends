@@ -9,6 +9,8 @@
     "dev:watch": "node tools/dev-watch.mjs",
     "dev": "npm run dev:watch & npm run dev:serve",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
+    "test:coverage": "npm run test -- --coverage",
+    "simulate": "node tools/simulate.mjs",
     "lint": "htmlhint index.html"
   },
   "keywords": [],
