@@ -18,7 +18,7 @@ Conventions
 ## Phase 1 — Core Utilities
 - [x] `utils/rng.js`: Seedable RNG with deterministic sequence, `randomInt`, `pick`, `shuffle`.
 - [x] `utils/id.js`: Short id generator for entities/cards.
-- [ ] `utils/events.js`: Simple typed event bus (subscribe, publish, once) for game systems.
+- [x] `utils/events.js`: Simple typed event bus (subscribe, publish, once) for game systems.
 - [ ] `utils/logger.js`: Namespaced logger with levels; no-op in production.
 - [ ] `utils/assert.js`: Dev-time invariant checks and error helpers.
 - [ ] Tests for all utilities (determinism, edge cases, event ordering).
