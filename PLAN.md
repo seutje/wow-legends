@@ -67,13 +67,13 @@ Conventions
 - [x] Tests: encounter scripts run, victory/defeat conditions, AI turn completes in bounded time.
 
 ## Phase 8 — Content Pipeline (Cards/Data)
-- [ ] Define card data format `data/cards/*.json` (or `.mjs` data modules) aligned with schemas.
-- [ ] Implement content loader/validator that rejects bad definitions in dev.
-- [ ] Add Core Set from `CARDS.md` (automated ingestion preferred):
-  - [ ] Write a small parser in `tools/cards-ingest.mjs` to convert `CARDS.md` sections → JSON, with warnings for unparsed fields.
+- [x] Define card data format `data/cards/*.json` (or `.mjs` data modules) aligned with schemas.
+- [x] Implement content loader/validator that rejects bad definitions in dev.
+- [x] Add Core Set from `CARDS.md` (automated ingestion preferred):
+  - [x] Write a small parser in `tools/cards-ingest.mjs` to convert `CARDS.md` sections → JSON, with warnings for unparsed fields.
   - [ ] On failure cases, log actionable notes; avoid manual data where possible.
   - [ ] Human review only for ambiguous entries.
-- [ ] Tests: sample card parsed equals expected JSON; invalid data surfaced with clear errors.
+- [x] Tests: sample card parsed equals expected JSON; invalid data surfaced with clear errors.
 
 ## Phase 9 — Persistence & Profile
 - [ ] `systems/save.js`: Save/load profile, collection, decks, campaign progress using `localStorage` namespaced keys.
