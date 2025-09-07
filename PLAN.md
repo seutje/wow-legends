@@ -21,7 +21,7 @@ Conventions
 - [x] `utils/events.js`: Simple typed event bus (subscribe, publish, once) for game systems.
 - [x] `utils/logger.js`: Namespaced logger with levels; no-op in production.
 - [x] `utils/assert.js`: Dev-time invariant checks and error helpers.
-- [ ] Tests for all utilities (determinism, edge cases, event ordering).
+- [x] Tests for all utilities (determinism, edge cases, event ordering).
 
 ## Phase 2 — Data Models & Schemas
 - [ ] Define Type-like JSDoc typedefs for: `Card`, `Hero`, `Ability`, `Ally`, `Equipment`, `Quest`, `Consumable`, `Keyword`.
