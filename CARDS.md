@@ -9,6 +9,69 @@ Conventions
 - Keywords: Examples include Taunt, Stealth, Freeze, Overload, Combo, Lifesteal, Silence, Summon.
 - Systems: Notes relate to talent trees, faction reputation, dungeon/raid PvE, loot/crafting, and deckbuilding restrictions.
 
+## Card List
+
+- Jaina Proudmoore, Archmage (Hero)
+- Thrall, Warchief of the Horde (Hero)
+- Varian Wrynn, High King (Hero)
+- Valeera Sanguinar, Master Assassin (Hero)
+- Tyrande Whisperwind, High Priestess (Hero)
+- Uther the Lightbringer (Hero)
+- Malfurion Stormrage, Archdruid (Hero)
+- Rexxar, Beastmaster (Hero)
+- Gul’dan, Dark Conjurer (Hero)
+- Fireball (Ability) - Cost 4
+- Water Elemental (Ability) - Cost 4
+- Shield Slam (Ability) - Cost 1
+- Whirlwind (Ability) - Cost 2
+- Eviscerate (Ability) - Cost 2
+- Sap (Ability) - Cost 2
+- Power Word: Shield (Ability) - Cost 1
+- Shadow Word: Pain (Ability) - Cost 2
+- Consecration (Ability) - Cost 4
+- Blessing of Kings (Ability) - Cost 4
+- Lightning Bolt (Ability) - Cost 1
+- Feral Spirit (Ability) - Cost 3
+- Starfire (Ability) - Cost 5
+- Savage Roar (Ability) - Cost 3
+- Kill Command (Ability) - Cost 3
+- Explosive Trap (Ability) - Cost 2
+- Hellfire (Ability) - Cost 4
+- Summon Infernal (Ability) - Cost 6
+- Water Elemental Guardian (Ability) - Cost 4
+- Silver Hand Lieutenant (Ability) - Cost 3
+- Orgrimmar Grunt (Ability) - Cost 2
+- Jungle Stalker (Ability) - Cost 4
+- Northshire Acolyte (Ability) - Cost 2
+- Imp Swarm Caller (Ability) - Cost 3
+- Darnassian Huntress (Ability) - Cost 3
+- Stormforged Totemic (Ability) - Cost 2
+- Gnomish Tinkerer (Ability) - Cost 2
+- Argent Healer (Ability) - Cost 4
+- Warsong Raider (Ability) - Cost 3
+- Scarlet Sorcerer (Ability) - Cost 3
+- Stone Bark Treant (Ability) - Cost 5
+- Defias Footpad (Ability) - Cost 1
+- Ashkandi, Greatsword of the Brotherhood (Equipment) - Cost 5
+- Core Hound Tooth (Equipment) - Cost 3
+- Benediction (Equipment) - Cost 4
+- Stormshield Bulwark (Equipment) - Cost 3
+- Wildheart Spaulders (Equipment) - Cost 2
+- Arcanist’s Signet (Equipment) - Cost 2
+- Demonheart Grimoire (Equipment) - Cost 3
+- Masterwork Longbow (Equipment) - Cost 4
+- Purge the Scourge (Quest) - Cost 1
+- Trial of the Elements (Quest) - Cost 1
+- Bounty: The Defias Kingpin (Quest) - Cost 1
+- Hunt the Great Kodo (Quest) - Cost 1
+- Forge the Relic (Quest) - Cost 1
+- Call to Arms (Quest) - Cost 1
+- Healing Potion (Consumable) - Cost 1
+- Mana Potion (Consumable) - Cost 0
+- Scroll of Fortitude (Consumable) - Cost 1
+- Savory Deviate Delight (Consumable) - Cost 1
+- Elixir of Firepower (Consumable) - Cost 1
+
 ## Hero Cards (9)
 
 1) Jaina Proudmoore, Archmage

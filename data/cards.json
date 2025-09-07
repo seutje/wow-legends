@@ -1,1 +1,413 @@
-[]
+[
+  {
+    "id": "hero-jaina-proudmoore-archmage",
+    "name": "Jaina Proudmoore, Archmage",
+    "type": "hero",
+    "keywords": []
+  },
+  {
+    "id": "hero-thrall-warchief-of-the-horde",
+    "name": "Thrall, Warchief of the Horde",
+    "type": "hero",
+    "keywords": []
+  },
+  {
+    "id": "hero-varian-wrynn-high-king",
+    "name": "Varian Wrynn, High King",
+    "type": "hero",
+    "keywords": []
+  },
+  {
+    "id": "hero-valeera-sanguinar-master-assassin",
+    "name": "Valeera Sanguinar, Master Assassin",
+    "type": "hero",
+    "keywords": []
+  },
+  {
+    "id": "hero-tyrande-whisperwind-high-priestess",
+    "name": "Tyrande Whisperwind, High Priestess",
+    "type": "hero",
+    "keywords": []
+  },
+  {
+    "id": "hero-uther-the-lightbringer",
+    "name": "Uther the Lightbringer",
+    "type": "hero",
+    "keywords": []
+  },
+  {
+    "id": "hero-malfurion-stormrage-archdruid",
+    "name": "Malfurion Stormrage, Archdruid",
+    "type": "hero",
+    "keywords": []
+  },
+  {
+    "id": "hero-rexxar-beastmaster",
+    "name": "Rexxar, Beastmaster",
+    "type": "hero",
+    "keywords": []
+  },
+  {
+    "id": "hero-gul-dan-dark-conjurer",
+    "name": "Gul’dan, Dark Conjurer",
+    "type": "hero",
+    "keywords": []
+  },
+  {
+    "id": "spell-fireball",
+    "name": "Fireball",
+    "type": "spell",
+    "cost": 4,
+    "keywords": []
+  },
+  {
+    "id": "spell-water-elemental",
+    "name": "Water Elemental",
+    "type": "spell",
+    "cost": 4,
+    "keywords": []
+  },
+  {
+    "id": "spell-shield-slam",
+    "name": "Shield Slam",
+    "type": "spell",
+    "cost": 1,
+    "keywords": []
+  },
+  {
+    "id": "spell-whirlwind",
+    "name": "Whirlwind",
+    "type": "spell",
+    "cost": 2,
+    "keywords": []
+  },
+  {
+    "id": "spell-eviscerate",
+    "name": "Eviscerate",
+    "type": "spell",
+    "cost": 2,
+    "keywords": []
+  },
+  {
+    "id": "spell-sap",
+    "name": "Sap",
+    "type": "spell",
+    "cost": 2,
+    "keywords": []
+  },
+  {
+    "id": "spell-power-word-shield",
+    "name": "Power Word: Shield",
+    "type": "spell",
+    "cost": 1,
+    "keywords": []
+  },
+  {
+    "id": "spell-shadow-word-pain",
+    "name": "Shadow Word: Pain",
+    "type": "spell",
+    "cost": 2,
+    "keywords": []
+  },
+  {
+    "id": "spell-consecration",
+    "name": "Consecration",
+    "type": "spell",
+    "cost": 4,
+    "keywords": []
+  },
+  {
+    "id": "spell-blessing-of-kings",
+    "name": "Blessing of Kings",
+    "type": "spell",
+    "cost": 4,
+    "keywords": []
+  },
+  {
+    "id": "spell-lightning-bolt",
+    "name": "Lightning Bolt",
+    "type": "spell",
+    "cost": 1,
+    "keywords": []
+  },
+  {
+    "id": "spell-feral-spirit",
+    "name": "Feral Spirit",
+    "type": "spell",
+    "cost": 3,
+    "keywords": []
+  },
+  {
+    "id": "spell-starfire",
+    "name": "Starfire",
+    "type": "spell",
+    "cost": 5,
+    "keywords": []
+  },
+  {
+    "id": "spell-savage-roar",
+    "name": "Savage Roar",
+    "type": "spell",
+    "cost": 3,
+    "keywords": []
+  },
+  {
+    "id": "spell-kill-command",
+    "name": "Kill Command",
+    "type": "spell",
+    "cost": 3,
+    "keywords": []
+  },
+  {
+    "id": "spell-explosive-trap",
+    "name": "Explosive Trap",
+    "type": "spell",
+    "cost": 2,
+    "keywords": []
+  },
+  {
+    "id": "spell-hellfire",
+    "name": "Hellfire",
+    "type": "spell",
+    "cost": 4,
+    "keywords": []
+  },
+  {
+    "id": "spell-summon-infernal",
+    "name": "Summon Infernal",
+    "type": "spell",
+    "cost": 6,
+    "keywords": []
+  },
+  {
+    "id": "spell-water-elemental-guardian",
+    "name": "Water Elemental Guardian",
+    "type": "spell",
+    "cost": 4,
+    "keywords": []
+  },
+  {
+    "id": "spell-silver-hand-lieutenant",
+    "name": "Silver Hand Lieutenant",
+    "type": "spell",
+    "cost": 3,
+    "keywords": []
+  },
+  {
+    "id": "spell-orgrimmar-grunt",
+    "name": "Orgrimmar Grunt",
+    "type": "spell",
+    "cost": 2,
+    "keywords": []
+  },
+  {
+    "id": "spell-jungle-stalker",
+    "name": "Jungle Stalker",
+    "type": "spell",
+    "cost": 4,
+    "keywords": []
+  },
+  {
+    "id": "spell-northshire-acolyte",
+    "name": "Northshire Acolyte",
+    "type": "spell",
+    "cost": 2,
+    "keywords": []
+  },
+  {
+    "id": "spell-imp-swarm-caller",
+    "name": "Imp Swarm Caller",
+    "type": "spell",
+    "cost": 3,
+    "keywords": []
+  },
+  {
+    "id": "spell-darnassian-huntress",
+    "name": "Darnassian Huntress",
+    "type": "spell",
+    "cost": 3,
+    "keywords": []
+  },
+  {
+    "id": "spell-stormforged-totemic",
+    "name": "Stormforged Totemic",
+    "type": "spell",
+    "cost": 2,
+    "keywords": []
+  },
+  {
+    "id": "spell-gnomish-tinkerer",
+    "name": "Gnomish Tinkerer",
+    "type": "spell",
+    "cost": 2,
+    "keywords": []
+  },
+  {
+    "id": "spell-argent-healer",
+    "name": "Argent Healer",
+    "type": "spell",
+    "cost": 4,
+    "keywords": []
+  },
+  {
+    "id": "spell-warsong-raider",
+    "name": "Warsong Raider",
+    "type": "spell",
+    "cost": 3,
+    "keywords": []
+  },
+  {
+    "id": "spell-scarlet-sorcerer",
+    "name": "Scarlet Sorcerer",
+    "type": "spell",
+    "cost": 3,
+    "keywords": []
+  },
+  {
+    "id": "spell-stone-bark-treant",
+    "name": "Stone Bark Treant",
+    "type": "spell",
+    "cost": 5,
+    "keywords": []
+  },
+  {
+    "id": "spell-defias-footpad",
+    "name": "Defias Footpad",
+    "type": "spell",
+    "cost": 1,
+    "keywords": []
+  },
+  {
+    "id": "equipment-ashkandi-greatsword-of-the-brotherhood",
+    "name": "Ashkandi, Greatsword of the Brotherhood",
+    "type": "equipment",
+    "cost": 5,
+    "keywords": []
+  },
+  {
+    "id": "equipment-core-hound-tooth",
+    "name": "Core Hound Tooth",
+    "type": "equipment",
+    "cost": 3,
+    "keywords": []
+  },
+  {
+    "id": "equipment-benediction",
+    "name": "Benediction",
+    "type": "equipment",
+    "cost": 4,
+    "keywords": []
+  },
+  {
+    "id": "equipment-stormshield-bulwark",
+    "name": "Stormshield Bulwark",
+    "type": "equipment",
+    "cost": 3,
+    "keywords": []
+  },
+  {
+    "id": "equipment-wildheart-spaulders",
+    "name": "Wildheart Spaulders",
+    "type": "equipment",
+    "cost": 2,
+    "keywords": []
+  },
+  {
+    "id": "equipment-arcanist-s-signet",
+    "name": "Arcanist’s Signet",
+    "type": "equipment",
+    "cost": 2,
+    "keywords": []
+  },
+  {
+    "id": "equipment-demonheart-grimoire",
+    "name": "Demonheart Grimoire",
+    "type": "equipment",
+    "cost": 3,
+    "keywords": []
+  },
+  {
+    "id": "equipment-masterwork-longbow",
+    "name": "Masterwork Longbow",
+    "type": "equipment",
+    "cost": 4,
+    "keywords": []
+  },
+  {
+    "id": "quest-purge-the-scourge",
+    "name": "Purge the Scourge",
+    "type": "quest",
+    "cost": 1,
+    "keywords": []
+  },
+  {
+    "id": "quest-trial-of-the-elements",
+    "name": "Trial of the Elements",
+    "type": "quest",
+    "cost": 1,
+    "keywords": []
+  },
+  {
+    "id": "quest-bounty-the-defias-kingpin",
+    "name": "Bounty: The Defias Kingpin",
+    "type": "quest",
+    "cost": 1,
+    "keywords": []
+  },
+  {
+    "id": "quest-hunt-the-great-kodo",
+    "name": "Hunt the Great Kodo",
+    "type": "quest",
+    "cost": 1,
+    "keywords": []
+  },
+  {
+    "id": "quest-forge-the-relic",
+    "name": "Forge the Relic",
+    "type": "quest",
+    "cost": 1,
+    "keywords": []
+  },
+  {
+    "id": "quest-call-to-arms",
+    "name": "Call to Arms",
+    "type": "quest",
+    "cost": 1,
+    "keywords": []
+  },
+  {
+    "id": "consumable-healing-potion",
+    "name": "Healing Potion",
+    "type": "consumable",
+    "cost": 1,
+    "keywords": []
+  },
+  {
+    "id": "consumable-mana-potion",
+    "name": "Mana Potion",
+    "type": "consumable",
+    "cost": 0,
+    "keywords": []
+  },
+  {
+    "id": "consumable-scroll-of-fortitude",
+    "name": "Scroll of Fortitude",
+    "type": "consumable",
+    "cost": 1,
+    "keywords": []
+  },
+  {
+    "id": "consumable-savory-deviate-delight",
+    "name": "Savory Deviate Delight",
+    "type": "consumable",
+    "cost": 1,
+    "keywords": []
+  },
+  {
+    "id": "consumable-elixir-of-firepower",
+    "name": "Elixir of Firepower",
+    "type": "consumable",
+    "cost": 1,
+    "keywords": []
+  }
+]
