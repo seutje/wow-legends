@@ -1,4 +1,5 @@
 function getStat(card, key, def = 0) {
+  if (key === 'attack' && typeof card?.totalAttack === 'function') return card.totalAttack();
   return (card?.data && typeof card.data[key] === 'number') ? card.data[key] : def;
 }
 
@@ -7,13 +8,26 @@ function setStat(card, key, val) {
   card.data[key] = val;
 }
 
+function armorApply(card, amount) {
+  const a = (card?.data?.armor ?? 0);
+  const use = Math.min(a, amount);
+  if (use > 0) {
+    card.data.armor = a - use;
+  }
+  return amount - use;
+}
+
 export class CombatSystem {
   constructor() {
     this._attacks = new Map(); // attackerId -> { attacker, blockers: Card[] }
+    this._defenderHero = null;
   }
 
   declareAttacker(attacker) {
+    // Cannot attack when frozen/stunned
+    if (getStat(attacker, 'freezeTurns', 0) > 0) return false;
     this._attacks.set(attacker.id, { attacker, blockers: [] });
+    return true;
   }
 
   assignBlocker(attackerId, blocker) {
@@ -22,6 +36,8 @@ export class CombatSystem {
   }
 
   clear() { this._attacks.clear(); }
+
+  setDefenderHero(hero) { this._defenderHero = hero; }
 
   resolve() {
     // Simultaneous damage: compute all, then apply
@@ -35,11 +51,38 @@ export class CombatSystem {
     // For each attack group
     for (const { attacker, blockers } of this._attacks.values()) {
       const atk = getStat(attacker, 'attack', 0);
-      if (blockers.length === 0) continue; // to hero etc., ignored for now
+      if (blockers.length === 0) {
+        // Unblocked: route full to hero if present
+        if (this._defenderHero) addDmg(this._defenderHero, atk);
+        continue;
+      }
       const per = Math.floor(atk / blockers.length) || atk; // naive equal split
-      for (const b of blockers) addDmg(b, per);
+      let dealt = 0;
+      for (const b of blockers) {
+        addDmg(b, per);
+        dealt += per;
+        // Lethal: mark to zero health irrespective of current
+        if (attacker?.keywords?.includes?.('Lethal')) {
+          setStat(b, 'health', 0);
+          setStat(b, 'dead', true);
+        }
+      }
+      // Overflow to hero if flagged
+      if (attacker?.keywords?.includes?.('Overflow') && this._defenderHero && dealt < atk) {
+        addDmg(this._defenderHero, atk - dealt);
+      }
       // Blockers strike back at attacker
       for (const b of blockers) addDmg(attacker, getStat(b, 'attack', 0));
+
+      // Equipment durability loss on attack: if attacker has equipment list
+      if (attacker?.equipment && Array.isArray(attacker.equipment)) {
+        for (const eq of attacker.equipment) {
+          if (typeof eq.durability === 'number') {
+            eq.durability -= 1;
+          }
+        }
+        attacker.equipment = attacker.equipment.filter(e => (e.durability ?? 1) > 0);
+      }
     }
 
     // Apply damage
@@ -51,9 +94,13 @@ export class CombatSystem {
         const f = blockers.find(x => x.id === id);
         if (f) { ref = f; break; }
       }
+      if (!ref && this._defenderHero && this._defenderHero.id === id) ref = this._defenderHero;
       if (!ref) continue;
+      let rem = amt;
+      // Apply armor first
+      rem = armorApply(ref, rem);
       const hp = getStat(ref, 'health', 0);
-      setStat(ref, 'health', hp - amt);
+      setStat(ref, 'health', Math.max(0, hp - rem));
       if (getStat(ref, 'health', 0) <= 0) setStat(ref, 'dead', true);
     }
 
@@ -62,4 +109,3 @@ export class CombatSystem {
 }
 
 export default CombatSystem;
-

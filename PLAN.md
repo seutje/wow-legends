@@ -40,8 +40,8 @@ Conventions
 
 ## Phase 4 — Combat System
 - [x] `systems/combat.js`: Declare attackers, assign blockers, damage assignment, simultaneous resolution.
-- [ ] Implement damage, armor, lethal, overflow routing; freeze/stun turns remaining.
-- [ ] Implement hero attacks and equipment interactions (durability loss on attack/block).
+- [x] Implement damage, armor, lethal, overflow routing; freeze/stun turns remaining.
+- [x] Implement hero attacks and equipment interactions (durability loss on attack/block).
 - [ ] Tests: single-unit combat, multi-block, trample/overflow-like effects where applicable, armor interactions.
 
 ## Phase 5 — Keyword & Effect Framework
