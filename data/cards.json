@@ -1,56 +1,56 @@
 [
   {
-    "id": "spell-jaina-proudmoore-archmage",
+    "id": "hero-jaina-proudmoore-archmage",
     "name": "Jaina Proudmoore, Archmage",
-    "type": "spell",
+    "type": "hero",
     "keywords": []
   },
   {
-    "id": "spell-thrall-warchief-of-the-horde",
+    "id": "hero-thrall-warchief-of-the-horde",
     "name": "Thrall, Warchief of the Horde",
-    "type": "spell",
+    "type": "hero",
     "keywords": []
   },
   {
-    "id": "spell-varian-wrynn-high-king",
+    "id": "hero-varian-wrynn-high-king",
     "name": "Varian Wrynn, High King",
-    "type": "spell",
+    "type": "hero",
     "keywords": []
   },
   {
-    "id": "spell-valeera-sanguinar-master-assassin",
+    "id": "hero-valeera-sanguinar-master-assassin",
     "name": "Valeera Sanguinar, Master Assassin",
-    "type": "spell",
+    "type": "hero",
     "keywords": []
   },
   {
-    "id": "spell-tyrande-whisperwind-high-priestess",
+    "id": "hero-tyrande-whisperwind-high-priestess",
     "name": "Tyrande Whisperwind, High Priestess",
-    "type": "spell",
+    "type": "hero",
     "keywords": []
   },
   {
-    "id": "spell-uther-the-lightbringer",
+    "id": "hero-uther-the-lightbringer",
     "name": "Uther the Lightbringer",
-    "type": "spell",
+    "type": "hero",
     "keywords": []
   },
   {
-    "id": "spell-malfurion-stormrage-archdruid",
+    "id": "hero-malfurion-stormrage-archdruid",
     "name": "Malfurion Stormrage, Archdruid",
-    "type": "spell",
+    "type": "hero",
     "keywords": []
   },
   {
-    "id": "spell-rexxar-beastmaster",
+    "id": "hero-rexxar-beastmaster",
     "name": "Rexxar, Beastmaster",
-    "type": "spell",
+    "type": "hero",
     "keywords": []
   },
   {
-    "id": "spell-gul-dan-dark-conjurer",
+    "id": "hero-gul-dan-dark-conjurer",
     "name": "Gul’dan, Dark Conjurer",
-    "type": "spell",
+    "type": "hero",
     "keywords": []
   },
   {

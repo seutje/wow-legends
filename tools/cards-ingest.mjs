@@ -27,7 +27,15 @@ function parse(md) {
     const nameLc = name.toLowerCase();
     if (skipPrefixes.some(p => nameLc.startsWith(p))) continue; // skip meta lines
     const typeRaw = m[2].trim().toLowerCase();
-    const map = { ally: 'ally', spell: 'spell', equipment: 'equipment', quest: 'quest', consumable: 'consumable' };
+    const map = {
+      ally: 'ally',
+      spell: 'spell',
+      ability: 'spell',
+      equipment: 'equipment',
+      quest: 'quest',
+      consumable: 'consumable',
+      hero: 'hero'
+    };
     const type = map[typeRaw] || 'spell';
     const cm = line.match(/cost\s*:?\s*(\d+)/i);
     const cost = cm ? Number(cm[1]) : undefined;
