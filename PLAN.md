@@ -24,7 +24,7 @@ Conventions
 - [x] Tests for all utilities (determinism, edge cases, event ordering).
 
 ## Phase 2 — Data Models & Schemas
-- [ ] Define Type-like JSDoc typedefs for: `Card`, `Hero`, `Ability`, `Ally`, `Equipment`, `Quest`, `Consumable`, `Keyword`.
+- [x] Define Type-like JSDoc typedefs for: `Card`, `Hero`, `Ability`, `Ally`, `Equipment`, `Quest`, `Consumable`, `Keyword`.
 - [ ] Create `entities/card.js` base class and per-type specializations (or composition via `type` field + behavior registry).
 - [ ] Create `entities/deck.js`, `entities/hand.js`, `entities/zone.js` (draw pile, discard, battlefield, removed).
 - [ ] Create `entities/player.js` (hero reference, health/armor, resources, status, collection).
