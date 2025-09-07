@@ -52,12 +52,12 @@ Conventions
 - [x] Tests: each keyword’s core behavior and edge cases (silence removes auras, etc.).
 
 ## Phase 6 — Progression Layer
-- [ ] `systems/progression/xp.js`: XP gain, level thresholds per hero.
-- [ ] `systems/progression/talents.js`: Talent tree structure, selection rules, deckbuilding modifiers.
-- [ ] `systems/loot.js`: Loot tables, drops after matches/quests, equipment integration.
-- [ ] `systems/reputation.js`: Faction rep gains and unlock gates for cards.
-- [ ] Persistence hooks for progression (see Phase 9).
-- [ ] Tests: XP math, talent application modifies costs/effects, loot drops deterministic under seeded RNG.
+- [x] `systems/progression/xp.js`: XP gain, level thresholds per hero.
+- [x] `systems/progression/talents.js`: Talent tree structure, selection rules, deckbuilding modifiers.
+- [x] `systems/loot.js`: Loot tables, drops after matches/quests, equipment integration.
+- [x] `systems/reputation.js`: Faction rep gains and unlock gates for cards.
+- [x] Persistence hooks for progression (see Phase 9).
+- [x] Tests: XP math, talent application modifies costs/effects, loot drops deterministic under seeded RNG.
 
 ## Phase 7 — Game Modes & AI
 - [ ] Skirmish (local): Player vs basic AI using heuristic action/value scoring.
