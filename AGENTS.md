@@ -1,7 +1,8 @@
 Project Guidance for AI Agents
 
 Overview
-- This project is a browser-based tower defense game using ES modules, classes, and Jest tests.
+- This project is a browser-based RPG RCG game using ES modules, classes, and Jest tests.
+- Game design explained in detail in `DESIGN.md`.
 - Dev workflow uses a tiny live-reload mechanism based on a JSON file written by a watcher.
 
 Local Development
@@ -15,8 +16,8 @@ Code Conventions
 - Use ES modules (`type: module`) and modern JS. Prefer classes and small, focused modules.
 - Keep logic separated:
   - `src/js/utils/*` utilities (e.g., RNG)
-  - `src/js/entities/*` game entities (`Enemy` subclasses, `Tower`)
-  - `src/js/systems/*` systems (`map-generator`, `wave-composer`)
+  - `src/js/entities/*` game entities
+  - `src/js/systems/*` systems
   - `src/js/game.js` orchestrates the game
   - `src/js/main.js` is the browser entry; it initializes and exposes `window.game` for UI hooks.
 - Keep changes minimal and scoped to the request. Update docs and tests when behavior changes.
