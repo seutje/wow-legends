@@ -82,12 +82,12 @@ Conventions
 - [x] Tests: round-trip save/load, migration from older versions.
 
 ## Phase 10 — UI/UX (First Playable)
-- [ ] Render board (DOM/Canvas) with zones: deck, hand, battlefield, hero, graveyard, resources.
-- [ ] Click/tap interactions for play, targeting, combat declarations.
-- [ ] Simple log/inspector panel for state and effects stack.
+- [x] Render board (DOM/Canvas) with zones: deck, hand, battlefield, hero, graveyard, resources.
+- [x] Click/tap interactions for play, targeting, combat declarations.
+- [x] Simple log/inspector panel for state and effects stack.
 - [ ] Deck builder MVP: pick hero, filter by class/faction, 40–60 card rule, talent modifiers.
 - [ ] Options menu: seed RNG, reset profile, toggle logs.
-- [ ] Tests: interaction unit tests with DOM harness where feasible; integration scenarios via simulation.
+- [x] Tests: interaction unit tests with DOM harness where feasible; integration scenarios via simulation.
 
 ## Phase 11 — Dev Tooling & QA
 - [ ] Add simulation CLI `tools/simulate.mjs` to run headless games for AI/regression.

@@ -1,4 +1,6 @@
 import Game from './game.js';
+import { renderBoard, wireInteractions } from './ui/board.js';
+import Player from './entities/player.js';
 
 function qs(sel) { return document.querySelector(sel); }
 
@@ -35,3 +37,15 @@ function setStatus(msg) {
 
 setStatus('Initialized');
 
+// Render a minimal board for demo
+const board = document.createElement('div');
+root.appendChild(board);
+const player = new Player({ name: 'You' });
+// Seed a small library
+import('./entities/card.js').then(({ default: Card }) => {
+  player.library.add(new Card({ type: 'ally', name: 'Footman' }));
+  player.library.add(new Card({ type: 'ally', name: 'Archer' }));
+  renderBoard(board, player);
+});
+
+wireInteractions(board, player, { onChange: () => renderBoard(board, player) });
