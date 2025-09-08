@@ -12,7 +12,7 @@ export function renderBoard(container, player) {
   for (const [name, zone] of zones) {
     const section = document.createElement('section');
     const h = document.createElement('h3'); h.textContent = name; section.appendChild(h);
-    const ul = document.createElement('ul'); ul.dataset.zone = name.toLowerCase();
+    const ul = document.createElement('ul'); ul.dataset.zone = name.toLowerCase(); ul.classList.add('zone-list');
     for (const c of zone.cards) {
       const li = document.createElement('li'); li.textContent = c.name; li.dataset.cardId = c.id; ul.appendChild(li);
     }

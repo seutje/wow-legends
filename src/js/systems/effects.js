@@ -31,7 +31,7 @@ export class EffectSystem {
           this.applyOverload(effect, context);
           break;
         case 'rawText':
-          console.log(`Raw text effect: ${effect.text}`);
+          console.warn(`Raw text effect (not implemented): ${effect.text}`);
           break;
         case 'heal':
           this.healCharacter(effect, context);

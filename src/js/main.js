@@ -44,6 +44,8 @@ root.appendChild(board);
 const rerender = () => renderPlay(board, game, { onUpdate: rerender });
 rerender();
 
+game.setUIRerender(rerender);
+
 // Deck Builder + Options
 const sidebar = document.querySelector('#sidebar') || document.createElement('aside');
 const deckRoot = document.createElement('div');

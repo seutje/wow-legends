@@ -8,6 +8,7 @@ import EffectSystem from './systems/effects.js';
 import { validateCardData } from './systems/content.js';
 import { RNG } from './utils/rng.js';
 import Hero from './entities/hero.js';
+import { renderBoard } from './ui/board.js';
 
 export default class Game {
   constructor(rootEl, opts = {}) {
@@ -33,6 +34,10 @@ export default class Game {
     this.state = { frame: 0, startedAt: 0 };
   }
 
+  setUIRerender(fn) {
+    this._uiRerender = fn;
+  }
+
   async init() {
     if (this.rootEl && !this.rootEl.dataset.bound) {
       this.rootEl.innerHTML = '<p>Game initialized. Press Start.</p>';
@@ -43,19 +48,18 @@ export default class Game {
 
   async setupMatch() {
     // Load initial libraries from card data
-    let allCards;
     if (typeof window === 'undefined') {
       const fs = await import('fs/promises');
       const path = new URL('../../data/cards.json', import.meta.url);
       const txt = await fs.readFile(path, 'utf8');
-      allCards = JSON.parse(txt);
+      this.allCards = JSON.parse(txt);
     } else {
       const res = await fetch(new URL('../../data/cards.json', import.meta.url));
-      allCards = await res.json();
+      this.allCards = await res.json();
     }
 
-    const heroes = allCards.filter(c => c.type === 'hero');
-    const otherCards = allCards.filter(c => c.type !== 'hero');
+    const heroes = this.allCards.filter(c => c.type === 'hero');
+    const otherCards = this.allCards.filter(c => c.type !== 'hero');
 
     const rng = new RNG();
 
@@ -110,6 +114,21 @@ export default class Game {
     const drawn = player.library.draw(n);
     for (const c of drawn) player.hand.add(c);
     return drawn.length;
+  }
+
+  addCardToHand(cardId) {
+    const cardData = this.allCards.find(c => c.id === cardId);
+    if (cardData) {
+      const newCard = new Card(cardData);
+      this.player.hand.add(newCard);
+      console.log(`Added ${newCard.name} to hand.`);
+      if (this._uiRerender) {
+        this._uiRerender();
+      }
+      return true;
+    }
+    console.warn(`Card with ID ${cardId} not found.`);
+    return false;
   }
 
   start() {
