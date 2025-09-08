@@ -68,6 +68,13 @@
         }
       }
     ],
+    "combo": [
+      {
+        "type": "costReduction",
+        "target": "ability",
+        "amount": 1
+      }
+    ],
     "keywords": [
       "Combo — The first Ability you play each turn costs (1) less."
     ],
@@ -264,6 +271,13 @@
         "type": "damage",
         "target": "any",
         "amount": 2
+      }
+    ],
+    "combo": [
+      {
+        "type": "damage",
+        "target": "any",
+        "amount": 4
       }
     ],
     "keywords": [
@@ -828,6 +842,20 @@
         "text": "Combo — Summon another 1/1 Footpad."
       }
     ],
+    "combo": [
+      {
+        "type": "summon",
+        "unit": {
+          "name": "Defias Footpad",
+          "attack": 1,
+          "health": 1,
+          "keywords": [
+            "Token"
+          ]
+        },
+        "count": 1
+      }
+    ],
     "keywords": [
       "Combo",
       "Token"
@@ -865,6 +893,12 @@
       {
         "type": "rawText",
         "text": "Combo Abilities deal +1 damage while equipped."
+      }
+    ],
+    "combo": [
+      {
+        "type": "damageBonus",
+        "amount": 1
       }
     ],
     "keywords": [
