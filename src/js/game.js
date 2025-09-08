@@ -23,6 +23,7 @@ export default class Game {
     this.resources = new ResourceSystem(this.turns);
     this.combat = new CombatSystem();
     this.effects = new EffectSystem(this);
+    this.rng = new RNG();
 
     // Players
     this.player = new Player({ name: 'You' });
@@ -61,7 +62,7 @@ export default class Game {
     const heroes = this.allCards.filter(c => c.type === 'hero');
     const otherCards = this.allCards.filter(c => c.type !== 'hero');
 
-    const rng = new RNG();
+    const rng = this.rng;
 
     // Assign heroes
     const playerHeroData = rng.pick(heroes);
