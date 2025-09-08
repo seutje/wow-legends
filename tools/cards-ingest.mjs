@@ -49,7 +49,12 @@ function parse(md) {
         const keyLc = key.toLowerCase().trim();
 
         if (keyLc.includes('type')) {
-          card.type = value.split('—')[0].trim().toLowerCase();
+          let type = value.split('—')[0].trim().toLowerCase();
+          if (type === 'ability') {
+            card.type = 'spell';
+          } else {
+            card.type = type;
+          }
         } else if (keyLc.includes('cost')) {
           const costMatch = value.match(/(\d+)/);
           if (costMatch) card.cost = Number(costMatch[1]);

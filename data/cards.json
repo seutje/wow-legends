@@ -83,9 +83,9 @@
     ]
   },
   {
-    "id": "ability-fireball",
+    "id": "spell-fireball",
     "name": "Fireball",
-    "type": "ability",
+    "type": "spell",
     "cost": 4,
     "text": "Deal 6 damage to any target. If target is Frozen, deal 8 instead.",
     "keywords": [
@@ -93,9 +93,9 @@
     ]
   },
   {
-    "id": "ability-water-elemental",
+    "id": "spell-water-elemental",
     "name": "Water Elemental",
-    "type": "ability",
+    "type": "spell",
     "cost": 4,
     "text": "Summon a 3/6 Water Elemental with “Freeze any target it damages.”",
     "keywords": [
@@ -104,9 +104,9 @@
     ]
   },
   {
-    "id": "ability-shield-slam",
+    "id": "spell-shield-slam",
     "name": "Shield Slam",
-    "type": "ability",
+    "type": "spell",
     "cost": 1,
     "text": "Deal damage equal to your Armor to a minion.",
     "keywords": [
@@ -114,9 +114,9 @@
     ]
   },
   {
-    "id": "ability-whirlwind",
+    "id": "spell-whirlwind",
     "name": "Whirlwind",
-    "type": "ability",
+    "type": "spell",
     "cost": 2,
     "text": "Deal 1 damage to all characters. If any friendly character took damage this turn, Enrage them (+1 ATK).",
     "keywords": [
@@ -125,9 +125,9 @@
     ]
   },
   {
-    "id": "ability-eviscerate",
+    "id": "spell-eviscerate",
     "name": "Eviscerate",
-    "type": "ability",
+    "type": "spell",
     "cost": 2,
     "text": "Deal 2 damage. Combo: Deal 4 instead.",
     "keywords": [
@@ -135,9 +135,9 @@
     ]
   },
   {
-    "id": "ability-sap",
+    "id": "spell-sap",
     "name": "Sap",
-    "type": "ability",
+    "type": "spell",
     "cost": 2,
     "text": "Return an enemy ally to its owner’s hand; it costs (1) more next time.",
     "keywords": [
@@ -145,9 +145,9 @@
     ]
   },
   {
-    "id": "ability-power-word-shield",
+    "id": "spell-power-word-shield",
     "name": "Power Word: Shield",
-    "type": "ability",
+    "type": "spell",
     "cost": 1,
     "text": "Give a character +0/+3 until end of turn; if it survives damage, draw a card.",
     "keywords": [
@@ -156,9 +156,9 @@
     ]
   },
   {
-    "id": "ability-shadow-word-pain",
+    "id": "spell-shadow-word-pain",
     "name": "Shadow Word: Pain",
-    "type": "ability",
+    "type": "spell",
     "cost": 2,
     "text": "Destroy a minion with 3 or less ATK.",
     "keywords": [
@@ -166,9 +166,9 @@
     ]
   },
   {
-    "id": "ability-consecration",
+    "id": "spell-consecration",
     "name": "Consecration",
-    "type": "ability",
+    "type": "spell",
     "cost": 4,
     "text": "Deal 2 damage to all enemies. If you have a Silver Hand Recruit, deal 3 instead.",
     "keywords": [
@@ -177,9 +177,9 @@
     ]
   },
   {
-    "id": "ability-blessing-of-kings",
+    "id": "spell-blessing-of-kings",
     "name": "Blessing of Kings",
-    "type": "ability",
+    "type": "spell",
     "cost": 4,
     "text": "Give a friendly character +4/+4 until it dies.",
     "keywords": [
@@ -187,9 +187,9 @@
     ]
   },
   {
-    "id": "ability-lightning-bolt",
+    "id": "spell-lightning-bolt",
     "name": "Lightning Bolt",
-    "type": "ability",
+    "type": "spell",
     "cost": 1,
     "text": "Deal 3 damage. Overload (1).",
     "keywords": [
@@ -197,9 +197,9 @@
     ]
   },
   {
-    "id": "ability-feral-spirit",
+    "id": "spell-feral-spirit",
     "name": "Feral Spirit",
-    "type": "ability",
+    "type": "spell",
     "cost": 3,
     "text": "Summon two 2/3 Spirit Wolves with Taunt. Overload (2).",
     "keywords": [
@@ -209,9 +209,9 @@
     ]
   },
   {
-    "id": "ability-starfire",
+    "id": "spell-starfire",
     "name": "Starfire",
-    "type": "ability",
+    "type": "spell",
     "cost": 5,
     "text": "Deal 5 damage. Draw a card. If you chose both options on a card this turn, this costs (2) less.",
     "keywords": [
@@ -220,9 +220,9 @@
     ]
   },
   {
-    "id": "ability-savage-roar",
+    "id": "spell-savage-roar",
     "name": "Savage Roar",
-    "type": "ability",
+    "type": "spell",
     "cost": 3,
     "text": "Give your hero and allies +2 ATK this turn.",
     "keywords": [
@@ -230,9 +230,9 @@
     ]
   },
   {
-    "id": "ability-kill-command",
+    "id": "spell-kill-command",
     "name": "Kill Command",
-    "type": "ability",
+    "type": "spell",
     "cost": 3,
     "text": "Deal 3 damage; if you control a Beast, deal 5 instead.",
     "keywords": [
@@ -240,9 +240,9 @@
     ]
   },
   {
-    "id": "ability-explosive-trap",
+    "id": "spell-explosive-trap",
     "name": "Explosive Trap",
-    "type": "ability",
+    "type": "spell",
     "cost": 2,
     "text": "Secret — When your hero is attacked, deal 2 damage to all enemies.",
     "keywords": [
@@ -251,9 +251,9 @@
     ]
   },
   {
-    "id": "ability-hellfire",
+    "id": "spell-hellfire",
     "name": "Hellfire",
-    "type": "ability",
+    "type": "spell",
     "cost": 4,
     "text": "Deal 3 damage to ALL characters.",
     "keywords": [
@@ -262,9 +262,9 @@
     ]
   },
   {
-    "id": "ability-summon-infernal",
+    "id": "spell-summon-infernal",
     "name": "Summon Infernal",
-    "type": "ability",
+    "type": "spell",
     "cost": 6,
     "text": "Summon a 6/6 Infernal that deals 1 damage to all other characters.",
     "keywords": [
