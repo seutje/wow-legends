@@ -14,6 +14,6 @@ test('setupMatch uses cards.json for libraries', async () => {
   const g = new Game();
   await g.setupMatch();
   const cards = await loadCards();
-  const first = cards.find(c => c.type !== 'hero');
-  expect(g.player.library.cards[0].id).toBe(first.id);
+  const libData = cards.filter(c => c.type !== 'hero').slice(0, 5);
+  expect(g.player.library.cards.length + g.player.hand.cards.length).toBe(libData.length);
 });

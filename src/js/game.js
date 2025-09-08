@@ -55,6 +55,10 @@ export default class Game {
     const opponentLib = libData.map(c => new Card(c));
     for (const c of playerLib) this.player.library.add(c);
     for (const c of opponentLib) this.opponent.library.add(c);
+
+    this.player.library.shuffle();
+    this.opponent.library.shuffle();
+
     this.turns.setActivePlayer(this.player);
     this.turns.startTurn();
     this.resources.startTurn(this.player);
