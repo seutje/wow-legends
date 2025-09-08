@@ -56,6 +56,9 @@ export class EffectSystem {
         case 'equip':
           this.equipItem(effect, context);
           break;
+        case 'spellDamageNextSpell':
+          this.spellDamageNextSpell(effect, context);
+          break;
         case 'damageArmor':
           await this.dealDamage({ target: effect.target, amount: context.player.hero.data.armor }, context);
           break;
@@ -357,6 +360,12 @@ export class EffectSystem {
     const eq = new Equipment(item);
     player.equip(eq);
     console.log(`Equipped ${eq.name}.`);
+  }
+
+  spellDamageNextSpell(effect, context) {
+    const { amount = 1, eachTurn = false } = effect;
+    const { player } = context;
+    player.hero.data.nextSpellDamageBonus = { amount, used: false, eachTurn };
   }
 
   applyOverload(effect, context) {
