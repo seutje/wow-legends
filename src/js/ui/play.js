@@ -34,8 +34,6 @@ export function renderPlay(container, game, { onUpdate } = {}) {
   function showTooltip(card, event, game) {
     if (tooltipEl) hideTooltip(); // Hide any existing tooltip
 
-    console.log('Showing tooltip for card:', card.name, 'Text:', card.text);
-
     if (!card.text) return; // No text to show
 
     tooltipEl = el('div', { class: 'card-tooltip' }, card.text);
