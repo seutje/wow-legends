@@ -135,6 +135,43 @@ function parseEffect(text, card) {
     effects.push({ type: 'overload', amount });
   }
 
+  // Heal effects
+  match = text.match(/Restore (\d+) HP to a character/i);
+  if (match) {
+    const amount = parseInt(match[1], 10);
+    effects.push({ type: 'heal', target: 'character', amount });
+  }
+
+  // Draw effects
+  match = text.match(/Draw a card/i);
+  if (match) {
+    effects.push({ type: 'draw', count: 1 });
+  }
+
+  // Destroy effects
+  match = text.match(/Destroy a minion with (\d+) or less ATK/i);
+  if (match) {
+    const amount = parseInt(match[1], 10);
+    effects.push({ type: 'destroy', target: 'minion', condition: { type: 'attackLessThan', amount } });
+  }
+
+  // Return to Hand effects
+  match = text.match(/Return an enemy ally to its owner’s hand; it costs \((\d+)\) more next time/i);
+  if (match) {
+    const costIncrease = parseInt(match[1], 10);
+    effects.push({ type: 'returnToHand', target: 'enemyAlly', costIncrease });
+  }
+
+  // Transform effects
+  match = text.match(/Transform a random ally into a (\d+)\/(\d+) (.+?) with (.+?) until end of turn/i);
+  if (match) {
+    const attack = parseInt(match[1], 10);
+    const health = parseInt(match[2], 10);
+    const name = match[3].trim();
+    const keywords = match[4].split(',').map(k => k.trim());
+    effects.push({ type: 'transform', target: 'randomAlly', into: { name, attack, health, keywords }, duration: 'endOfTurn' });
+  }
+
   // If no specific effect is parsed, store the raw text as a generic effect
   if (effects.length === 0 && text.trim().length > 0) {
     effects.push({ type: 'rawText', text: text.trim() });

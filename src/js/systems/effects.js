@@ -32,6 +32,21 @@ export class EffectSystem {
         case 'rawText':
           console.log(`Raw text effect: ${effect.text}`);
           break;
+        case 'heal':
+          this.healCharacter(effect, context);
+          break;
+        case 'draw':
+          this.drawCard(effect, context);
+          break;
+        case 'destroy':
+          this.destroyMinion(effect, context);
+          break;
+        case 'returnToHand':
+          this.returnToHand(effect, context);
+          break;
+        case 'transform':
+          this.transformCharacter(effect, context);
+          break;
         default:
           console.log(`Unknown effect type: ${effect.type}`);
       }
@@ -103,6 +118,101 @@ export class EffectSystem {
       });
       player.battlefield.add(newUnit);
       console.log(`Summoned ${newUnit.name} to battlefield.`);
+    }
+  }
+
+  healCharacter(effect, context) {
+    const { target, amount } = effect;
+    const { game, player } = context;
+
+    let actualTargets = [];
+    // For now, always target player's hero
+    actualTargets.push(player.hero);
+
+    for (const t of actualTargets) {
+      if (t.data && t.data.health != null) {
+        t.data.health = Math.min(t.data.health + amount, t.data.maxHealth || t.data.health);
+        console.log(`${t.name} healed for ${amount}. Current health: ${t.data.health}`);
+      } else if (t.health != null) { // For hero
+        t.health = Math.min(t.health + amount, t.maxHealth || t.health);
+        console.log(`${t.name} healed for ${amount}. Current health: ${t.health}`);
+      }
+    }
+  }
+
+  drawCard(effect, context) {
+    const { count } = effect;
+    const { game, player } = context;
+    game.draw(player, count);
+    console.log(`${player.name} drew ${count} card(s).`);
+  }
+
+  destroyMinion(effect, context) {
+    const { target, condition } = effect;
+    const { game, player } = context;
+
+    // For now, destroy a random enemy minion that meets the condition
+    const targetMinions = game.opponent.battlefield.cards.filter(c => {
+      if (condition.type === 'attackLessThan') {
+        return c.data.attack <= condition.amount;
+      }
+      return true;
+    });
+
+    if (targetMinions.length > 0) {
+      const minionToDestroy = game.rng.pick(targetMinions);
+      game.opponent.battlefield.moveTo(game.opponent.graveyard, minionToDestroy.id);
+      console.log(`Destroyed ${minionToDestroy.name}.`);
+    } else {
+      console.log('No minion found to destroy.');
+    }
+  }
+
+  returnToHand(effect, context) {
+    const { target, costIncrease } = effect;
+    const { game, player } = context;
+
+    // For now, return a random enemy ally to hand
+    if (game.opponent.battlefield.cards.length > 0) {
+      const allyToReturn = game.rng.pick(game.opponent.battlefield.cards);
+      game.opponent.battlefield.moveTo(game.opponent.hand, allyToReturn.id);
+      allyToReturn.cost += costIncrease; // Increase cost
+      console.log(`Returned ${allyToReturn.name} to hand. New cost: ${allyToReturn.cost}`);
+    } else {
+      console.log('No enemy ally found to return to hand.');
+    }
+  }
+
+  transformCharacter(effect, context) {
+    const { target, into, duration } = effect;
+    const { game, player } = context;
+
+    // For now, transform a random player ally
+    if (player.battlefield.cards.length > 0) {
+      const allyToTransform = game.rng.pick(player.battlefield.cards);
+      const originalData = { ...allyToTransform.data };
+      const originalKeywords = [...allyToTransform.keywords];
+      const originalName = allyToTransform.name; // Store original name
+
+      allyToTransform.name = into.name;
+      allyToTransform.data.attack = into.attack;
+      allyToTransform.data.health = into.health;
+      allyToTransform.keywords = into.keywords;
+
+      if (duration === 'endOfTurn') {
+        const revertEffect = {
+          revert: () => {
+            allyToTransform.name = originalName; // Revert name
+            allyToTransform.data.attack = originalData.attack;
+            allyToTransform.data.health = originalData.health;
+            allyToTransform.keywords = originalKeywords;
+          }
+        };
+        this.temporaryEffects.push(revertEffect);
+      }
+      console.log(`Transformed ${allyToTransform.name} into a ${into.name}.`);
+    } else {
+      console.log('No player ally found to transform.');
     }
   }
 

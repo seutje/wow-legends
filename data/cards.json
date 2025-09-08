@@ -233,8 +233,9 @@
     "cost": 2,
     "effects": [
       {
-        "type": "rawText",
-        "text": "Return an enemy ally to its owner’s hand; it costs (1) more next time."
+        "type": "returnToHand",
+        "target": "enemyAlly",
+        "costIncrease": 1
       }
     ],
     "keywords": [
@@ -249,8 +250,8 @@
     "cost": 1,
     "effects": [
       {
-        "type": "rawText",
-        "text": "Give a character +0/+3 until end of turn; if it survives damage, draw a card."
+        "type": "draw",
+        "count": 1
       }
     ],
     "keywords": [
@@ -266,8 +267,12 @@
     "cost": 2,
     "effects": [
       {
-        "type": "rawText",
-        "text": "Destroy a minion with 3 or less ATK."
+        "type": "destroy",
+        "target": "minion",
+        "condition": {
+          "type": "attackLessThan",
+          "amount": 3
+        }
       }
     ],
     "keywords": [
@@ -360,8 +365,8 @@
     "cost": 5,
     "effects": [
       {
-        "type": "rawText",
-        "text": "Deal 5 damage. Draw a card. If you chose both options on a card this turn, this costs (2) less."
+        "type": "draw",
+        "count": 1
       }
     ],
     "keywords": [
@@ -549,8 +554,8 @@
     "cost": 2,
     "effects": [
       {
-        "type": "rawText",
-        "text": "Whenever a character is healed, draw a card (once per turn)."
+        "type": "draw",
+        "count": 1
       }
     ],
     "keywords": [
@@ -654,8 +659,9 @@
     "cost": 4,
     "effects": [
       {
-        "type": "rawText",
-        "text": "Restore 3 HP to a character at end of your turn."
+        "type": "heal",
+        "target": "character",
+        "amount": 3
       }
     ],
     "keywords": [
@@ -785,8 +791,8 @@
     "cost": 4,
     "effects": [
       {
-        "type": "rawText",
-        "text": "When you restore 5+ HP in a turn, draw a card."
+        "type": "draw",
+        "count": 1
       }
     ],
     "keywords": [
@@ -957,8 +963,8 @@
     "cost": 1,
     "effects": [
       {
-        "type": "rawText",
-        "text": "Objective: Control 3 units with Taunt for a turn. Reward: All allies gain +1/+1 this turn; draw a card."
+        "type": "draw",
+        "count": 1
       }
     ],
     "keywords": [],
@@ -971,8 +977,9 @@
     "cost": 1,
     "effects": [
       {
-        "type": "rawText",
-        "text": "Restore 5 HP to a character."
+        "type": "heal",
+        "target": "character",
+        "amount": 5
       }
     ],
     "keywords": [
@@ -1004,8 +1011,8 @@
     "cost": 1,
     "effects": [
       {
-        "type": "rawText",
-        "text": "Give your allies +0/+2 this turn. Draw a card."
+        "type": "draw",
+        "count": 1
       }
     ],
     "keywords": [
@@ -1021,8 +1028,17 @@
     "cost": 1,
     "effects": [
       {
-        "type": "rawText",
-        "text": "Transform a random ally into a 3/3 Pirate with Charge until end of turn."
+        "type": "transform",
+        "target": "randomAlly",
+        "into": {
+          "name": "Pirate",
+          "attack": 3,
+          "health": 3,
+          "keywords": [
+            "Charge"
+          ]
+        },
+        "duration": "endOfTurn"
       }
     ],
     "keywords": [

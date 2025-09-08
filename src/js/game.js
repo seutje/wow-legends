@@ -96,10 +96,10 @@ export default class Game {
     this.player.library.shuffle();
     this.opponent.library.shuffle();
 
-    // Add Lightning Bolt for testing
-    const lightningBoltCard = allCards.find(c => c.id === 'spell-lightning-bolt');
-    if (lightningBoltCard) {
-      this.player.hand.add(new Card(lightningBoltCard));
+    // Add Savory Deviate Delight for testing
+    const savoryDeviateDelightCard = allCards.find(c => c.id === 'consumable-savory-deviate-delight');
+    if (savoryDeviateDelightCard) {
+      this.player.hand.add(new Card(savoryDeviateDelightCard));
     }
 
     this.turns.setActivePlayer(this.player);
