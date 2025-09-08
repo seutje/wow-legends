@@ -168,7 +168,7 @@ export default class Game {
     }
 
     // Move the card to the appropriate zone
-    if (card.data.type === 'ally' || card.data.type === 'equipment') {
+    if (card.type === 'ally' || card.type === 'equipment') {
       player.hand.moveTo(player.battlefield, cardId);
     } else {
       player.hand.moveTo(player.graveyard, cardId);
