@@ -6,7 +6,7 @@ import BasicAI from '../../systems/ai.js';
 export class SkirmishMode {
   constructor({ seed = 1 } = {}) {
     this.turns = new TurnSystem();
-    this.resources = new ResourceSystem();
+    this.resources = new ResourceSystem(this.turns);
     this.ai = new BasicAI({ resourceSystem: this.resources });
     this.player = new Player({ name: 'Player' });
     this.opponent = new Player({ name: 'AI' });

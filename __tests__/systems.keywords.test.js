@@ -1,5 +1,6 @@
 import { registerDefaults, registry, freezeTarget, enforceTaunt, isTargetable, applyLayers } from '../src/js/systems/keywords.js';
 import ResourceSystem from '../src/js/systems/resources.js';
+import TurnSystem from '../src/js/systems/turns.js';
 import Player from '../src/js/entities/player.js';
 import Card from '../src/js/entities/card.js';
 
@@ -33,17 +34,22 @@ describe('Keywords registry', () => {
   });
 
   test('overload reduces next turn resources', () => {
-    const rs = new ResourceSystem();
+    const turns = new TurnSystem();
+    const rs = new ResourceSystem(turns);
     registerDefaults({ resourceSystem: rs });
     const p = new Player({ name: 'P' });
-    // Place one resource and start turn to get pool 1
-    const c = new Card({ type: 'ally', name: 'R' });
-    p.hand.add(c); rs.startTurn(p); rs.placeResource(p, c.id);
+
+    turns.turn = 2;
+    rs.startTurn(p);
+    expect(rs.pool(p)).toBe(2);
+
     // Play a card with Overload 1
     registry.get('Overload').onPlay({ player: p, amount: 1 });
-    // Next turn: pool should be base(1) - overload(1) = 0
+
+    // Next turn: pool should be base(3) - overload(1) = 2
+    turns.turn = 3;
     rs.startTurn(p);
-    expect(rs.pool(p)).toBe(0);
+    expect(rs.pool(p)).toBe(2);
   });
 
   test('applyLayers applies in priority order', () => {

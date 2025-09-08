@@ -18,7 +18,7 @@ export default class Game {
 
     // Systems
     this.turns = new TurnSystem();
-    this.resources = new ResourceSystem();
+    this.resources = new ResourceSystem(this.turns);
     this.combat = new CombatSystem();
 
     // Players
@@ -131,9 +131,7 @@ export default class Game {
     return this.resources.canPay(player, card.cost || 0);
   }
 
-  placeResource(player, cardId) {
-    return this.resources.placeResource(player, cardId);
-  }
+  
 
   playFromHand(player, cardId) {
     const card = player.hand.cards.find(c => c.id === cardId);
@@ -179,7 +177,6 @@ export default class Game {
     this.resources.startTurn(this.opponent);
     // AI: draw one, place a resource, play cheapest, attack all
     this.draw(this.opponent, 1);
-    if (this.opponent.hand.size() > 0) this.placeResource(this.opponent, this.opponent.hand.cards[0].id);
     // play cheapest affordable once
     const affordable = this.opponent.hand.cards.filter(c => this.canPlay(this.opponent, c)).sort((a,b)=> (a.cost||0)-(b.cost||0));
     if (affordable[0]) this.playFromHand(this.opponent, affordable[0].id);

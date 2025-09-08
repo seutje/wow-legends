@@ -30,7 +30,6 @@ export function renderPlay(container, game, { onUpdate } = {}) {
 
   const controls = el('div', { class: 'controls' },
     el('button', { onclick: () => { game.draw(p, 1); onUpdate?.(); } }, 'Draw'),
-    el('button', { onclick: () => { if (p.hand.size()>0) { game.placeResource(p, p.hand.cards[0].id); onUpdate?.(); } } }, 'Place Resource (first)'),
     el('button', { onclick: () => { onUpdate?.(); } }, 'Refresh'),
     el('button', { onclick: () => { game.resolveCombat(p, e); onUpdate?.(); } }, 'Resolve Combat'),
     el('button', { onclick: () => { game.endTurn(); onUpdate?.(); } }, 'End Turn')
@@ -38,13 +37,11 @@ export function renderPlay(container, game, { onUpdate } = {}) {
 
   const playerRow = el('div', { class: 'row player' },
     el('div', { class: 'zone' }, zoneList('Player Battlefield', p.battlefield.cards, { clickCard: (c)=>{ game.toggleAttacker(p, c.id); onUpdate?.(); } })),
-    el('div', { class: 'zone' }, zoneList('Player Hand', p.hand.cards, { clickCard: (c)=>{ if (!game.playFromHand(p, c.id)) { /* ignore */ } onUpdate?.(); } })),
-    el('div', { class: 'zone' }, zoneList('Player Resources', p.resourcesZone.cards)),
+    el('div', { class: 'zone' }, zoneList('Player Hand', p.hand.cards, { clickCard: (c)=>{ if (!game.playFromHand(p, c.id)) { /* ignore */ } onUpdate?.(); } }))
   );
   const enemyRow = el('div', { class: 'row enemy' },
     el('div', { class: 'zone' }, zoneList('Enemy Battlefield', e.battlefield.cards)),
-    el('div', { class: 'zone' }, el('h3', {}, 'Enemy Hand'), el('p', {}, `${e.hand.size()} cards`)),
-    el('div', { class: 'zone' }, zoneList('Enemy Resources', e.resourcesZone.cards)),
+    el('div', { class: 'zone' }, el('h3', {}, 'Enemy Hand'), el('p', {}, `${e.hand.size()} cards`))
   );
 
   container.append(header, controls, enemyRow, playerRow);
