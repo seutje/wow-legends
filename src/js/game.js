@@ -184,12 +184,6 @@ export default class Game {
   }
 
   endTurn() {
-    // End player's turn
-    while(this.turns.current !== 'End') {
-      this.turns.nextPhase();
-    }
-    this.turns.nextPhase(); // End -> Start, turn increments for opponent
-
     // AI's turn
     this.turns.setActivePlayer(this.opponent);
     this.turns.startTurn();
@@ -203,13 +197,12 @@ export default class Game {
     this.cleanupDeaths(this.player);
     this.cleanupDeaths(this.opponent);
 
-    // End AI's turn
+    // End AI's turn and start player's turn
     while(this.turns.current !== 'End') {
       this.turns.nextPhase();
     }
     this.turns.nextPhase(); // End -> Start, turn increments for player
 
-    // Start player's turn
     this.turns.setActivePlayer(this.player);
     this.turns.startTurn();
     this.resources.startTurn(this.player);
