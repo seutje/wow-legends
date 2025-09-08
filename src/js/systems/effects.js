@@ -99,11 +99,15 @@ export class EffectSystem {
       if (t.data && t.data.health != null) {
         t.data.health -= amount;
         console.log(`${t.name} took ${amount} damage. Remaining health: ${t.data.health}`);
+        if (t.data.health <= 0) t.data.dead = true;
       } else if (t.health != null) { // For hero
         t.health -= amount;
         console.log(`${t.name} took ${amount} damage. Remaining health: ${t.health}`);
       }
     }
+
+    game.cleanupDeaths(player);
+    game.cleanupDeaths(game.opponent);
   }
 
   summonUnit(effect, context) {
