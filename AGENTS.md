@@ -9,7 +9,7 @@ Local Development
 - Install deps: `npm ci`
 - Start dev server + watcher (the user is already running the dev server): `npm run dev`
   - `npm run dev:serve` serves via `http-server` on port 8000 (no cache)
-  - `npm run dev:watch` writes `live-reload.json` whenever files change, don't manually delete or edit `live-reload.json`
+  - `npm run dev:watch` writes `live-reload.json` whenever files change; ignore these updates and do not commit this file
 - Open http://localhost:8000 to play. The client polls `live-reload.json` and reloads on changes.
 
 Code Conventions
@@ -21,6 +21,7 @@ Code Conventions
   - `src/js/game.js` orchestrates the game
   - `src/js/main.js` is the browser entry; it initializes and exposes `window.game` for UI hooks.
 - Keep changes minimal and scoped to the request. Update docs and tests when behavior changes.
+- Implement cards generically. Do not target specific card IDs; adjust `data/cards.json` and add effect types to cover card-specific behavior.
 
 Testing
 - Run tests: `npm test`
@@ -28,15 +29,12 @@ Testing
 
 Live Reload Requirements (Important)
 - The live-reload mechanism relies on `live-reload.json` in the project root.
-- Always include `live-reload.json` in commits. Do not add it to `.gitignore`.
-- When committing, prefer `git add -A` or explicitly stage `live-reload.json` along with your changes.
-- Before committing, always run `npm run live-reload` to update `live-reload.json`. This ensures the live-reload mechanism reflects your changes.
-- Never edit `live-reload.json` manually. Always use the `npm run live-reload` command.
+- To avoid merge conflicts, never run `npm run live-reload` or manually edit `live-reload.json`.
+- Do not commit changes to `live-reload.json`; if the watcher updates it, restore the file before committing.
 
 Commit Practices
 - Use concise, descriptive commit messages (conventional style preferred, e.g., `feat:`, `fix:`, `refactor:`).
 - Make atomic commits (one logical change per commit) and include tests/updates that keep the repo green.
-- Ensure `live-reload.json` is staged in each commit as noted above.
 
 PR/Change Checklist
 - Lint/format if applicable.
