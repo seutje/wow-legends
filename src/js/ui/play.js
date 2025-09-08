@@ -48,19 +48,27 @@ export function renderPlay(container, game, { onUpdate } = {}) {
   function showTooltip(card, event, game) {
     if (tooltipEl) hideTooltip(); // Hide any existing tooltip
 
-    if (!card.text) return; // No text to show
-
-    tooltipEl = el('div', { class: 'card-tooltip' }, card.text);
+    tooltipEl = el('div', { class: 'card-tooltip' });
     container.append(tooltipEl);
+
+    const img = new Image();
+    img.alt = card.name;
+    img.onload = () => {
+      tooltipEl.append(img);
+    };
+    img.onerror = () => {
+      tooltipEl.textContent = card.text;
+      tooltipEl.style.backgroundColor = 'rgba(0,0,0,0.8)';
+      tooltipEl.style.color = 'white';
+      tooltipEl.style.padding = '5px';
+      tooltipEl.style.borderRadius = '3px';
+    };
+    img.src = `src/assets/cards/${card.id}.png`;
 
     // Position the tooltip (simple positioning for now)
     tooltipEl.style.position = 'absolute';
     tooltipEl.style.left = `${event.clientX + 10}px`;
     tooltipEl.style.top = `${event.clientY + 10}px`;
-    tooltipEl.style.backgroundColor = 'rgba(0,0,0,0.8)';
-    tooltipEl.style.color = 'white';
-    tooltipEl.style.padding = '5px';
-    tooltipEl.style.borderRadius = '3px';
     tooltipEl.style.zIndex = '1000';
   }
 
