@@ -970,8 +970,9 @@
     "cost": 2,
     "effects": [
       {
-        "type": "rawText",
-        "text": "Your next Spell each turn has Spell Damage +1."
+        "type": "spellDamageNextSpell",
+        "amount": 1,
+        "eachTurn": true
       }
     ],
     "keywords": [

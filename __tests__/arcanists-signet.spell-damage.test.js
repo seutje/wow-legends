@@ -9,8 +9,15 @@ test("Arcanist's Signet grants +1 Spell Damage to the first spell each turn", as
   g.player.battlefield.cards = [];
   g.opponent.battlefield.cards = [];
   g.resources._pool.set(g.player, 10);
-
-  g.player.equip({ id: 'equipment-arcanist-s-signet', name: "Arcanist's Signet" });
+  const signet = new Card({
+    id: 'equipment-arcanist-s-signet',
+    name: "Arcanist's Signet",
+    type: 'equipment',
+    cost: 0,
+    effects: [{ type: 'spellDamageNextSpell', amount: 1, eachTurn: true }],
+  });
+  g.player.hand.add(signet);
+  await g.playFromHand(g.player, signet.id);
 
   const makeSpell = () => new Card({
     id: 'spell-test-' + Math.random(),

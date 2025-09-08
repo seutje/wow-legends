@@ -26,9 +26,8 @@ export default class Game {
     this.rng = new RNG();
 
     this.turns.bus.on('turn:start', ({ player }) => {
-      if (player?.hero?.equipment?.some(eq => eq.id === 'equipment-arcanist-s-signet')) {
-        player.hero.data.arcanistsSignetUsed = false;
-      }
+      const bonus = player?.hero?.data?.nextSpellDamageBonus;
+      if (bonus?.eachTurn) bonus.used = false;
     });
 
     // Players
@@ -168,16 +167,12 @@ export default class Game {
     if (!card) return false;
     const cost = card.cost || 0;
     if (!this.resources.pay(player, cost)) return false;
-
-    let signetApplied = false;
-    if (
-      card.type === 'spell' &&
-      player.hero.equipment?.some(eq => eq.id === 'equipment-arcanist-s-signet') &&
-      !player.hero.data.arcanistsSignetUsed
-    ) {
-      player.hero.data.spellDamage = (player.hero.data.spellDamage || 0) + 1;
-      player.hero.data.arcanistsSignetUsed = true;
-      signetApplied = true;
+    let tempSpellDamage = 0;
+    const bonus = player.hero.data.nextSpellDamageBonus;
+    if (card.type === 'spell' && bonus && !bonus.used) {
+      player.hero.data.spellDamage = (player.hero.data.spellDamage || 0) + bonus.amount;
+      bonus.used = true;
+      tempSpellDamage = bonus.amount;
     }
 
     // Execute the card's effect
@@ -185,13 +180,14 @@ export default class Game {
       await this.effects.execute(card.effects, { game: this, player: player, card: card });
     }
 
-    if (signetApplied) {
-      player.hero.data.spellDamage -= 1;
+    if (tempSpellDamage) {
+      player.hero.data.spellDamage -= tempSpellDamage;
     }
 
     // Move the card to the appropriate zone
     if (card.type === 'ally' || card.type === 'equipment') {
       player.hand.moveTo(player.battlefield, cardId);
+      if (card.type === 'equipment') player.hero.equipment.push(card);
     } else {
       player.hand.moveTo(player.graveyard, cardId);
     }

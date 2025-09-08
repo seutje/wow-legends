@@ -200,6 +200,11 @@ describe.each(effectCards)('$id executes its effect', (card) => {
         expect(transformed.keywords).toEqual(effect.into.keywords);
         break;
       }
+      case 'spellDamageNextSpell': {
+        await g.playFromHand(g.player, card.id);
+        expect(g.player.hero.data.nextSpellDamageBonus.amount).toBe(effect.amount);
+        break;
+      }
       default:
         throw new Error('Unhandled effect type: ' + effect.type);
     }

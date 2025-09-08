@@ -28,9 +28,6 @@ export class Player {
     if (eq.armor) {
       this.hero.data.armor = (this.hero.data.armor || 0) + eq.armor;
     }
-    if (eq.id === 'equipment-arcanist-s-signet') {
-      this.hero.data.arcanistsSignetUsed = false;
-    }
     return eq;
   }
 }
