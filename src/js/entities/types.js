@@ -50,6 +50,7 @@
  * @property {CardType} type
  * @property {string} name
  * @property {number=} cost
+ * @property {string=} text
  * @property {Keyword[]=} keywords
  * @property {Record<string, any>=} data
  */
