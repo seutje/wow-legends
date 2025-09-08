@@ -96,10 +96,10 @@ export default class Game {
     this.player.library.shuffle();
     this.opponent.library.shuffle();
 
-    // Add Water Elemental for testing
-    const waterElementalCard = allCards.find(c => c.id === 'spell-water-elemental');
-    if (waterElementalCard) {
-      this.player.hand.add(new Card(waterElementalCard));
+    // Add Savage Roar for testing
+    const savageRoarCard = allCards.find(c => c.id === 'spell-savage-roar');
+    if (savageRoarCard) {
+      this.player.hand.add(new Card(savageRoarCard));
     }
 
     this.turns.setActivePlayer(this.player);

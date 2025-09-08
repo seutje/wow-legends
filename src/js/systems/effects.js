@@ -24,26 +24,7 @@ export class EffectSystem {
           this.summonUnit(effect, context);
           break;
         case 'buff':
-          // Implement buff logic
-          console.log(`Buffing ${effect.target} with +${effect.amount} ${effect.property}`);
-          // This is where the Savage Roar logic will go
-          if (effect.target === 'allies' && effect.property === 'attack') {
-            const amount = effect.amount;
-            const heroEffect = {
-              revert: () => { context.player.hero.data.attack -= amount; }
-            };
-            this.temporaryEffects.push(heroEffect);
-            context.player.hero.data.attack += amount;
-
-            for (const ally of context.player.battlefield.cards) {
-              const allyEffect = {
-                revert: () => { ally.data.attack -= amount; }
-              };
-              this.temporaryEffects.push(allyEffect);
-              ally.data.attack += amount;
-            }
-            console.log(`Gave +${amount} ATK to hero and allies.`);
-          }
+          this.applyBuff(effect, context);
           break;
         case 'overload':
           // Implement overload logic
@@ -137,6 +118,63 @@ export class EffectSystem {
     }
     this.temporaryEffects = [];
     console.log('Cleaned up temporary effects.');
+  }
+
+  applyBuff(effect, context) {
+    const { target, property, amount, duration } = effect;
+    const { player, game } = context;
+
+    let actualTargets = [];
+
+    switch (target) {
+      case 'allies':
+        actualTargets.push(player.hero);
+        actualTargets.push(...player.battlefield.cards);
+        break;
+      case 'hero':
+        actualTargets.push(player.hero);
+        break;
+      case 'character':
+        // This requires target selection from the player.
+        // For now, I'll just target the player's hero.
+        actualTargets.push(player.hero);
+        break;
+      default:
+        console.warn(`Unknown buff target: ${target}`);
+        return;
+    }
+
+    for (const t of actualTargets) {
+      if (duration === 'thisTurn') {
+        const revertEffect = {
+          revert: () => {
+            if (property === 'attack') {
+              if (t.data && t.data.attack != null) t.data.attack -= amount;
+              else if (t.attack != null) t.attack -= amount; // For hero
+            } else if (property === 'health') {
+              if (t.data && t.data.health != null) t.data.health -= amount;
+              else if (t.health != null) t.health -= amount; // For hero
+            } else if (property === 'armor') {
+              if (t.data && t.data.armor != null) t.data.armor -= amount;
+              else if (t.armor != null) t.armor -= amount; // For hero
+            }
+          }
+        };
+        this.temporaryEffects.push(revertEffect);
+      }
+
+      if (property === 'attack') {
+        if (t.data && t.data.attack != null) t.data.attack += amount;
+        else if (t.attack != null) t.attack += amount; // For hero
+      } else if (property === 'health') {
+        if (t.data && t.data.health != null) t.data.health += amount;
+        else if (t.health != null) t.health += amount; // For hero
+      } else if (property === 'armor') {
+        if (t.data && t.data.armor != null) t.data.armor += amount;
+        else if (t.armor != null) t.armor += amount; // For hero
+      }
+      console.log(`Applied +${amount} ${property} to ${t.name}.`);
+    }
   }
 }
 
