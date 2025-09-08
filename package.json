@@ -7,6 +7,7 @@
     "start": "http-server . -p 8000",
     "dev:serve": "http-server . -p 8000 -c-1",
     "dev:watch": "node tools/dev-watch.mjs",
+    "live-reload": "node tools/live-reload.mjs",
     "dev": "npm run dev:watch & npm run dev:serve",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --setupFilesAfterEnv=./jest.setup.js",
     "test:coverage": "npm run test -- --coverage",
