@@ -1,6 +1,6 @@
 import Card from '../entities/card.js';
 import Equipment from '../entities/equipment.js';
-import { freezeTarget } from './keywords.js';
+import { freezeTarget, getSpellDamageBonus } from './keywords.js';
 
 export class EffectSystem {
   constructor(game) {
@@ -64,11 +64,15 @@ export class EffectSystem {
 
   async dealDamage(effect, context) {
     const { target, amount, freeze, beastBonus } = effect;
-    const { game, player } = context;
+    const { game, player, card } = context;
     let dmgAmount = amount;
     if (beastBonus) {
       const hasBeast = player.battlefield.cards.some(c => c.keywords?.includes('Beast'));
       if (hasBeast) dmgAmount += beastBonus;
+    }
+    if (card?.type === 'spell') {
+      const bonus = getSpellDamageBonus(player);
+      if (bonus) dmgAmount += bonus;
     }
 
     let actualTargets = [];
