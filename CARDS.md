@@ -84,7 +84,7 @@ Conventions
 
 2) Thrall, Warchief of the Horde
 - Type: Hero — Shaman (Horde)
-- Health: 30; Text: Power (2): Chain Spark — Deal 1 damage to up to three different targets.
+- Health: 30; Text: Power (2): Chain Spark — Deal 1 damage to up to three different targets. Overload (1).
 - Rarity: Legendary
 - Keywords: Overload +1 the turn after using Power.
 - Systems: Elemental/Totem/Enhancement talents scale Overload payoff and Totem summons. Horde reputation adds Warsong and Frostwolf allies.

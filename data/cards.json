@@ -27,13 +27,17 @@
         "type": "damage",
         "target": "upToThreeTargets",
         "amount": 1
+      },
+      {
+        "type": "overload",
+        "amount": 1
       }
     ],
     "keywords": [
       "Overload +1 the turn after using Power."
     ],
     "data": {},
-    "text": "Chain Spark — Deal 1 damage to up to three different targets."
+    "text": "Chain Spark — Deal 1 damage to up to three different targets. Overload (1)."
   },
   {
     "id": "hero-varian-wrynn-high-king",
