@@ -1,3 +1,5 @@
+import Card from '../entities/card.js';
+
 export class EffectSystem {
   constructor(game) {
     this.game = game;
@@ -19,8 +21,7 @@ export class EffectSystem {
           this.dealDamage(effect, context);
           break;
         case 'summon':
-          // Implement summon logic
-          console.log(`Summoning ${effect.count} x ${effect.unit.name}`);
+          this.summonUnit(effect, context);
           break;
         case 'buff':
           // Implement buff logic
@@ -106,6 +107,22 @@ export class EffectSystem {
         t.health -= amount;
         console.log(`${t.name} took ${amount} damage. Remaining health: ${t.health}`);
       }
+    }
+  }
+
+  summonUnit(effect, context) {
+    const { unit, count } = effect;
+    const { player } = context;
+
+    for (let i = 0; i < count; i++) {
+      const newUnit = new Card({
+        name: unit.name,
+        type: 'ally', // Summoned units are typically allies
+        data: { attack: unit.attack, health: unit.health },
+        keywords: unit.keywords
+      });
+      player.battlefield.add(newUnit);
+      console.log(`Summoned ${newUnit.name} to battlefield.`);
     }
   }
 
