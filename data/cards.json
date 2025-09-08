@@ -806,7 +806,8 @@
     ],
     "data": {
       "attack": 3,
-      "health": 3
+      "health": 3,
+      "spellDamage": 1
     },
     "text": "Spell Damage +1."
   },

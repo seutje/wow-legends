@@ -35,6 +35,18 @@ export function computeSpellDamage(base, spellDamage = 0) {
   return base + (spellDamage || 0);
 }
 
+export function getSpellDamageBonus(player) {
+  let bonus = 0;
+  if (player?.hero?.data?.spellDamage) bonus += player.hero.data.spellDamage;
+  if (player?.hero?.equipment) {
+    bonus += player.hero.equipment.reduce((s, e) => s + (e.spellDamage || 0), 0);
+  }
+  if (player?.battlefield?.cards) {
+    bonus += player.battlefield.cards.reduce((s, c) => s + (c.data?.spellDamage || 0), 0);
+  }
+  return bonus;
+}
+
 export function applyLayers(value, modifiers = []) {
   // modifiers: array of {priority, apply: (v)=>v}
   return modifiers
