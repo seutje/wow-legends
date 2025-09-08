@@ -76,7 +76,7 @@ Conventions
 
 1) Jaina Proudmoore, Archmage
 - Type: Hero — Mage (Alliance)
-- Health: 30; Power (1): Frostbolt — Deal 1 damage; if target survives, Freeze it next turn.
+- Health: 30; Text: Power (1): Frostbolt — Deal 1 damage; if target survives, Freeze it next turn.
 - Rarity: Legendary
 - Keywords: Freeze, Spell Damage +1 while you control a Water Elemental.
 - Systems: Fire/Frost/Arcane talents can reduce Ability costs or add Burn/Draw. Alliance reputation unlocks “Kul Tiran Support” allies.
@@ -84,7 +84,7 @@ Conventions
 
 2) Thrall, Warchief of the Horde
 - Type: Hero — Shaman (Horde)
-- Health: 30; Power (2): Chain Spark — Deal 1 damage to up to three different targets.
+- Health: 30; Text: Power (2): Chain Spark — Deal 1 damage to up to three different targets.
 - Rarity: Legendary
 - Keywords: Overload +1 the turn after using Power.
 - Systems: Elemental/Totem/Enhancement talents scale Overload payoff and Totem summons. Horde reputation adds Warsong and Frostwolf allies.
@@ -92,7 +92,7 @@ Conventions
 
 3) Varian Wrynn, High King
 - Type: Hero — Warrior (Alliance)
-- Health: 32; Power (1): Heroic Strike — Your hero gains +1 ATK this turn.
+- Health: 32; Text: Power (1): Heroic Strike — Your hero gains +1 ATK this turn.
 - Rarity: Legendary
 - Keywords: Armor — Starts with 2 Armor.
 - Systems: Arms/Fury/Protection talents modify Equipment durability and Enrage triggers. Synergizes with Taunt allies for Tank archetypes.
@@ -100,7 +100,7 @@ Conventions
 
 4) Valeera Sanguinar, Master Assassin
 - Type: Hero — Rogue (Horde)
-- Health: 28; Power (1): Dagger Mastery — Equip 1/1 Dagger (Durability 2).
+- Health: 28; Text: Power (1): Dagger Mastery — Equip 1/1 Dagger (Durability 2).
 - Rarity: Legendary
 - Keywords: Combo — The first Ability you play each turn costs (1) less.
 - Systems: Assassination/Subtlety/Outlaw talents chain low‑cost Abilities. Horde rep unlocks Blood Elf synergies (Spell Damage/Combo).
@@ -108,7 +108,7 @@ Conventions
 
 5) Tyrande Whisperwind, High Priestess
 - Type: Hero — Priest (Alliance)
-- Health: 30; Power (2): Mend — Restore 2 HP to a character or remove a debuff.
+- Health: 30; Text: Power (2): Mend — Restore 2 HP to a character or remove a debuff.
 - Rarity: Legendary
 - Keywords: When you restore HP to full, draw a card (once per turn).
 - Systems: Holy/Discipline/Shadow talents alter heal size vs. drain effects. Alliance rep adds Sentinels and Moon Priestess allies.
@@ -116,7 +116,7 @@ Conventions
 
 6) Uther the Lightbringer
 - Type: Hero — Paladin (Alliance)
-- Health: 31; Power (2): Blessing — Give a friendly character +1/+1 until end of turn; if it attacks, keep the buff.
+- Health: 31; Text: Power (2): Blessing — Give a friendly character +1/+1 until end of turn; if it attacks, keep the buff.
 - Rarity: Legendary
 - Keywords: Summon a 1/1 Silver Hand Recruit at 10 total mana spent this game.
 - Systems: Holy/Protection/Retribution talents buff Recruits and Equipment. Alliance rep introduces Argent Dawn synergies.
@@ -124,7 +124,7 @@ Conventions
 
 7) Malfurion Stormrage, Archdruid
 - Type: Hero — Druid (Alliance)
-- Health: 30; Power (2): Shapeshift — Choose one: +1 ATK this turn; or gain 2 Armor.
+- Health: 30; Text: Power (2): Shapeshift — Choose one: +1 ATK this turn; or gain 2 Armor.
 - Rarity: Legendary
 - Keywords: Choose One — your Abilities with Choose One gain both if you spent 3+ nature mana this turn.
 - Systems: Balance/Feral/Guardian talents add ramp and Treant synergies.
@@ -132,7 +132,7 @@ Conventions
 
 8) Rexxar, Beastmaster
 - Type: Hero — Hunter (Horde)
-- Health: 30; Power (2): Steady Shot — Deal 2 damage to the enemy hero or a minion without Taunt.
+- Health: 30; Text: Power (2): Steady Shot — Deal 2 damage to the enemy hero or a minion without Taunt.
 - Rarity: Legendary
 - Keywords: Your Beast allies cost (1) less (minimum 1).
 - Systems: Beast synergies and traps; Horde rep introduces Mok’Nathal and Darkspear trackers.
@@ -140,7 +140,7 @@ Conventions
 
 9) Gul’dan, Dark Conjurer
 - Type: Hero — Warlock (Horde)
-- Health: 28; Power (2): Life Tap — Draw a card; deal 2 damage to your hero.
+- Health: 28; Text: Power (2): Life Tap — Draw a card; deal 2 damage to your hero.
 - Rarity: Legendary
 - Keywords: Demons you summon have +1 ATK.
 - Systems: Affliction/Demonology/Destruction talents escalate self‑damage into tempo; Dungeon/Raid bosses often punish greedy taps.
@@ -499,48 +499,42 @@ Conventions
 50) Purge the Scourge
 - Type: Quest — Campaign
 - Cost: 1; Rarity: Rare
-- Objective: Defeat 3 Undead allies.
-- Reward: Draw 2 cards; gain +1 Alliance reputation.
+- Text: Objective: Defeat 3 Undead allies. Reward: Draw 2 cards; gain +1 Alliance reputation.
 - Systems: Campaign progression; unlocks Argent‑themed allies.
 - Art: Crusader parchment stamped with a silver hand over skulls.
 
 51) Trial of the Elements
 - Type: Quest — PvE
 - Cost: 1; Rarity: Rare
-- Objective: Play 3 Elemental cards.
-- Reward: Discover an Elemental; your next Elemental costs (1) less.
+- Text: Objective: Play 3 Elemental cards. Reward: Discover an Elemental; your next Elemental costs (1) less.
 - Systems: Cross‑class Elemental synergy; dungeon puzzle angles.
 - Art: Four elemental glyphs orbit a stone altar.
 
 52) Bounty: The Defias Kingpin
 - Type: Quest — Campaign
 - Cost: 1; Rarity: Rare
-- Objective: Return 2 enemy allies to hand (or defeat the Kingpin boss in PvE).
-- Reward: Add “Kingpin’s Cutlass” (2‑cost 2/2 weapon) to your hand.
+- Text: Objective: Return 2 enemy allies to hand (or defeat the Kingpin boss in PvE). Reward: Add “Kingpin’s Cutlass” (2‑cost 2/2 weapon) to your hand.
 - Systems: Rogue tempo path; reputation with Stormwind.
 - Art: Wanted poster tacked to a timber hall; dagger pin at corner.
 
 53) Hunt the Great Kodo
 - Type: Quest — PvE
 - Cost: 1; Rarity: Common
-- Objective: Deal 10 damage with Beasts.
-- Reward: Create a 3/3 Kodo companion token with Rush.
+- Text: Objective: Deal 10 damage with Beasts. Reward: Create a 3/3 Kodo companion token with Rush.
 - Systems: Hunter progression; Horde rep if completed with Orc/Tauren allies.
 - Art: Dusty savannah, massive kodo silhouette under sunset.
 
 54) Forge the Relic
 - Type: Quest — Crafting
 - Cost: 1; Rarity: Rare
-- Objective: Play 3 Equipment cards.
-- Reward: Discover a Trinket.
+- Text: Objective: Play 3 Equipment cards. Reward: Discover a Trinket.
 - Systems: Encourages equipment builds and crafting loops.
 - Art: Anvils spark as a master smith quenches a glowing ingot.
 
 55) Call to Arms
 - Type: Quest — Battlegrounds
 - Cost: 1; Rarity: Rare
-- Objective: Control 3 units with Taunt for a turn.
-- Reward: All allies gain +1/+1 this turn; draw a card.
+- Text: Objective: Control 3 units with Taunt for a turn. Reward: All allies gain +1/+1 this turn; draw a card.
 - Systems: Team PvP payoff; tank synergy.
 - Art: War horn blast sends ripples through a line of shields.
 

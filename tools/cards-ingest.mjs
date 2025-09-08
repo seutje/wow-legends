@@ -74,6 +74,14 @@ function parse(md) {
         } else if (keyLc.includes('power')) {
           card.text = value; // Use power as text for heroes
         }
+
+        // Special handling for hero power text
+        if (card.type === 'hero' && line.includes('Power (')) {
+          const powerMatch = line.match(/Power \(\d+\):\s*(.*)/);
+          if (powerMatch) {
+            card.text = powerMatch[1].trim();
+          }
+        }
       }
       card.id = `${card.type}-${slugify(card.name)}`;
       out.push(card);

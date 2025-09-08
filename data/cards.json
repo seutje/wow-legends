@@ -3,7 +3,7 @@
     "id": "hero-jaina-proudmoore-archmage",
     "name": "Jaina Proudmoore, Archmage",
     "type": "hero",
-    "text": "",
+    "text": "Frostbolt — Deal 1 damage; if target survives, Freeze it next turn.",
     "keywords": [
       "Freeze",
       "Spell Damage +1 while you control a Water Elemental."
@@ -14,7 +14,7 @@
     "id": "hero-thrall-warchief-of-the-horde",
     "name": "Thrall, Warchief of the Horde",
     "type": "hero",
-    "text": "",
+    "text": "Chain Spark — Deal 1 damage to up to three different targets.",
     "keywords": [
       "Overload +1 the turn after using Power."
     ],
@@ -24,7 +24,7 @@
     "id": "hero-varian-wrynn-high-king",
     "name": "Varian Wrynn, High King",
     "type": "hero",
-    "text": "",
+    "text": "Heroic Strike — Your hero gains +1 ATK this turn.",
     "keywords": [
       "Armor — Starts with 2 Armor."
     ],
@@ -34,7 +34,7 @@
     "id": "hero-valeera-sanguinar-master-assassin",
     "name": "Valeera Sanguinar, Master Assassin",
     "type": "hero",
-    "text": "",
+    "text": "Dagger Mastery — Equip 1/1 Dagger (Durability 2).",
     "keywords": [
       "Combo — The first Ability you play each turn costs (1) less."
     ],
@@ -44,7 +44,7 @@
     "id": "hero-tyrande-whisperwind-high-priestess",
     "name": "Tyrande Whisperwind, High Priestess",
     "type": "hero",
-    "text": "",
+    "text": "Mend — Restore 2 HP to a character or remove a debuff.",
     "keywords": [
       "When you restore HP to full",
       "draw a card (once per turn)."
@@ -55,7 +55,7 @@
     "id": "hero-uther-the-lightbringer",
     "name": "Uther the Lightbringer",
     "type": "hero",
-    "text": "",
+    "text": "Blessing — Give a friendly character +1/+1 until end of turn; if it attacks, keep the buff.",
     "keywords": [
       "Summon a 1/1 Silver Hand Recruit at 10 total mana spent this game."
     ],
@@ -65,7 +65,7 @@
     "id": "hero-malfurion-stormrage-archdruid",
     "name": "Malfurion Stormrage, Archdruid",
     "type": "hero",
-    "text": "",
+    "text": "Shapeshift — Choose one: +1 ATK this turn; or gain 2 Armor.",
     "keywords": [
       "Choose One — your Abilities with Choose One gain both if you spent 3+ nature mana this turn."
     ],
@@ -75,7 +75,7 @@
     "id": "hero-rexxar-beastmaster",
     "name": "Rexxar, Beastmaster",
     "type": "hero",
-    "text": "",
+    "text": "Steady Shot — Deal 2 damage to the enemy hero or a minion without Taunt.",
     "keywords": [
       "Your Beast allies cost (1) less (minimum 1)."
     ],
@@ -85,7 +85,7 @@
     "id": "hero-gul-dan-dark-conjurer",
     "name": "Gul’dan, Dark Conjurer",
     "type": "hero",
-    "text": "",
+    "text": "Life Tap — Draw a card; deal 2 damage to your hero.",
     "keywords": [
       "Demons you summon have +1 ATK."
     ],
@@ -604,7 +604,7 @@
     "name": "Purge the Scourge",
     "type": "quest",
     "cost": 1,
-    "text": "",
+    "text": "Objective: Defeat 3 Undead allies. Reward: Draw 2 cards; gain +1 Alliance reputation.",
     "keywords": [],
     "data": {}
   },
@@ -613,7 +613,7 @@
     "name": "Trial of the Elements",
     "type": "quest",
     "cost": 1,
-    "text": "",
+    "text": "Objective: Play 3 Elemental cards. Reward: Discover an Elemental; your next Elemental costs (1) less.",
     "keywords": [],
     "data": {}
   },
@@ -622,7 +622,7 @@
     "name": "Bounty: The Defias Kingpin",
     "type": "quest",
     "cost": 1,
-    "text": "",
+    "text": "Objective: Return 2 enemy allies to hand (or defeat the Kingpin boss in PvE). Reward: Add “Kingpin’s Cutlass” (2‑cost 2/2 weapon) to your hand.",
     "keywords": [],
     "data": {}
   },
@@ -631,7 +631,7 @@
     "name": "Hunt the Great Kodo",
     "type": "quest",
     "cost": 1,
-    "text": "",
+    "text": "Objective: Deal 10 damage with Beasts. Reward: Create a 3/3 Kodo companion token with Rush.",
     "keywords": [],
     "data": {}
   },
@@ -640,7 +640,7 @@
     "name": "Forge the Relic",
     "type": "quest",
     "cost": 1,
-    "text": "",
+    "text": "Objective: Play 3 Equipment cards. Reward: Discover a Trinket.",
     "keywords": [],
     "data": {}
   },
@@ -649,7 +649,7 @@
     "name": "Call to Arms",
     "type": "quest",
     "cost": 1,
-    "text": "",
+    "text": "Objective: Control 3 units with Taunt for a turn. Reward: All allies gain +1/+1 this turn; draw a card.",
     "keywords": [],
     "data": {}
   },
