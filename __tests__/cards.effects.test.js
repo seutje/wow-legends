@@ -28,15 +28,15 @@ describe.each(effectCards)('$id executes its effect', (card) => {
       if (effect.type === 'heal') {
         g.player.hero.data.maxHealth = 30;
         g.player.hero.data.health = 20;
-        g.effects.execute(card.effects, { game: g, player: g.player, card: g.player.hero });
+        await g.effects.execute(card.effects, { game: g, player: g.player, card: g.player.hero });
         expect(g.player.hero.data.health).toBe(20 + effect.amount);
       } else if (effect.type === 'damage') {
         const before = g.opponent.hero.data.health;
-        g.effects.execute(card.effects, { game: g, player: g.player, card: g.player.hero });
+        await g.effects.execute(card.effects, { game: g, player: g.player, card: g.player.hero });
         expect(g.opponent.hero.data.health).toBe(before - effect.amount);
       } else if (effect.type === 'draw') {
         const handBefore = g.player.hand.cards.length;
-        g.effects.execute(card.effects, { game: g, player: g.player, card: g.player.hero });
+        await g.effects.execute(card.effects, { game: g, player: g.player, card: g.player.hero });
         expect(g.player.hand.cards.length).toBe(handBefore + effect.count);
       }
       return;
@@ -54,18 +54,27 @@ describe.each(effectCards)('$id executes its effect', (card) => {
         if (effect.target === 'allEnemies') {
           g.opponent.battlefield.add(new Card({ name: 'Enemy', type: 'ally', data: { attack: 0, health: 5 }, keywords: [] }));
         }
-        const oppBefore = g.opponent.hero.data.health;
-        const playerBefore = g.player.hero.data.health;
-        g.playFromHand(g.player, card.id);
-        expect(g.opponent.hero.data.health).toBe(oppBefore - effect.amount);
-        if (effect.target === 'allCharacters') {
-          expect(g.player.hero.data.health).toBe(playerBefore - effect.amount);
+        if (['any', 'minion', 'enemyHeroOrMinionWithoutTaunt', 'character'].includes(effect.target)) {
+          const enemy = new Card({ name: 'Enemy', type: 'ally', data: { attack: 0, health: 5 }, keywords: [] });
+          g.opponent.battlefield.add(enemy);
+          g.promptTarget = async () => enemy;
+          const before = enemy.data.health;
+          await g.playFromHand(g.player, card.id);
+          expect(enemy.data.health).toBe(before - effect.amount);
+        } else {
+          const oppBefore = g.opponent.hero.data.health;
+          const playerBefore = g.player.hero.data.health;
+          await g.playFromHand(g.player, card.id);
+          expect(g.opponent.hero.data.health).toBe(oppBefore - effect.amount);
+          if (effect.target === 'allCharacters') {
+            expect(g.player.hero.data.health).toBe(playerBefore - effect.amount);
+          }
         }
         break;
       }
       case 'summon': {
         const bfBefore = g.player.battlefield.cards.length;
-        g.playFromHand(g.player, card.id);
+        await g.playFromHand(g.player, card.id);
         const expected = bfBefore + effect.count + (card.type === 'ally' ? 1 : 0);
         expect(g.player.battlefield.cards.length).toBe(expected);
         const summoned = g.player.battlefield.cards.filter(c => c.name === effect.unit.name);
@@ -77,38 +86,38 @@ describe.each(effectCards)('$id executes its effect', (card) => {
       case 'buff': {
         g.player.battlefield.add(new Card({ name: 'Ally', type: 'ally', data: { attack: 1, health: 1 }, keywords: [] }));
         const heroAttack = g.player.hero.data.attack || 0;
-        g.playFromHand(g.player, card.id);
+        await g.playFromHand(g.player, card.id);
         expect(g.player.hero.data.attack).toBe(heroAttack + effect.amount);
         break;
       }
       case 'overload': {
         const overloadBefore = g.resources._overloadNext.get(g.player) || 0;
-        g.playFromHand(g.player, card.id);
+        await g.playFromHand(g.player, card.id);
         expect(g.resources._overloadNext.get(g.player)).toBe(overloadBefore + effect.amount);
         break;
       }
       case 'heal': {
         g.player.hero.data.maxHealth = 30;
         g.player.hero.data.health = 20;
-        g.playFromHand(g.player, card.id);
+        await g.playFromHand(g.player, card.id);
         expect(g.player.hero.data.health).toBe(20 + effect.amount);
         break;
       }
       case 'draw': {
-        g.playFromHand(g.player, card.id);
+        await g.playFromHand(g.player, card.id);
         expect(g.player.hand.cards.length).toBe(handStart - 1 + effect.count);
         break;
       }
       case 'destroy': {
         g.opponent.battlefield.add(new Card({ name: 'Enemy', type: 'ally', data: { attack: 2, health: 2 }, keywords: [] }));
-        g.playFromHand(g.player, card.id);
+        await g.playFromHand(g.player, card.id);
         expect(g.opponent.battlefield.cards.length).toBe(0);
         break;
       }
       case 'returnToHand': {
         const enemy = new Card({ name: 'Enemy', type: 'ally', cost: 2, data: { attack: 2, health: 2 }, keywords: [] });
         g.opponent.battlefield.add(enemy);
-        g.playFromHand(g.player, card.id);
+        await g.playFromHand(g.player, card.id);
         expect(g.opponent.battlefield.cards.length).toBe(0);
         expect(g.opponent.hand.cards[0].cost).toBe(3);
         break;
@@ -116,7 +125,7 @@ describe.each(effectCards)('$id executes its effect', (card) => {
       case 'transform': {
         const ally = new Card({ name: 'Ally', type: 'ally', data: { attack: 1, health: 1 }, keywords: [] });
         g.player.battlefield.add(ally);
-        g.playFromHand(g.player, card.id);
+        await g.playFromHand(g.player, card.id);
         const transformed = g.player.battlefield.cards[0];
         expect(transformed.name).toBe(effect.into.name);
         expect(transformed.data.attack).toBe(effect.into.attack);

@@ -157,7 +157,7 @@ export default class Game {
 
   
 
-  playFromHand(player, cardId) {
+  async playFromHand(player, cardId) {
     const card = player.hand.cards.find(c => c.id === cardId);
     if (!card) return false;
     const cost = card.cost || 0;
@@ -165,7 +165,7 @@ export default class Game {
 
     // Execute the card's effect
     if (card.effects && card.effects.length > 0) {
-      this.effects.execute(card.effects, { game: this, player: player, card: card });
+      await this.effects.execute(card.effects, { game: this, player: player, card: card });
     }
 
     // Move the card to the appropriate zone
@@ -176,6 +176,46 @@ export default class Game {
     }
 
     return true;
+  }
+
+  async promptTarget(candidates) {
+    if (!candidates?.length) return null;
+    if (typeof document === 'undefined') {
+      return candidates[0];
+    }
+    return new Promise((resolve) => {
+      const overlay = document.createElement('div');
+      overlay.className = 'target-prompt';
+      overlay.style.position = 'fixed';
+      overlay.style.top = '0';
+      overlay.style.left = '0';
+      overlay.style.right = '0';
+      overlay.style.bottom = '0';
+      overlay.style.background = 'rgba(0,0,0,0.5)';
+      overlay.style.display = 'flex';
+      overlay.style.alignItems = 'center';
+      overlay.style.justifyContent = 'center';
+
+      const list = document.createElement('ul');
+      list.style.background = '#fff';
+      list.style.padding = '1em';
+      list.style.listStyle = 'none';
+
+      candidates.forEach((t) => {
+        const li = document.createElement('li');
+        li.textContent = t.name;
+        li.style.cursor = 'pointer';
+        li.style.margin = '0.25em 0';
+        li.addEventListener('click', () => {
+          document.body.removeChild(overlay);
+          resolve(t);
+        });
+        list.appendChild(li);
+      });
+
+      overlay.appendChild(list);
+      document.body.appendChild(overlay);
+    });
   }
 
   toggleAttacker(player, cardId) {
@@ -205,14 +245,14 @@ export default class Game {
     for (const c of dead) player.battlefield.moveTo(player.graveyard, c.id);
   }
 
-  endTurn() {
+  async endTurn() {
     // AI's turn
     this.turns.setActivePlayer(this.opponent);
     this.turns.startTurn();
     this.resources.startTurn(this.opponent);
     this.draw(this.opponent, 1);
     const affordable = this.opponent.hand.cards.filter(c => this.canPlay(this.opponent, c)).sort((a,b)=> (a.cost||0)-(b.cost||0));
-    if (affordable[0]) this.playFromHand(this.opponent, affordable[0].id);
+    if (affordable[0]) await this.playFromHand(this.opponent, affordable[0].id);
     for (const c of this.opponent.battlefield.cards) this.combat.declareAttacker(c);
     this.combat.setDefenderHero(this.player.hero);
     this.combat.resolve();

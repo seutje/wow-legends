@@ -14,7 +14,7 @@ function zoneList(title, cards, { clickCard, game, showTooltip, hideTooltip } = 
   for (const c of cards) {
     const cost = c.cost != null ? ` (${c.cost})` : '';
     const li = el('li', { dataset: { cardId: c.id } }, `${c.name}${cost}`);
-    if (clickCard) li.addEventListener('click', () => clickCard(c));
+    if (clickCard) li.addEventListener('click', async () => { await clickCard(c); });
 
     // Add mouseover and mouseout listeners
     li.addEventListener('mouseover', (e) => showTooltip(c, e, game));
@@ -80,13 +80,13 @@ export function renderPlay(container, game, { onUpdate } = {}) {
     el('button', { onclick: () => { game.draw(p, 1); onUpdate?.(); } }, 'Draw'),
     el('button', { onclick: () => { onUpdate?.(); } }, 'Refresh'),
     el('button', { onclick: () => { game.resolveCombat(p, e); onUpdate?.(); } }, 'Resolve Combat'),
-    el('button', { onclick: () => { game.endTurn(); onUpdate?.(); } }, 'End Turn')
+    el('button', { onclick: async () => { await game.endTurn(); onUpdate?.(); } }, 'End Turn')
   );
 
   const playerRow = el('div', { class: 'row player' },
     heroPane(p.hero),
     el('div', { class: 'zone' }, zoneList('Player Battlefield', p.battlefield.cards, { clickCard: (c)=>{ game.toggleAttacker(p, c.id); onUpdate?.(); }, game: game, showTooltip: showTooltip, hideTooltip: hideTooltip })),
-    el('div', { class: 'zone' }, zoneList('Player Hand', p.hand.cards, { clickCard: (c)=>{ if (!game.playFromHand(p, c.id)) { /* ignore */ } onUpdate?.(); }, game: game, showTooltip: showTooltip, hideTooltip: hideTooltip }))
+    el('div', { class: 'zone' }, zoneList('Player Hand', p.hand.cards, { clickCard: async (c)=>{ if (!await game.playFromHand(p, c.id)) { /* ignore */ } onUpdate?.(); }, game: game, showTooltip: showTooltip, hideTooltip: hideTooltip }))
   );
   const enemyRow = el('div', { class: 'row enemy' },
     heroPane(e.hero),
