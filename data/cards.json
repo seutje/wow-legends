@@ -342,6 +342,11 @@
     "cost": 1,
     "effects": [
       {
+        "type": "damage",
+        "amount": 3,
+        "target": "any"
+      },
+      {
         "type": "overload",
         "amount": 1
       }
