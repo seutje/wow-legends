@@ -370,8 +370,8 @@ Conventions
 - Type: Ally — Gnome (Neutral)
 - Cost: 2; Rarity: Common
 - Stats: 2 ATK / 1 HP
-- Text: Battlecry — Discover a Consumable from your deck (draw it).
-- Keywords: Discover, Tutor
+- Text: Battlecry — Play a random Consumable from your deck.
+- Keywords: Tutor
 - Systems: Supports combo turns; PvE toolbox consistency.
 - Art: Goggles askew, a tinker brandishes a bubbling vial and wrench.
 
