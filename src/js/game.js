@@ -4,6 +4,7 @@ import Card from './entities/card.js';
 import TurnSystem from './systems/turns.js';
 import ResourceSystem from './systems/resources.js';
 import CombatSystem from './systems/combat.js';
+import EffectSystem from './systems/effects.js';
 import { validateCardData } from './systems/content.js';
 import { RNG } from './utils/rng.js';
 import Hero from './entities/hero.js';
@@ -20,6 +21,7 @@ export default class Game {
     this.turns = new TurnSystem();
     this.resources = new ResourceSystem(this.turns);
     this.combat = new CombatSystem();
+    this.effects = new EffectSystem(this);
 
     // Players
     this.player = new Player({ name: 'You' });
@@ -138,7 +140,19 @@ export default class Game {
     if (!card) return false;
     const cost = card.cost || 0;
     if (!this.resources.pay(player, cost)) return false;
-    player.hand.moveTo(player.battlefield, cardId);
+
+    // Execute the card's effect
+    if (card.data.text) {
+      this.effects.execute(card.data.text, { player: player, card: card });
+    }
+
+    // Move the card to the appropriate zone
+    if (card.data.type === 'ally' || card.data.type === 'equipment') {
+      player.hand.moveTo(player.battlefield, cardId);
+    } else {
+      player.hand.moveTo(player.graveyard, cardId);
+    }
+
     return true;
   }
 

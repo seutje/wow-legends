@@ -14,32 +14,58 @@ function slugify(s) {
 }
 
 function parse(md) {
-  const lines = md.split(/\r?\n/);
   const out = [];
-  const skipPrefixes = ['type:', 'keywords:', 'systems:', 'stats:', 'health:', 'rarity:', 'text:', 'cost:', 'reward:', 'objective:'];
-  for (const raw of lines) {
-    const line = raw.trim();
-    if (!line.startsWith('-')) continue;
-    // Pattern: "- Name (Type) - Cost X" (Name can include dashes)
-    const m = line.match(/^\s*-\s*(.+?)\s*\(([^\)]+)\)/i);
-    if (!m) continue;
-    const name = m[1].trim();
-    const nameLc = name.toLowerCase();
-    if (skipPrefixes.some(p => nameLc.startsWith(p))) continue; // skip meta lines
-    const typeRaw = m[2].trim().toLowerCase();
-    const map = {
-      ally: 'ally',
-      spell: 'spell',
-      ability: 'spell',
-      equipment: 'equipment',
-      quest: 'quest',
-      consumable: 'consumable',
-      hero: 'hero'
-    };
-    const type = map[typeRaw] || 'spell';
-    const cm = line.match(/cost\s*:?\s*(\d+)/i);
-    const cost = cm ? Number(cm[1]) : undefined;
-    out.push({ id: `${type}-${slugify(name)}`, name, type, ...(cost!=null?{cost}:{}), keywords: [] });
+  const sections = md.split(/^## /m);
+
+  // Skip the first section (before the first ##)
+  for (let i = 1; i < sections.length; i++) {
+    const section = sections[i];
+    const sectionLines = section.split(/\r?\n/);
+    const title = sectionLines[0];
+
+    if (!title.includes('Cards')) continue;
+
+    const cardBlocks = section.split(/^\d+\)\s/m);
+    for (let j = 1; j < cardBlocks.length; j++) {
+      const block = cardBlocks[j];
+      if (block.trim().length === 0) continue;
+      const blockLines = block.split(/\r?\n/);
+      const name = blockLines[0].split('(')[0].trim();
+      if (!name) continue;
+
+      const card = {
+        id: '',
+        name: name,
+        type: '',
+        cost: undefined,
+        text: '',
+        keywords: [],
+        stats: undefined
+      };
+
+      for (const line of blockLines) {
+        const [key, ...valueParts] = line.split(':');
+        const value = valueParts.join(':').trim();
+        const keyLc = key.toLowerCase().trim();
+
+        if (keyLc.includes('type')) {
+          card.type = value.split('—')[0].trim().toLowerCase();
+        } else if (keyLc.includes('cost')) {
+          const costMatch = value.match(/(\d+)/);
+          if (costMatch) card.cost = Number(costMatch[1]);
+        } else if (keyLc.includes('text')) {
+          card.text = value;
+        } else if (keyLc.includes('keywords')) {
+          card.keywords = value.split(',').map(k => k.trim()).filter(Boolean);
+        } else if (keyLc.includes('stats')) {
+          card.stats = value;
+        } else if (keyLc.includes('power')) {
+          card.text = value; // Use power as text for heroes
+        }
+      }
+      card.id = `${card.type}-${slugify(card.name)}`;
+      out.push(card);
+    }
   }
   return out;
 }

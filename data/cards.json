@@ -3,341 +3,539 @@
     "id": "hero-jaina-proudmoore-archmage",
     "name": "Jaina Proudmoore, Archmage",
     "type": "hero",
-    "keywords": []
+    "text": "",
+    "keywords": [
+      "Freeze",
+      "Spell Damage +1 while you control a Water Elemental."
+    ]
   },
   {
     "id": "hero-thrall-warchief-of-the-horde",
     "name": "Thrall, Warchief of the Horde",
     "type": "hero",
-    "keywords": []
+    "text": "",
+    "keywords": [
+      "Overload +1 the turn after using Power."
+    ]
   },
   {
     "id": "hero-varian-wrynn-high-king",
     "name": "Varian Wrynn, High King",
     "type": "hero",
-    "keywords": []
+    "text": "",
+    "keywords": [
+      "Armor — Starts with 2 Armor."
+    ]
   },
   {
     "id": "hero-valeera-sanguinar-master-assassin",
     "name": "Valeera Sanguinar, Master Assassin",
     "type": "hero",
-    "keywords": []
+    "text": "",
+    "keywords": [
+      "Combo — The first Ability you play each turn costs (1) less."
+    ]
   },
   {
     "id": "hero-tyrande-whisperwind-high-priestess",
     "name": "Tyrande Whisperwind, High Priestess",
     "type": "hero",
-    "keywords": []
+    "text": "",
+    "keywords": [
+      "When you restore HP to full",
+      "draw a card (once per turn)."
+    ]
   },
   {
     "id": "hero-uther-the-lightbringer",
     "name": "Uther the Lightbringer",
     "type": "hero",
-    "keywords": []
+    "text": "",
+    "keywords": [
+      "Summon a 1/1 Silver Hand Recruit at 10 total mana spent this game."
+    ]
   },
   {
     "id": "hero-malfurion-stormrage-archdruid",
     "name": "Malfurion Stormrage, Archdruid",
     "type": "hero",
-    "keywords": []
+    "text": "",
+    "keywords": [
+      "Choose One — your Abilities with Choose One gain both if you spent 3+ nature mana this turn."
+    ]
   },
   {
     "id": "hero-rexxar-beastmaster",
     "name": "Rexxar, Beastmaster",
     "type": "hero",
-    "keywords": []
+    "text": "",
+    "keywords": [
+      "Your Beast allies cost (1) less (minimum 1)."
+    ]
   },
   {
     "id": "hero-gul-dan-dark-conjurer",
     "name": "Gul’dan, Dark Conjurer",
     "type": "hero",
-    "keywords": []
+    "text": "",
+    "keywords": [
+      "Demons you summon have +1 ATK."
+    ]
   },
   {
-    "id": "spell-fireball",
+    "id": "ability-fireball",
     "name": "Fireball",
-    "type": "spell",
+    "type": "ability",
     "cost": 4,
-    "keywords": []
+    "text": "Deal 6 damage to any target. If target is Frozen, deal 8 instead.",
+    "keywords": [
+      "Burn — Excess damage to hero becomes a Damage‑over‑Time 1 per turn for 2 turns."
+    ]
   },
   {
-    "id": "spell-water-elemental",
+    "id": "ability-water-elemental",
     "name": "Water Elemental",
-    "type": "spell",
+    "type": "ability",
     "cost": 4,
-    "keywords": []
+    "text": "Summon a 3/6 Water Elemental with “Freeze any target it damages.”",
+    "keywords": [
+      "Freeze",
+      "Elemental"
+    ]
   },
   {
-    "id": "spell-shield-slam",
+    "id": "ability-shield-slam",
     "name": "Shield Slam",
-    "type": "spell",
+    "type": "ability",
     "cost": 1,
-    "keywords": []
+    "text": "Deal damage equal to your Armor to a minion.",
+    "keywords": [
+      "Armor scaling"
+    ]
   },
   {
-    "id": "spell-whirlwind",
+    "id": "ability-whirlwind",
     "name": "Whirlwind",
-    "type": "spell",
+    "type": "ability",
     "cost": 2,
-    "keywords": []
+    "text": "Deal 1 damage to all characters. If any friendly character took damage this turn, Enrage them (+1 ATK).",
+    "keywords": [
+      "AoE",
+      "Enrage"
+    ]
   },
   {
-    "id": "spell-eviscerate",
+    "id": "ability-eviscerate",
     "name": "Eviscerate",
-    "type": "spell",
+    "type": "ability",
     "cost": 2,
-    "keywords": []
+    "text": "Deal 2 damage. Combo: Deal 4 instead.",
+    "keywords": [
+      "Combo"
+    ]
   },
   {
-    "id": "spell-sap",
+    "id": "ability-sap",
     "name": "Sap",
-    "type": "spell",
+    "type": "ability",
     "cost": 2,
-    "keywords": []
+    "text": "Return an enemy ally to its owner’s hand; it costs (1) more next time.",
+    "keywords": [
+      "Tempo"
+    ]
   },
   {
-    "id": "spell-power-word-shield",
+    "id": "ability-power-word-shield",
     "name": "Power Word: Shield",
-    "type": "spell",
+    "type": "ability",
     "cost": 1,
-    "keywords": []
+    "text": "Give a character +0/+3 until end of turn; if it survives damage, draw a card.",
+    "keywords": [
+      "Buff",
+      "Draw"
+    ]
   },
   {
-    "id": "spell-shadow-word-pain",
+    "id": "ability-shadow-word-pain",
     "name": "Shadow Word: Pain",
-    "type": "spell",
+    "type": "ability",
     "cost": 2,
-    "keywords": []
+    "text": "Destroy a minion with 3 or less ATK.",
+    "keywords": [
+      "Removal"
+    ]
   },
   {
-    "id": "spell-consecration",
+    "id": "ability-consecration",
     "name": "Consecration",
-    "type": "spell",
+    "type": "ability",
     "cost": 4,
-    "keywords": []
+    "text": "Deal 2 damage to all enemies. If you have a Silver Hand Recruit, deal 3 instead.",
+    "keywords": [
+      "AoE",
+      "Recruit synergy"
+    ]
   },
   {
-    "id": "spell-blessing-of-kings",
+    "id": "ability-blessing-of-kings",
     "name": "Blessing of Kings",
-    "type": "spell",
+    "type": "ability",
     "cost": 4,
-    "keywords": []
+    "text": "Give a friendly character +4/+4 until it dies.",
+    "keywords": [
+      "Buff"
+    ]
   },
   {
-    "id": "spell-lightning-bolt",
+    "id": "ability-lightning-bolt",
     "name": "Lightning Bolt",
-    "type": "spell",
+    "type": "ability",
     "cost": 1,
-    "keywords": []
+    "text": "Deal 3 damage. Overload (1).",
+    "keywords": [
+      "Overload"
+    ]
   },
   {
-    "id": "spell-feral-spirit",
+    "id": "ability-feral-spirit",
     "name": "Feral Spirit",
-    "type": "spell",
+    "type": "ability",
     "cost": 3,
-    "keywords": []
+    "text": "Summon two 2/3 Spirit Wolves with Taunt. Overload (2).",
+    "keywords": [
+      "Summon",
+      "Taunt",
+      "Overload"
+    ]
   },
   {
-    "id": "spell-starfire",
+    "id": "ability-starfire",
     "name": "Starfire",
-    "type": "spell",
+    "type": "ability",
     "cost": 5,
-    "keywords": []
+    "text": "Deal 5 damage. Draw a card. If you chose both options on a card this turn, this costs (2) less.",
+    "keywords": [
+      "Draw",
+      "Choose One synergy"
+    ]
   },
   {
-    "id": "spell-savage-roar",
+    "id": "ability-savage-roar",
     "name": "Savage Roar",
-    "type": "spell",
+    "type": "ability",
     "cost": 3,
-    "keywords": []
+    "text": "Give your hero and allies +2 ATK this turn.",
+    "keywords": [
+      "Burst"
+    ]
   },
   {
-    "id": "spell-kill-command",
+    "id": "ability-kill-command",
     "name": "Kill Command",
-    "type": "spell",
+    "type": "ability",
     "cost": 3,
-    "keywords": []
+    "text": "Deal 3 damage; if you control a Beast, deal 5 instead.",
+    "keywords": [
+      "Beast synergy"
+    ]
   },
   {
-    "id": "spell-explosive-trap",
+    "id": "ability-explosive-trap",
     "name": "Explosive Trap",
-    "type": "spell",
+    "type": "ability",
     "cost": 2,
-    "keywords": []
+    "text": "Secret — When your hero is attacked, deal 2 damage to all enemies.",
+    "keywords": [
+      "Secret",
+      "AoE"
+    ]
   },
   {
-    "id": "spell-hellfire",
+    "id": "ability-hellfire",
     "name": "Hellfire",
-    "type": "spell",
+    "type": "ability",
     "cost": 4,
-    "keywords": []
+    "text": "Deal 3 damage to ALL characters.",
+    "keywords": [
+      "AoE",
+      "Self‑damage"
+    ]
   },
   {
-    "id": "spell-summon-infernal",
+    "id": "ability-summon-infernal",
     "name": "Summon Infernal",
-    "type": "spell",
+    "type": "ability",
     "cost": 6,
-    "keywords": []
+    "text": "Summon a 6/6 Infernal that deals 1 damage to all other characters.",
+    "keywords": [
+      "Demon",
+      "AoE"
+    ]
   },
   {
-    "id": "spell-water-elemental-guardian",
+    "id": "ally-water-elemental-guardian",
     "name": "Water Elemental Guardian",
-    "type": "spell",
+    "type": "ally",
     "cost": 4,
-    "keywords": []
+    "text": "Freeze any target this damages.",
+    "keywords": [
+      "Freeze",
+      "Elemental"
+    ],
+    "stats": "3 ATK / 6 HP"
   },
   {
-    "id": "spell-silver-hand-lieutenant",
+    "id": "ally-silver-hand-lieutenant",
     "name": "Silver Hand Lieutenant",
-    "type": "spell",
+    "type": "ally",
     "cost": 3,
-    "keywords": []
+    "text": "Your Recruits have +1 ATK.",
+    "keywords": [
+      "Aura"
+    ],
+    "stats": "2 ATK / 3 HP"
   },
   {
-    "id": "spell-orgrimmar-grunt",
+    "id": "ally-orgrimmar-grunt",
     "name": "Orgrimmar Grunt",
-    "type": "spell",
+    "type": "ally",
     "cost": 2,
-    "keywords": []
+    "text": "Taunt.",
+    "keywords": [
+      "Taunt"
+    ],
+    "stats": "2 ATK / 2 HP"
   },
   {
-    "id": "spell-jungle-stalker",
+    "id": "ally-jungle-stalker",
     "name": "Jungle Stalker",
-    "type": "spell",
+    "type": "ally",
     "cost": 4,
-    "keywords": []
+    "text": "Stealth (loses Stealth when it attacks).",
+    "keywords": [
+      "Stealth",
+      "Beast"
+    ],
+    "stats": "5 ATK / 3 HP"
   },
   {
-    "id": "spell-northshire-acolyte",
+    "id": "ally-northshire-acolyte",
     "name": "Northshire Acolyte",
-    "type": "spell",
+    "type": "ally",
     "cost": 2,
-    "keywords": []
+    "text": "Whenever a character is healed, draw a card (once per turn).",
+    "keywords": [
+      "Draw"
+    ],
+    "stats": "1 ATK / 3 HP"
   },
   {
-    "id": "spell-imp-swarm-caller",
+    "id": "ally-imp-swarm-caller",
     "name": "Imp Swarm Caller",
-    "type": "spell",
+    "type": "ally",
     "cost": 3,
-    "keywords": []
+    "text": "Deathrattle — Summon two 1/1 Imps.",
+    "keywords": [
+      "Demon",
+      "Deathrattle"
+    ],
+    "stats": "3 ATK / 2 HP"
   },
   {
-    "id": "spell-darnassian-huntress",
+    "id": "ally-darnassian-huntress",
     "name": "Darnassian Huntress",
-    "type": "spell",
+    "type": "ally",
     "cost": 3,
-    "keywords": []
+    "text": "Battlecry — Give a Beast +1/+1 and Rush this turn.",
+    "keywords": [
+      "Battlecry",
+      "Rush"
+    ],
+    "stats": "2 ATK / 4 HP"
   },
   {
-    "id": "spell-stormforged-totemic",
+    "id": "ally-stormforged-totemic",
     "name": "Stormforged Totemic",
-    "type": "spell",
+    "type": "ally",
     "cost": 2,
-    "keywords": []
+    "text": "End of your turn: Give a random ally +1 ATK.",
+    "keywords": [
+      "Totem",
+      "Buff"
+    ],
+    "stats": "0 ATK / 3 HP"
   },
   {
-    "id": "spell-gnomish-tinkerer",
+    "id": "ally-gnomish-tinkerer",
     "name": "Gnomish Tinkerer",
-    "type": "spell",
+    "type": "ally",
     "cost": 2,
-    "keywords": []
+    "text": "Battlecry — Discover a Consumable from your deck (draw it).",
+    "keywords": [
+      "Discover",
+      "Tutor"
+    ],
+    "stats": "2 ATK / 1 HP"
   },
   {
-    "id": "spell-argent-healer",
+    "id": "ally-argent-healer",
     "name": "Argent Healer",
-    "type": "spell",
+    "type": "ally",
     "cost": 4,
-    "keywords": []
+    "text": "Restore 3 HP to a character at end of your turn.",
+    "keywords": [
+      "Heal"
+    ],
+    "stats": "3 ATK / 4 HP"
   },
   {
-    "id": "spell-warsong-raider",
+    "id": "ally-warsong-raider",
     "name": "Warsong Raider",
-    "type": "spell",
+    "type": "ally",
     "cost": 3,
-    "keywords": []
+    "text": "Enrage — +2 ATK while damaged.",
+    "keywords": [
+      "Enrage"
+    ],
+    "stats": "3 ATK / 3 HP"
   },
   {
-    "id": "spell-scarlet-sorcerer",
+    "id": "ally-scarlet-sorcerer",
     "name": "Scarlet Sorcerer",
-    "type": "spell",
+    "type": "ally",
     "cost": 3,
-    "keywords": []
+    "text": "Spell Damage +1.",
+    "keywords": [
+      "Aura"
+    ],
+    "stats": "3 ATK / 3 HP"
   },
   {
-    "id": "spell-stone-bark-treant",
+    "id": "ally-stone-bark-treant",
     "name": "Stone Bark Treant",
-    "type": "spell",
+    "type": "ally",
     "cost": 5,
-    "keywords": []
+    "text": "Taunt. If you gained Armor this turn, gain +0/+2.",
+    "keywords": [
+      "Taunt",
+      "Treant"
+    ],
+    "stats": "4 ATK / 6 HP"
   },
   {
-    "id": "spell-defias-footpad",
+    "id": "ally-defias-footpad",
     "name": "Defias Footpad",
-    "type": "spell",
+    "type": "ally",
     "cost": 1,
-    "keywords": []
+    "text": "Combo — Summon another 1/1 Footpad.",
+    "keywords": [
+      "Combo",
+      "Token"
+    ],
+    "stats": "1 ATK / 1 HP"
   },
   {
     "id": "equipment-ashkandi-greatsword-of-the-brotherhood",
     "name": "Ashkandi, Greatsword of the Brotherhood",
     "type": "equipment",
     "cost": 5,
-    "keywords": []
+    "text": "While equipped, your Taunt allies have +1 ATK.",
+    "keywords": [
+      "Weapon",
+      "Loot"
+    ],
+    "stats": "+5 ATK, Durability 3"
   },
   {
     "id": "equipment-core-hound-tooth",
     "name": "Core Hound Tooth",
     "type": "equipment",
     "cost": 3,
-    "keywords": []
+    "text": "Combo Abilities deal +1 damage while equipped.",
+    "keywords": [
+      "Weapon",
+      "Combo"
+    ],
+    "stats": "+3 ATK, Durability 2"
   },
   {
     "id": "equipment-benediction",
     "name": "Benediction",
     "type": "equipment",
     "cost": 4,
-    "keywords": []
+    "text": "When you restore 5+ HP in a turn, draw a card.",
+    "keywords": [
+      "Spell Damage",
+      "Sustain"
+    ],
+    "stats": "+2 Spell Power, Durability 3"
   },
   {
     "id": "equipment-stormshield-bulwark",
     "name": "Stormshield Bulwark",
     "type": "equipment",
     "cost": 3,
-    "keywords": []
+    "text": "After you take damage, gain +1 Armor (once per turn).",
+    "keywords": [
+      "Armor",
+      "Shield"
+    ],
+    "stats": "+2 Armor, Durability 3"
   },
   {
     "id": "equipment-wildheart-spaulders",
     "name": "Wildheart Spaulders",
     "type": "equipment",
     "cost": 2,
-    "keywords": []
+    "text": "Your Choose One Abilities cost (1) less this turn after you gain Armor.",
+    "keywords": [
+      "Armor",
+      "Choose One synergy"
+    ],
+    "stats": "+1 Armor"
   },
   {
     "id": "equipment-arcanist-s-signet",
     "name": "Arcanist’s Signet",
     "type": "equipment",
     "cost": 2,
-    "keywords": []
+    "text": "Your next Spell each turn has Spell Damage +1.",
+    "keywords": [
+      "Trinket",
+      "Spell Damage"
+    ],
+    "stats": "Passive"
   },
   {
     "id": "equipment-demonheart-grimoire",
     "name": "Demonheart Grimoire",
     "type": "equipment",
     "cost": 3,
-    "keywords": []
+    "text": "Demons you summon gain +1/+1.",
+    "keywords": [
+      "Demon",
+      "Summon buff"
+    ],
+    "stats": "Passive"
   },
   {
     "id": "equipment-masterwork-longbow",
     "name": "Masterwork Longbow",
     "type": "equipment",
     "cost": 4,
-    "keywords": []
+    "text": "Your Traps trigger for +1 damage.",
+    "keywords": [
+      "Weapon",
+      "Trap synergy"
+    ],
+    "stats": "+3 ATK, Durability 3"
   },
   {
     "id": "quest-purge-the-scourge",
     "name": "Purge the Scourge",
     "type": "quest",
     "cost": 1,
+    "text": "",
     "keywords": []
   },
   {
@@ -345,6 +543,7 @@
     "name": "Trial of the Elements",
     "type": "quest",
     "cost": 1,
+    "text": "",
     "keywords": []
   },
   {
@@ -352,6 +551,7 @@
     "name": "Bounty: The Defias Kingpin",
     "type": "quest",
     "cost": 1,
+    "text": "",
     "keywords": []
   },
   {
@@ -359,6 +559,7 @@
     "name": "Hunt the Great Kodo",
     "type": "quest",
     "cost": 1,
+    "text": "",
     "keywords": []
   },
   {
@@ -366,6 +567,7 @@
     "name": "Forge the Relic",
     "type": "quest",
     "cost": 1,
+    "text": "",
     "keywords": []
   },
   {
@@ -373,6 +575,7 @@
     "name": "Call to Arms",
     "type": "quest",
     "cost": 1,
+    "text": "",
     "keywords": []
   },
   {
@@ -380,34 +583,52 @@
     "name": "Healing Potion",
     "type": "consumable",
     "cost": 1,
-    "keywords": []
+    "text": "Restore 5 HP to a character.",
+    "keywords": [
+      "Heal"
+    ]
   },
   {
     "id": "consumable-mana-potion",
     "name": "Mana Potion",
     "type": "consumable",
     "cost": 0,
-    "keywords": []
+    "text": "Refresh up to 2 spent resources this turn. Overload (1) next turn.",
+    "keywords": [
+      "Resource",
+      "Overload"
+    ]
   },
   {
     "id": "consumable-scroll-of-fortitude",
     "name": "Scroll of Fortitude",
     "type": "consumable",
     "cost": 1,
-    "keywords": []
+    "text": "Give your allies +0/+2 this turn. Draw a card.",
+    "keywords": [
+      "Team buff",
+      "Cantrip"
+    ]
   },
   {
     "id": "consumable-savory-deviate-delight",
     "name": "Savory Deviate Delight",
     "type": "consumable",
     "cost": 1,
-    "keywords": []
+    "text": "Transform a random ally into a 3/3 Pirate with Charge until end of turn.",
+    "keywords": [
+      "Transform",
+      "Burst"
+    ]
   },
   {
     "id": "consumable-elixir-of-firepower",
     "name": "Elixir of Firepower",
     "type": "consumable",
     "cost": 1,
-    "keywords": []
+    "text": "Your Spells deal +1 damage this turn.",
+    "keywords": [
+      "Spell Damage"
+    ]
   }
 ]
