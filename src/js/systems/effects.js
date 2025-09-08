@@ -27,8 +27,7 @@ export class EffectSystem {
           this.applyBuff(effect, context);
           break;
         case 'overload':
-          // Implement overload logic
-          console.log(`Applying ${effect.amount} overload`);
+          this.applyOverload(effect, context);
           break;
         case 'rawText':
           console.log(`Raw text effect: ${effect.text}`);
@@ -175,6 +174,13 @@ export class EffectSystem {
       }
       console.log(`Applied +${amount} ${property} to ${t.name}.`);
     }
+  }
+
+  applyOverload(effect, context) {
+    const { amount } = effect;
+    const { player, game } = context;
+    game.resources.addOverloadNextTurn(player, amount);
+    console.log(`Applied ${amount} overload to ${player.name}.`);
   }
 }
 

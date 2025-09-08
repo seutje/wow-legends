@@ -96,10 +96,10 @@ export default class Game {
     this.player.library.shuffle();
     this.opponent.library.shuffle();
 
-    // Add Savage Roar for testing
-    const savageRoarCard = allCards.find(c => c.id === 'spell-savage-roar');
-    if (savageRoarCard) {
-      this.player.hand.add(new Card(savageRoarCard));
+    // Add Lightning Bolt for testing
+    const lightningBoltCard = allCards.find(c => c.id === 'spell-lightning-bolt');
+    if (lightningBoltCard) {
+      this.player.hand.add(new Card(lightningBoltCard));
     }
 
     this.turns.setActivePlayer(this.player);
