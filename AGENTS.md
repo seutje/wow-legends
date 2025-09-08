@@ -30,7 +30,8 @@ Live Reload Requirements (Important)
 - The live-reload mechanism relies on `live-reload.json` in the project root.
 - Always include `live-reload.json` in commits. Do not add it to `.gitignore`.
 - When committing, prefer `git add -A` or explicitly stage `live-reload.json` along with your changes.
-- If your changes don’t naturally update the file (e.g., documentation-only changes), you may run `npm run dev:watch` briefly to refresh the file, or manually bump its `time` value to ensure it’s included.
+- Before committing, always run `npm run live-reload` to update `live-reload.json`. This ensures the live-reload mechanism reflects your changes.
+- Never edit `live-reload.json` manually. Always use the `npm run live-reload` command.
 
 Commit Practices
 - Use concise, descriptive commit messages (conventional style preferred, e.g., `feat:`, `fix:`, `refactor:`).
