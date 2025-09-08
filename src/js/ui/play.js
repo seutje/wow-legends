@@ -9,7 +9,7 @@ function el(tag, attrs = {}, ...children) {
   return e;
 }
 
-function zoneList(title, cards, { clickCard, game } = {}) {
+function zoneList(title, cards, { clickCard, game, showTooltip, hideTooltip } = {}) {
   const ul = el('ul', { class: 'zone-list' });
   for (const c of cards) {
     const cost = c.cost != null ? ` (${c.cost})` : '';
@@ -70,11 +70,11 @@ export function renderPlay(container, game, { onUpdate } = {}) {
   );
 
   const playerRow = el('div', { class: 'row player' },
-    el('div', { class: 'zone' }, zoneList('Player Battlefield', p.battlefield.cards, { clickCard: (c)=>{ game.toggleAttacker(p, c.id); onUpdate?.(); }, game: game })),
-    el('div', { class: 'zone' }, zoneList('Player Hand', p.hand.cards, { clickCard: (c)=>{ if (!game.playFromHand(p, c.id)) { /* ignore */ } onUpdate?.(); }, game: game }))
+    el('div', { class: 'zone' }, zoneList('Player Battlefield', p.battlefield.cards, { clickCard: (c)=>{ game.toggleAttacker(p, c.id); onUpdate?.(); }, game: game, showTooltip: showTooltip, hideTooltip: hideTooltip })),
+    el('div', { class: 'zone' }, zoneList('Player Hand', p.hand.cards, { clickCard: (c)=>{ if (!game.playFromHand(p, c.id)) { /* ignore */ } onUpdate?.(); }, game: game, showTooltip: showTooltip, hideTooltip: hideTooltip }))
   );
   const enemyRow = el('div', { class: 'row enemy' },
-    el('div', { class: 'zone' }, zoneList('Enemy Battlefield', e.battlefield.cards, { game: game })),
+    el('div', { class: 'zone' }, zoneList('Enemy Battlefield', e.battlefield.cards, { game: game, showTooltip: showTooltip, hideTooltip: hideTooltip })),
     el('div', { class: 'zone' }, el('h3', {}, 'Enemy Hand'), el('p', {}, `${e.hand.size()} cards`))
   );
 
