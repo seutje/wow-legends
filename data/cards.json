@@ -6,14 +6,15 @@
     "effects": [
       {
         "type": "rawText",
-        "text": "1"
+        "text": "Frostbolt — Deal 1 damage; if target survives, Freeze it next turn."
       }
     ],
     "keywords": [
       "Freeze",
       "Spell Damage +1 while you control a Water Elemental."
     ],
-    "data": {}
+    "data": {},
+    "text": "Frostbolt — Deal 1 damage; if target survives, Freeze it next turn."
   },
   {
     "id": "hero-thrall-warchief-of-the-horde",
@@ -22,13 +23,14 @@
     "effects": [
       {
         "type": "rawText",
-        "text": "2"
+        "text": "Chain Spark — Deal 1 damage to up to three different targets."
       }
     ],
     "keywords": [
       "Overload +1 the turn after using Power."
     ],
-    "data": {}
+    "data": {},
+    "text": "Chain Spark — Deal 1 damage to up to three different targets."
   },
   {
     "id": "hero-varian-wrynn-high-king",
@@ -37,13 +39,14 @@
     "effects": [
       {
         "type": "rawText",
-        "text": "1"
+        "text": "Heroic Strike — Your hero gains +1 ATK this turn."
       }
     ],
     "keywords": [
       "Armor — Starts with 2 Armor."
     ],
-    "data": {}
+    "data": {},
+    "text": "Heroic Strike — Your hero gains +1 ATK this turn."
   },
   {
     "id": "hero-valeera-sanguinar-master-assassin",
@@ -52,13 +55,14 @@
     "effects": [
       {
         "type": "rawText",
-        "text": "1"
+        "text": "Dagger Mastery — Equip 1/1 Dagger (Durability 2)."
       }
     ],
     "keywords": [
       "Combo — The first Ability you play each turn costs (1) less."
     ],
-    "data": {}
+    "data": {},
+    "text": "Dagger Mastery — Equip 1/1 Dagger (Durability 2)."
   },
   {
     "id": "hero-tyrande-whisperwind-high-priestess",
@@ -66,15 +70,17 @@
     "type": "hero",
     "effects": [
       {
-        "type": "rawText",
-        "text": "2"
+        "type": "heal",
+        "target": "character",
+        "amount": 2
       }
     ],
     "keywords": [
       "When you restore HP to full",
       "draw a card (once per turn)."
     ],
-    "data": {}
+    "data": {},
+    "text": "Mend — Restore 2 HP to a character or remove a debuff."
   },
   {
     "id": "hero-uther-the-lightbringer",
@@ -83,13 +89,14 @@
     "effects": [
       {
         "type": "rawText",
-        "text": "2"
+        "text": "Blessing — Give a friendly character +1/+1 until end of turn; if it attacks, keep the buff."
       }
     ],
     "keywords": [
       "Summon a 1/1 Silver Hand Recruit at 10 total mana spent this game."
     ],
-    "data": {}
+    "data": {},
+    "text": "Blessing — Give a friendly character +1/+1 until end of turn; if it attacks, keep the buff."
   },
   {
     "id": "hero-malfurion-stormrage-archdruid",
@@ -98,13 +105,14 @@
     "effects": [
       {
         "type": "rawText",
-        "text": "2"
+        "text": "Shapeshift — Choose one: +1 ATK this turn; or gain 2 Armor."
       }
     ],
     "keywords": [
       "Choose One — your Abilities with Choose One gain both if you spent 3+ nature mana this turn."
     ],
-    "data": {}
+    "data": {},
+    "text": "Shapeshift — Choose one: +1 ATK this turn; or gain 2 Armor."
   },
   {
     "id": "hero-rexxar-beastmaster",
@@ -112,14 +120,16 @@
     "type": "hero",
     "effects": [
       {
-        "type": "rawText",
-        "text": "2"
+        "type": "damage",
+        "target": "enemyHeroOrMinionWithoutTaunt",
+        "amount": 2
       }
     ],
     "keywords": [
       "Your Beast allies cost (1) less (minimum 1)."
     ],
-    "data": {}
+    "data": {},
+    "text": "Steady Shot — Deal 2 damage to the enemy hero or a minion without Taunt."
   },
   {
     "id": "hero-gul-dan-dark-conjurer",
@@ -127,14 +137,15 @@
     "type": "hero",
     "effects": [
       {
-        "type": "rawText",
-        "text": "2"
+        "type": "draw",
+        "count": 1
       }
     ],
     "keywords": [
       "Demons you summon have +1 ATK."
     ],
-    "data": {}
+    "data": {},
+    "text": "Life Tap — Draw a card; deal 2 damage to your hero."
   },
   {
     "id": "spell-fireball",
@@ -151,7 +162,8 @@
     "keywords": [
       "Burn — Excess damage to hero becomes a Damage‑over‑Time 1 per turn for 2 turns."
     ],
-    "data": {}
+    "data": {},
+    "text": "Deal 6 damage to any target. If target is Frozen, deal 8 instead."
   },
   {
     "id": "spell-water-elemental",
@@ -174,7 +186,8 @@
       "Freeze",
       "Elemental"
     ],
-    "data": {}
+    "data": {},
+    "text": "Summon a 3/6 Water Elemental with “Freeze any target it damages.”"
   },
   {
     "id": "spell-shield-slam",
@@ -190,7 +203,8 @@
     "keywords": [
       "Armor scaling"
     ],
-    "data": {}
+    "data": {},
+    "text": "Deal damage equal to your Armor to a minion."
   },
   {
     "id": "spell-whirlwind",
@@ -208,7 +222,8 @@
       "AoE",
       "Enrage"
     ],
-    "data": {}
+    "data": {},
+    "text": "Deal 1 damage to all characters. If any friendly character took damage this turn, Enrage them (+1 ATK)."
   },
   {
     "id": "spell-eviscerate",
@@ -224,7 +239,8 @@
     "keywords": [
       "Combo"
     ],
-    "data": {}
+    "data": {},
+    "text": "Deal 2 damage. Combo: Deal 4 instead."
   },
   {
     "id": "spell-sap",
@@ -241,7 +257,8 @@
     "keywords": [
       "Tempo"
     ],
-    "data": {}
+    "data": {},
+    "text": "Return an enemy ally to its owner’s hand; it costs (1) more next time."
   },
   {
     "id": "spell-power-word-shield",
@@ -258,7 +275,8 @@
       "Buff",
       "Draw"
     ],
-    "data": {}
+    "data": {},
+    "text": "Give a character +0/+3 until end of turn; if it survives damage, draw a card."
   },
   {
     "id": "spell-shadow-word-pain",
@@ -278,7 +296,8 @@
     "keywords": [
       "Removal"
     ],
-    "data": {}
+    "data": {},
+    "text": "Destroy a minion with 3 or less ATK."
   },
   {
     "id": "spell-consecration",
@@ -296,7 +315,8 @@
       "AoE",
       "Recruit synergy"
     ],
-    "data": {}
+    "data": {},
+    "text": "Deal 2 damage to all enemies. If you have a Silver Hand Recruit, deal 3 instead."
   },
   {
     "id": "spell-blessing-of-kings",
@@ -312,7 +332,8 @@
     "keywords": [
       "Buff"
     ],
-    "data": {}
+    "data": {},
+    "text": "Give a friendly character +4/+4 until it dies."
   },
   {
     "id": "spell-lightning-bolt",
@@ -328,7 +349,8 @@
     "keywords": [
       "Overload"
     ],
-    "data": {}
+    "data": {},
+    "text": "Deal 3 damage. Overload (1)."
   },
   {
     "id": "spell-feral-spirit",
@@ -356,7 +378,8 @@
       "Taunt",
       "Overload"
     ],
-    "data": {}
+    "data": {},
+    "text": "Summon two 2/3 Spirit Wolves with Taunt. Overload (2)."
   },
   {
     "id": "spell-starfire",
@@ -373,7 +396,8 @@
       "Draw",
       "Choose One synergy"
     ],
-    "data": {}
+    "data": {},
+    "text": "Deal 5 damage. Draw a card. If you chose both options on a card this turn, this costs (2) less."
   },
   {
     "id": "spell-savage-roar",
@@ -392,7 +416,8 @@
     "keywords": [
       "Burst"
     ],
-    "data": {}
+    "data": {},
+    "text": "Give your hero and allies +2 ATK this turn."
   },
   {
     "id": "spell-kill-command",
@@ -408,7 +433,8 @@
     "keywords": [
       "Beast synergy"
     ],
-    "data": {}
+    "data": {},
+    "text": "Deal 3 damage; if you control a Beast, deal 5 instead."
   },
   {
     "id": "spell-explosive-trap",
@@ -426,7 +452,8 @@
       "Secret",
       "AoE"
     ],
-    "data": {}
+    "data": {},
+    "text": "Secret — When your hero is attacked, deal 2 damage to all enemies."
   },
   {
     "id": "spell-hellfire",
@@ -444,7 +471,8 @@
       "AoE",
       "Self‑damage"
     ],
-    "data": {}
+    "data": {},
+    "text": "Deal 3 damage to ALL characters."
   },
   {
     "id": "spell-summon-infernal",
@@ -467,7 +495,8 @@
       "Demon",
       "AoE"
     ],
-    "data": {}
+    "data": {},
+    "text": "Summon a 6/6 Infernal that deals 1 damage to all other characters."
   },
   {
     "id": "ally-water-elemental-guardian",
@@ -487,7 +516,8 @@
     "data": {
       "attack": 3,
       "health": 6
-    }
+    },
+    "text": "Freeze any target this damages."
   },
   {
     "id": "ally-silver-hand-lieutenant",
@@ -506,7 +536,8 @@
     "data": {
       "attack": 2,
       "health": 3
-    }
+    },
+    "text": "Your Recruits have +1 ATK."
   },
   {
     "id": "ally-orgrimmar-grunt",
@@ -525,7 +556,8 @@
     "data": {
       "attack": 2,
       "health": 2
-    }
+    },
+    "text": "Taunt."
   },
   {
     "id": "ally-jungle-stalker",
@@ -545,7 +577,8 @@
     "data": {
       "attack": 5,
       "health": 3
-    }
+    },
+    "text": "Stealth (loses Stealth when it attacks)."
   },
   {
     "id": "ally-northshire-acolyte",
@@ -564,7 +597,8 @@
     "data": {
       "attack": 1,
       "health": 3
-    }
+    },
+    "text": "Whenever a character is healed, draw a card (once per turn)."
   },
   {
     "id": "ally-imp-swarm-caller",
@@ -590,7 +624,8 @@
     "data": {
       "attack": 3,
       "health": 2
-    }
+    },
+    "text": "Deathrattle — Summon two 1/1 Imps."
   },
   {
     "id": "ally-darnassian-huntress",
@@ -610,7 +645,8 @@
     "data": {
       "attack": 2,
       "health": 4
-    }
+    },
+    "text": "Battlecry — Give a Beast +1/+1 and Rush this turn."
   },
   {
     "id": "ally-stormforged-totemic",
@@ -630,7 +666,8 @@
     "data": {
       "attack": 0,
       "health": 3
-    }
+    },
+    "text": "End of your turn: Give a random ally +1 ATK."
   },
   {
     "id": "ally-gnomish-tinkerer",
@@ -650,7 +687,8 @@
     "data": {
       "attack": 2,
       "health": 1
-    }
+    },
+    "text": "Battlecry — Discover a Consumable from your deck (draw it)."
   },
   {
     "id": "ally-argent-healer",
@@ -670,7 +708,8 @@
     "data": {
       "attack": 3,
       "health": 4
-    }
+    },
+    "text": "Restore 3 HP to a character at end of your turn."
   },
   {
     "id": "ally-warsong-raider",
@@ -689,7 +728,8 @@
     "data": {
       "attack": 3,
       "health": 3
-    }
+    },
+    "text": "Enrage — +2 ATK while damaged."
   },
   {
     "id": "ally-scarlet-sorcerer",
@@ -708,7 +748,8 @@
     "data": {
       "attack": 3,
       "health": 3
-    }
+    },
+    "text": "Spell Damage +1."
   },
   {
     "id": "ally-stone-bark-treant",
@@ -728,7 +769,8 @@
     "data": {
       "attack": 4,
       "health": 6
-    }
+    },
+    "text": "Taunt. If you gained Armor this turn, gain +0/+2."
   },
   {
     "id": "ally-defias-footpad",
@@ -748,7 +790,8 @@
     "data": {
       "attack": 1,
       "health": 1
-    }
+    },
+    "text": "Combo — Summon another 1/1 Footpad."
   },
   {
     "id": "equipment-ashkandi-greatsword-of-the-brotherhood",
@@ -765,7 +808,8 @@
       "Weapon",
       "Loot"
     ],
-    "data": {}
+    "data": {},
+    "text": "While equipped, your Taunt allies have +1 ATK."
   },
   {
     "id": "equipment-core-hound-tooth",
@@ -782,7 +826,8 @@
       "Weapon",
       "Combo"
     ],
-    "data": {}
+    "data": {},
+    "text": "Combo Abilities deal +1 damage while equipped."
   },
   {
     "id": "equipment-benediction",
@@ -799,7 +844,8 @@
       "Spell Damage",
       "Sustain"
     ],
-    "data": {}
+    "data": {},
+    "text": "When you restore 5+ HP in a turn, draw a card."
   },
   {
     "id": "equipment-stormshield-bulwark",
@@ -816,7 +862,8 @@
       "Armor",
       "Shield"
     ],
-    "data": {}
+    "data": {},
+    "text": "After you take damage, gain +1 Armor (once per turn)."
   },
   {
     "id": "equipment-wildheart-spaulders",
@@ -833,7 +880,8 @@
       "Armor",
       "Choose One synergy"
     ],
-    "data": {}
+    "data": {},
+    "text": "Your Choose One Abilities cost (1) less this turn after you gain Armor."
   },
   {
     "id": "equipment-arcanist-s-signet",
@@ -850,7 +898,8 @@
       "Trinket",
       "Spell Damage"
     ],
-    "data": {}
+    "data": {},
+    "text": "Your next Spell each turn has Spell Damage +1."
   },
   {
     "id": "equipment-demonheart-grimoire",
@@ -867,7 +916,8 @@
       "Demon",
       "Summon buff"
     ],
-    "data": {}
+    "data": {},
+    "text": "Demons you summon gain +1/+1."
   },
   {
     "id": "equipment-masterwork-longbow",
@@ -884,7 +934,8 @@
       "Weapon",
       "Trap synergy"
     ],
-    "data": {}
+    "data": {},
+    "text": "Your Traps trigger for +1 damage."
   },
   {
     "id": "quest-purge-the-scourge",
@@ -898,7 +949,8 @@
       }
     ],
     "keywords": [],
-    "data": {}
+    "data": {},
+    "text": "Objective: Defeat 3 Undead allies. Reward: Draw 2 cards; gain +1 Alliance reputation."
   },
   {
     "id": "quest-trial-of-the-elements",
@@ -912,7 +964,8 @@
       }
     ],
     "keywords": [],
-    "data": {}
+    "data": {},
+    "text": "Objective: Play 3 Elemental cards. Reward: Discover an Elemental; your next Elemental costs (1) less."
   },
   {
     "id": "quest-bounty-the-defias-kingpin",
@@ -926,7 +979,8 @@
       }
     ],
     "keywords": [],
-    "data": {}
+    "data": {},
+    "text": "Objective: Return 2 enemy allies to hand (or defeat the Kingpin boss in PvE). Reward: Add “Kingpin’s Cutlass” (2‑cost 2/2 weapon) to your hand."
   },
   {
     "id": "quest-hunt-the-great-kodo",
@@ -940,7 +994,8 @@
       }
     ],
     "keywords": [],
-    "data": {}
+    "data": {},
+    "text": "Objective: Deal 10 damage with Beasts. Reward: Create a 3/3 Kodo companion token with Rush."
   },
   {
     "id": "quest-forge-the-relic",
@@ -954,7 +1009,8 @@
       }
     ],
     "keywords": [],
-    "data": {}
+    "data": {},
+    "text": "Objective: Play 3 Equipment cards. Reward: Discover a Trinket."
   },
   {
     "id": "quest-call-to-arms",
@@ -968,7 +1024,8 @@
       }
     ],
     "keywords": [],
-    "data": {}
+    "data": {},
+    "text": "Objective: Control 3 units with Taunt for a turn. Reward: All allies gain +1/+1 this turn; draw a card."
   },
   {
     "id": "consumable-healing-potion",
@@ -985,7 +1042,8 @@
     "keywords": [
       "Heal"
     ],
-    "data": {}
+    "data": {},
+    "text": "Restore 5 HP to a character."
   },
   {
     "id": "consumable-mana-potion",
@@ -1002,7 +1060,8 @@
       "Resource",
       "Overload"
     ],
-    "data": {}
+    "data": {},
+    "text": "Refresh up to 2 spent resources this turn. Overload (1) next turn."
   },
   {
     "id": "consumable-scroll-of-fortitude",
@@ -1019,7 +1078,8 @@
       "Team buff",
       "Cantrip"
     ],
-    "data": {}
+    "data": {},
+    "text": "Give your allies +0/+2 this turn. Draw a card."
   },
   {
     "id": "consumable-savory-deviate-delight",
@@ -1045,7 +1105,8 @@
       "Transform",
       "Burst"
     ],
-    "data": {}
+    "data": {},
+    "text": "Transform a random ally into a 3/3 Pirate with Charge until end of turn."
   },
   {
     "id": "consumable-elixir-of-firepower",
@@ -1061,6 +1122,7 @@
     "keywords": [
       "Spell Damage"
     ],
-    "data": {}
+    "data": {},
+    "text": "Your Spells deal +1 damage this turn."
   }
 ]

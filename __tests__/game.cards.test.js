@@ -14,3 +14,10 @@ test('setupMatch assigns different heroes to players', async () => {
   expect(g.opponent.hero).toBeDefined();
   expect(g.player.hero.id).not.toBe(g.opponent.hero.id);
 });
+
+test('cards loaded with text for tooltips', async () => {
+  const g = new Game();
+  await g.setupMatch();
+  const hasText = g.allCards.every(c => typeof c.text === 'string');
+  expect(hasText).toBe(true);
+});

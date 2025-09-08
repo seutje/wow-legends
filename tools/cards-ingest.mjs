@@ -41,7 +41,8 @@ function parse(md) {
         effects: [],
         keywords: [],
         stats: undefined,
-        data: {}
+        data: {},
+        text: ''
       };
 
       let rawText = '';
@@ -81,12 +82,13 @@ function parse(md) {
         if (card.type === 'hero' && line.includes('Power (')) {
           const powerMatch = line.match(/Power \((\d+)\):\s*(.*)/);
           if (powerMatch) {
-            rawText = powerMatch[1].trim();
+            rawText = powerMatch[2].trim();
           }
         }
       }
       card.id = `${card.type}-${slugify(card.name)}`;
       card.effects = parseEffect(rawText, card);
+      card.text = rawText.trim();
       out.push(card);
     }
   }
