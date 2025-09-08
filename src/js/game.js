@@ -186,26 +186,12 @@ export default class Game {
     return new Promise((resolve) => {
       const overlay = document.createElement('div');
       overlay.className = 'target-prompt';
-      overlay.style.position = 'fixed';
-      overlay.style.top = '0';
-      overlay.style.left = '0';
-      overlay.style.right = '0';
-      overlay.style.bottom = '0';
-      overlay.style.background = 'rgba(0,0,0,0.5)';
-      overlay.style.display = 'flex';
-      overlay.style.alignItems = 'center';
-      overlay.style.justifyContent = 'center';
 
       const list = document.createElement('ul');
-      list.style.background = '#fff';
-      list.style.padding = '1em';
-      list.style.listStyle = 'none';
 
       candidates.forEach((t) => {
         const li = document.createElement('li');
         li.textContent = t.name;
-        li.style.cursor = 'pointer';
-        li.style.margin = '0.25em 0';
         li.addEventListener('click', () => {
           document.body.removeChild(overlay);
           resolve(t);
