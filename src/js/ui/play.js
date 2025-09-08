@@ -109,12 +109,12 @@ export function renderPlay(container, game, { onUpdate } = {}) {
 
   const playerRow = el('div', { class: 'row player' },
     heroPane(p.hero),
-    el('div', { class: 'zone' }, zoneList('Player Battlefield', p.battlefield.cards, { clickCard: (c)=>{ game.toggleAttacker(p, c.id); onUpdate?.(); }, game: game, showTooltip: showTooltip, hideTooltip: hideTooltip })),
+    el('div', { class: 'zone' }, zoneList('Player Battlefield', [p.hero, ...p.battlefield.cards], { clickCard: (c)=>{ game.toggleAttacker(p, c.id); onUpdate?.(); }, game: game, showTooltip: showTooltip, hideTooltip: hideTooltip })),
     el('div', { class: 'zone' }, zoneList('Player Hand', p.hand.cards, { clickCard: async (c)=>{ if (!await game.playFromHand(p, c.id)) { /* ignore */ } onUpdate?.(); }, game: game, showTooltip: showTooltip, hideTooltip: hideTooltip }))
   );
   const enemyRow = el('div', { class: 'row enemy' },
     heroPane(e.hero),
-    el('div', { class: 'zone' }, zoneList('Enemy Battlefield', e.battlefield.cards, { game: game, showTooltip: showTooltip, hideTooltip: hideTooltip })),
+    el('div', { class: 'zone' }, zoneList('Enemy Battlefield', [e.hero, ...e.battlefield.cards], { game: game, showTooltip: showTooltip, hideTooltip: hideTooltip })),
     el('div', { class: 'zone' }, el('h3', {}, 'Enemy Hand'), el('p', {}, `${e.hand.size()} cards`))
   );
 
