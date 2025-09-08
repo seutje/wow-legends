@@ -108,5 +108,55 @@ describe('UI Play', () => {
 
     global.Image = OriginalImage;
   });
+
+  test('card tooltip fits within the viewport', () => {
+    const OriginalImage = global.Image;
+    global.Image = class {
+      constructor() {
+        const img = document.createElement('img');
+        Object.defineProperty(img, 'src', {
+          set(v) {
+            img.setAttribute('src', v);
+            img.onload?.();
+          },
+          get() { return img.getAttribute('src'); }
+        });
+        return img;
+      }
+    };
+
+    const prevW = window.innerWidth;
+    const prevH = window.innerHeight;
+    Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: 300 });
+    Object.defineProperty(window, 'innerHeight', { configurable: true, writable: true, value: 200 });
+
+    const container = document.createElement('div');
+    const card = { id: 'hero-jaina-proudmoore-archmage', name: 'Jaina', text: 'Archmage' };
+    const playerHero = new Hero({ name: 'Player Hero', data: { health: 25 } });
+    const enemyHero = new Hero({ name: 'Enemy Hero', data: { health: 20 } });
+
+    const game = {
+      player: { hero: playerHero, battlefield: { cards: [] }, hand: { cards: [card], size: () => 1 } },
+      opponent: { hero: enemyHero, battlefield: { cards: [] }, hand: { cards: [], size: () => 0 } },
+      resources: { pool: () => 0, available: () => 0 },
+      draw: jest.fn(), resolveCombat: jest.fn(), endTurn: jest.fn(), toggleAttacker: jest.fn(), playFromHand: () => true,
+    };
+
+    renderPlay(container, game);
+
+    const li = container.querySelector(`[data-card-id="${card.id}"]`);
+    li.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, clientX: 290, clientY: 190 }));
+
+    const tooltip = container.querySelector('.card-tooltip');
+    const img = tooltip.querySelector('img');
+    expect(tooltip.style.maxWidth).toBe(`${window.innerWidth - 20}px`);
+    expect(tooltip.style.maxHeight).toBe(`${window.innerHeight - 20}px`);
+    expect(img.style.maxWidth).toBe('100%');
+    expect(img.style.maxHeight).toBe('100%');
+
+    global.Image = OriginalImage;
+    Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: prevW });
+    Object.defineProperty(window, 'innerHeight', { configurable: true, writable: true, value: prevH });
+  });
 });
 
