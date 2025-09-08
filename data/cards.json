@@ -7,7 +7,8 @@
     "keywords": [
       "Freeze",
       "Spell Damage +1 while you control a Water Elemental."
-    ]
+    ],
+    "data": {}
   },
   {
     "id": "hero-thrall-warchief-of-the-horde",
@@ -16,7 +17,8 @@
     "text": "",
     "keywords": [
       "Overload +1 the turn after using Power."
-    ]
+    ],
+    "data": {}
   },
   {
     "id": "hero-varian-wrynn-high-king",
@@ -25,7 +27,8 @@
     "text": "",
     "keywords": [
       "Armor — Starts with 2 Armor."
-    ]
+    ],
+    "data": {}
   },
   {
     "id": "hero-valeera-sanguinar-master-assassin",
@@ -34,7 +37,8 @@
     "text": "",
     "keywords": [
       "Combo — The first Ability you play each turn costs (1) less."
-    ]
+    ],
+    "data": {}
   },
   {
     "id": "hero-tyrande-whisperwind-high-priestess",
@@ -44,7 +48,8 @@
     "keywords": [
       "When you restore HP to full",
       "draw a card (once per turn)."
-    ]
+    ],
+    "data": {}
   },
   {
     "id": "hero-uther-the-lightbringer",
@@ -53,7 +58,8 @@
     "text": "",
     "keywords": [
       "Summon a 1/1 Silver Hand Recruit at 10 total mana spent this game."
-    ]
+    ],
+    "data": {}
   },
   {
     "id": "hero-malfurion-stormrage-archdruid",
@@ -62,7 +68,8 @@
     "text": "",
     "keywords": [
       "Choose One — your Abilities with Choose One gain both if you spent 3+ nature mana this turn."
-    ]
+    ],
+    "data": {}
   },
   {
     "id": "hero-rexxar-beastmaster",
@@ -71,7 +78,8 @@
     "text": "",
     "keywords": [
       "Your Beast allies cost (1) less (minimum 1)."
-    ]
+    ],
+    "data": {}
   },
   {
     "id": "hero-gul-dan-dark-conjurer",
@@ -80,7 +88,8 @@
     "text": "",
     "keywords": [
       "Demons you summon have +1 ATK."
-    ]
+    ],
+    "data": {}
   },
   {
     "id": "spell-fireball",
@@ -90,7 +99,8 @@
     "text": "Deal 6 damage to any target. If target is Frozen, deal 8 instead.",
     "keywords": [
       "Burn — Excess damage to hero becomes a Damage‑over‑Time 1 per turn for 2 turns."
-    ]
+    ],
+    "data": {}
   },
   {
     "id": "spell-water-elemental",
@@ -101,7 +111,8 @@
     "keywords": [
       "Freeze",
       "Elemental"
-    ]
+    ],
+    "data": {}
   },
   {
     "id": "spell-shield-slam",
@@ -111,7 +122,8 @@
     "text": "Deal damage equal to your Armor to a minion.",
     "keywords": [
       "Armor scaling"
-    ]
+    ],
+    "data": {}
   },
   {
     "id": "spell-whirlwind",
@@ -122,7 +134,8 @@
     "keywords": [
       "AoE",
       "Enrage"
-    ]
+    ],
+    "data": {}
   },
   {
     "id": "spell-eviscerate",
@@ -132,7 +145,8 @@
     "text": "Deal 2 damage. Combo: Deal 4 instead.",
     "keywords": [
       "Combo"
-    ]
+    ],
+    "data": {}
   },
   {
     "id": "spell-sap",
@@ -142,7 +156,8 @@
     "text": "Return an enemy ally to its owner’s hand; it costs (1) more next time.",
     "keywords": [
       "Tempo"
-    ]
+    ],
+    "data": {}
   },
   {
     "id": "spell-power-word-shield",
@@ -153,7 +168,8 @@
     "keywords": [
       "Buff",
       "Draw"
-    ]
+    ],
+    "data": {}
   },
   {
     "id": "spell-shadow-word-pain",
@@ -163,7 +179,8 @@
     "text": "Destroy a minion with 3 or less ATK.",
     "keywords": [
       "Removal"
-    ]
+    ],
+    "data": {}
   },
   {
     "id": "spell-consecration",
@@ -174,7 +191,8 @@
     "keywords": [
       "AoE",
       "Recruit synergy"
-    ]
+    ],
+    "data": {}
   },
   {
     "id": "spell-blessing-of-kings",
@@ -184,7 +202,8 @@
     "text": "Give a friendly character +4/+4 until it dies.",
     "keywords": [
       "Buff"
-    ]
+    ],
+    "data": {}
   },
   {
     "id": "spell-lightning-bolt",
@@ -194,7 +213,8 @@
     "text": "Deal 3 damage. Overload (1).",
     "keywords": [
       "Overload"
-    ]
+    ],
+    "data": {}
   },
   {
     "id": "spell-feral-spirit",
@@ -206,7 +226,8 @@
       "Summon",
       "Taunt",
       "Overload"
-    ]
+    ],
+    "data": {}
   },
   {
     "id": "spell-starfire",
@@ -217,7 +238,8 @@
     "keywords": [
       "Draw",
       "Choose One synergy"
-    ]
+    ],
+    "data": {}
   },
   {
     "id": "spell-savage-roar",
@@ -227,7 +249,8 @@
     "text": "Give your hero and allies +2 ATK this turn.",
     "keywords": [
       "Burst"
-    ]
+    ],
+    "data": {}
   },
   {
     "id": "spell-kill-command",
@@ -237,7 +260,8 @@
     "text": "Deal 3 damage; if you control a Beast, deal 5 instead.",
     "keywords": [
       "Beast synergy"
-    ]
+    ],
+    "data": {}
   },
   {
     "id": "spell-explosive-trap",
@@ -248,7 +272,8 @@
     "keywords": [
       "Secret",
       "AoE"
-    ]
+    ],
+    "data": {}
   },
   {
     "id": "spell-hellfire",
@@ -259,7 +284,8 @@
     "keywords": [
       "AoE",
       "Self‑damage"
-    ]
+    ],
+    "data": {}
   },
   {
     "id": "spell-summon-infernal",
@@ -270,7 +296,8 @@
     "keywords": [
       "Demon",
       "AoE"
-    ]
+    ],
+    "data": {}
   },
   {
     "id": "ally-water-elemental-guardian",
@@ -282,7 +309,10 @@
       "Freeze",
       "Elemental"
     ],
-    "stats": "3 ATK / 6 HP"
+    "data": {
+      "attack": 3,
+      "health": 6
+    }
   },
   {
     "id": "ally-silver-hand-lieutenant",
@@ -293,7 +323,10 @@
     "keywords": [
       "Aura"
     ],
-    "stats": "2 ATK / 3 HP"
+    "data": {
+      "attack": 2,
+      "health": 3
+    }
   },
   {
     "id": "ally-orgrimmar-grunt",
@@ -304,7 +337,10 @@
     "keywords": [
       "Taunt"
     ],
-    "stats": "2 ATK / 2 HP"
+    "data": {
+      "attack": 2,
+      "health": 2
+    }
   },
   {
     "id": "ally-jungle-stalker",
@@ -316,7 +352,10 @@
       "Stealth",
       "Beast"
     ],
-    "stats": "5 ATK / 3 HP"
+    "data": {
+      "attack": 5,
+      "health": 3
+    }
   },
   {
     "id": "ally-northshire-acolyte",
@@ -327,7 +366,10 @@
     "keywords": [
       "Draw"
     ],
-    "stats": "1 ATK / 3 HP"
+    "data": {
+      "attack": 1,
+      "health": 3
+    }
   },
   {
     "id": "ally-imp-swarm-caller",
@@ -339,7 +381,10 @@
       "Demon",
       "Deathrattle"
     ],
-    "stats": "3 ATK / 2 HP"
+    "data": {
+      "attack": 3,
+      "health": 2
+    }
   },
   {
     "id": "ally-darnassian-huntress",
@@ -351,7 +396,10 @@
       "Battlecry",
       "Rush"
     ],
-    "stats": "2 ATK / 4 HP"
+    "data": {
+      "attack": 2,
+      "health": 4
+    }
   },
   {
     "id": "ally-stormforged-totemic",
@@ -363,7 +411,10 @@
       "Totem",
       "Buff"
     ],
-    "stats": "0 ATK / 3 HP"
+    "data": {
+      "attack": 0,
+      "health": 3
+    }
   },
   {
     "id": "ally-gnomish-tinkerer",
@@ -375,7 +426,10 @@
       "Discover",
       "Tutor"
     ],
-    "stats": "2 ATK / 1 HP"
+    "data": {
+      "attack": 2,
+      "health": 1
+    }
   },
   {
     "id": "ally-argent-healer",
@@ -386,7 +440,10 @@
     "keywords": [
       "Heal"
     ],
-    "stats": "3 ATK / 4 HP"
+    "data": {
+      "attack": 3,
+      "health": 4
+    }
   },
   {
     "id": "ally-warsong-raider",
@@ -397,7 +454,10 @@
     "keywords": [
       "Enrage"
     ],
-    "stats": "3 ATK / 3 HP"
+    "data": {
+      "attack": 3,
+      "health": 3
+    }
   },
   {
     "id": "ally-scarlet-sorcerer",
@@ -408,7 +468,10 @@
     "keywords": [
       "Aura"
     ],
-    "stats": "3 ATK / 3 HP"
+    "data": {
+      "attack": 3,
+      "health": 3
+    }
   },
   {
     "id": "ally-stone-bark-treant",
@@ -420,7 +483,10 @@
       "Taunt",
       "Treant"
     ],
-    "stats": "4 ATK / 6 HP"
+    "data": {
+      "attack": 4,
+      "health": 6
+    }
   },
   {
     "id": "ally-defias-footpad",
@@ -432,7 +498,10 @@
       "Combo",
       "Token"
     ],
-    "stats": "1 ATK / 1 HP"
+    "data": {
+      "attack": 1,
+      "health": 1
+    }
   },
   {
     "id": "equipment-ashkandi-greatsword-of-the-brotherhood",
@@ -444,7 +513,7 @@
       "Weapon",
       "Loot"
     ],
-    "stats": "+5 ATK, Durability 3"
+    "data": {}
   },
   {
     "id": "equipment-core-hound-tooth",
@@ -456,7 +525,7 @@
       "Weapon",
       "Combo"
     ],
-    "stats": "+3 ATK, Durability 2"
+    "data": {}
   },
   {
     "id": "equipment-benediction",
@@ -468,7 +537,7 @@
       "Spell Damage",
       "Sustain"
     ],
-    "stats": "+2 Spell Power, Durability 3"
+    "data": {}
   },
   {
     "id": "equipment-stormshield-bulwark",
@@ -480,7 +549,7 @@
       "Armor",
       "Shield"
     ],
-    "stats": "+2 Armor, Durability 3"
+    "data": {}
   },
   {
     "id": "equipment-wildheart-spaulders",
@@ -492,7 +561,7 @@
       "Armor",
       "Choose One synergy"
     ],
-    "stats": "+1 Armor"
+    "data": {}
   },
   {
     "id": "equipment-arcanist-s-signet",
@@ -504,7 +573,7 @@
       "Trinket",
       "Spell Damage"
     ],
-    "stats": "Passive"
+    "data": {}
   },
   {
     "id": "equipment-demonheart-grimoire",
@@ -516,7 +585,7 @@
       "Demon",
       "Summon buff"
     ],
-    "stats": "Passive"
+    "data": {}
   },
   {
     "id": "equipment-masterwork-longbow",
@@ -528,7 +597,7 @@
       "Weapon",
       "Trap synergy"
     ],
-    "stats": "+3 ATK, Durability 3"
+    "data": {}
   },
   {
     "id": "quest-purge-the-scourge",
@@ -536,7 +605,8 @@
     "type": "quest",
     "cost": 1,
     "text": "",
-    "keywords": []
+    "keywords": [],
+    "data": {}
   },
   {
     "id": "quest-trial-of-the-elements",
@@ -544,7 +614,8 @@
     "type": "quest",
     "cost": 1,
     "text": "",
-    "keywords": []
+    "keywords": [],
+    "data": {}
   },
   {
     "id": "quest-bounty-the-defias-kingpin",
@@ -552,7 +623,8 @@
     "type": "quest",
     "cost": 1,
     "text": "",
-    "keywords": []
+    "keywords": [],
+    "data": {}
   },
   {
     "id": "quest-hunt-the-great-kodo",
@@ -560,7 +632,8 @@
     "type": "quest",
     "cost": 1,
     "text": "",
-    "keywords": []
+    "keywords": [],
+    "data": {}
   },
   {
     "id": "quest-forge-the-relic",
@@ -568,7 +641,8 @@
     "type": "quest",
     "cost": 1,
     "text": "",
-    "keywords": []
+    "keywords": [],
+    "data": {}
   },
   {
     "id": "quest-call-to-arms",
@@ -576,7 +650,8 @@
     "type": "quest",
     "cost": 1,
     "text": "",
-    "keywords": []
+    "keywords": [],
+    "data": {}
   },
   {
     "id": "consumable-healing-potion",
@@ -586,7 +661,8 @@
     "text": "Restore 5 HP to a character.",
     "keywords": [
       "Heal"
-    ]
+    ],
+    "data": {}
   },
   {
     "id": "consumable-mana-potion",
@@ -597,7 +673,8 @@
     "keywords": [
       "Resource",
       "Overload"
-    ]
+    ],
+    "data": {}
   },
   {
     "id": "consumable-scroll-of-fortitude",
@@ -608,7 +685,8 @@
     "keywords": [
       "Team buff",
       "Cantrip"
-    ]
+    ],
+    "data": {}
   },
   {
     "id": "consumable-savory-deviate-delight",
@@ -619,7 +697,8 @@
     "keywords": [
       "Transform",
       "Burst"
-    ]
+    ],
+    "data": {}
   },
   {
     "id": "consumable-elixir-of-firepower",
@@ -629,6 +708,7 @@
     "text": "Your Spells deal +1 damage this turn.",
     "keywords": [
       "Spell Damage"
-    ]
+    ],
+    "data": {}
   }
 ]

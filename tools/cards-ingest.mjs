@@ -40,7 +40,8 @@ function parse(md) {
         cost: undefined,
         text: '',
         keywords: [],
-        stats: undefined
+        stats: undefined,
+        data: {}
       };
 
       for (const line of blockLines) {
@@ -63,7 +64,13 @@ function parse(md) {
         } else if (keyLc.includes('keywords')) {
           card.keywords = value.split(',').map(k => k.trim()).filter(Boolean);
         } else if (keyLc.includes('stats')) {
-          card.stats = value;
+          const statsMatch = value.match(/(\d+)\s*ATK\s*\/\s*(\d+)\s*HP/i);
+          if (statsMatch) {
+            card.data = {
+              attack: parseInt(statsMatch[1], 10),
+              health: parseInt(statsMatch[2], 10)
+            };
+          }
         } else if (keyLc.includes('power')) {
           card.text = value; // Use power as text for heroes
         }
