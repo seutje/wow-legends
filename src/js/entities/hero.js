@@ -1,7 +1,7 @@
 import { shortId } from '../utils/id.js';
 
 export default class Hero {
-  constructor({ id, name = 'Hero', data = {}, attack = 0, health = 30, armor = 0, keywords = [], text = '', effects = [] } = {}) {
+  constructor({ id, name = 'Hero', data = {}, attack = 0, health = 30, armor = 0, keywords = [], text = '', effects = [], active = effects, passive = [] } = {}) {
     this.id = id || shortId('hero');
     this.name = name;
     if (data) {
@@ -11,9 +11,14 @@ export default class Hero {
     }
     this.data = { attack, health, armor };
     this.keywords = keywords;
-    this.effects = effects;
+    this.active = active; // hero power (active ability)
+    this.passive = passive; // passive effects applied automatically
     this.text = text;
     this.equipment = [];
+    this.powerUsed = false; // track hero power usage per turn
+
+    // Backwards compatibility: some code may still reference `.effects`
+    this.effects = this.active;
   }
 
   totalAttack() {
