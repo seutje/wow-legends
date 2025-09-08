@@ -8,7 +8,7 @@
     "dev:serve": "http-server . -p 8000 -c-1",
     "dev:watch": "node tools/dev-watch.mjs",
     "dev": "npm run dev:watch & npm run dev:serve",
-    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --setupFilesAfterEnv=./jest.setup.js",
     "test:coverage": "npm run test -- --coverage",
     "simulate": "node tools/simulate.mjs",
     "ingest": "node tools/cards-ingest.mjs",
