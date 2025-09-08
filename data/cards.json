@@ -1132,6 +1132,11 @@
     "cost": 0,
     "effects": [
       {
+        "type": "restore",
+        "amount": 2,
+        "requiresSpent": 2
+      },
+      {
         "type": "overload",
         "amount": 1
       }

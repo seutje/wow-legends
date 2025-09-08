@@ -147,6 +147,16 @@ describe.each(effectCards)('$id executes its effect', (card) => {
         expect(enemy.data.health).toBe(1);
         break;
       }
+      case 'restore': {
+        g.turns.turn = 10;
+        const avail = g.resources.available(g.player);
+        const spent = effect.requiresSpent || 0;
+        g.resources._pool.set(g.player, avail - spent);
+        await g.playFromHand(g.player, card.id);
+        const expected = Math.min(avail, avail - spent + effect.amount);
+        expect(g.resources.pool(g.player)).toBe(expected);
+        break;
+      }
       case 'overload': {
         const overloadBefore = g.resources._overloadNext.get(g.player) || 0;
         await g.playFromHand(g.player, card.id);
