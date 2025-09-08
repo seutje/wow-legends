@@ -148,8 +148,8 @@ export default class Game {
     if (!this.resources.pay(player, cost)) return false;
 
     // Execute the card's effect
-    if (card.data.text) {
-      this.effects.execute(card.data.text, { player: player, card: card });
+    if (card.effects && card.effects.length > 0) {
+      this.effects.execute(card.effects, { player: player, card: card });
     }
 
     // Move the card to the appropriate zone

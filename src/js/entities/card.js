@@ -17,7 +17,7 @@ export class CardEntity {
     this.cost = props.cost ?? 0;
     this.keywords = props.keywords ? Array.from(props.keywords) : [];
     this.data = props.data ? { ...props.data } : {};
-    this.text = props.text; // Add this line
+    this.effects = props.effects; // Add this line
   }
 }
 

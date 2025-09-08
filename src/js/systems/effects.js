@@ -12,40 +12,55 @@ export class EffectSystem {
     });
   }
 
-  register(regex, handler) {
-    this.effectRegistry.set(regex, handler);
-  }
+  execute(cardEffects, context) {
+    for (const effect of cardEffects) {
+      switch (effect.type) {
+        case 'damage':
+          // Implement damage logic
+          console.log(`Dealing ${effect.amount} damage to ${effect.target}`);
+          break;
+        case 'summon':
+          // Implement summon logic
+          console.log(`Summoning ${effect.count} x ${effect.unit.name}`);
+          break;
+        case 'buff':
+          // Implement buff logic
+          console.log(`Buffing ${effect.target} with +${effect.amount} ${effect.property}`);
+          // This is where the Savage Roar logic will go
+          if (effect.target === 'allies' && effect.property === 'attack') {
+            const amount = effect.amount;
+            const heroEffect = {
+              revert: () => { context.player.hero.data.attack -= amount; }
+            };
+            this.temporaryEffects.push(heroEffect);
+            context.player.hero.data.attack += amount;
 
-  execute(effectText, context) {
-    for (const [regex, handler] of this.effectRegistry.entries()) {
-      const match = effectText.match(regex);
-      if (match) {
-        handler(this.game, context, match);
-        return;
+            for (const ally of context.player.battlefield.cards) {
+              const allyEffect = {
+                revert: () => { ally.data.attack -= amount; }
+              };
+              this.temporaryEffects.push(allyEffect);
+              ally.data.attack += amount;
+            }
+            console.log(`Gave +${amount} ATK to hero and allies.`);
+          }
+          break;
+        case 'overload':
+          // Implement overload logic
+          console.log(`Applying ${effect.amount} overload`);
+          break;
+        case 'rawText':
+          console.log(`Raw text effect: ${effect.text}`);
+          break;
+        default:
+          console.log(`Unknown effect type: ${effect.type}`);
       }
     }
-    console.log(`No handler found for effect: ${effectText}`);
   }
 
   registerDefaults() {
-    this.register(/Give your hero and allies \+(\d+) ATK this turn/, (game, context, match) => {
-      const amount = parseInt(match[1], 10);
-      
-      const heroEffect = {
-        revert: () => { context.player.hero.data.attack -= amount; }
-      };
-      this.temporaryEffects.push(heroEffect);
-      context.player.hero.data.attack += amount;
-
-      for (const ally of context.player.battlefield.cards) {
-        const allyEffect = {
-          revert: () => { ally.data.attack -= amount; }
-        };
-        this.temporaryEffects.push(allyEffect);
-        ally.data.attack += amount;
-      }
-      console.log(`Gave +${amount} ATK to hero and allies.`);
-    });
+    // Remove the old regex-based registration
+    // this.register(/Give your hero and allies \+(\d+) ATK this turn/, (game, context, match) => { ... });
   }
 
   cleanupTemporaryEffects() {
