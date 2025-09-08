@@ -28,6 +28,12 @@ export default class Game {
     this.turns.bus.on('turn:start', ({ player }) => {
       const bonus = player?.hero?.data?.nextSpellDamageBonus;
       if (bonus?.eachTurn) bonus.used = false;
+      if (player?.hero) {
+        player.hero.powerUsed = false;
+        if (player.hero.passive?.length) {
+          this.effects.execute(player.hero.passive, { game: this, player, card: player.hero });
+        }
+      }
     });
 
     // Players
@@ -120,6 +126,15 @@ export default class Game {
     const drawn = player.library.draw(n);
     for (const c of drawn) player.hand.add(c);
     return drawn.length;
+  }
+
+  async useHeroPower(player) {
+    const hero = player?.hero;
+    if (!hero || hero.powerUsed) return false;
+    if (!hero.active?.length) return false;
+    await this.effects.execute(hero.active, { game: this, player, card: hero });
+    hero.powerUsed = true;
+    return true;
   }
 
   addCardToHand(cardId) {
