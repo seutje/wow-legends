@@ -31,13 +31,46 @@ describe.each(effectCards)('$id executes its effect', (card) => {
         await g.effects.execute(card.effects, { game: g, player: g.player, card: g.player.hero });
         expect(g.player.hero.data.health).toBe(20 + effect.amount);
       } else if (effect.type === 'damage') {
-        const before = g.opponent.hero.data.health;
-        await g.effects.execute(card.effects, { game: g, player: g.player, card: g.player.hero });
-        expect(g.opponent.hero.data.health).toBe(before - effect.amount);
+        if (effect.target === 'upToThreeTargets') {
+          const targets = [
+            new Card({ name: 'E1', type: 'ally', data: { attack: 0, health: 2 }, keywords: [] }),
+            new Card({ name: 'E2', type: 'ally', data: { attack: 0, health: 2 }, keywords: [] }),
+            new Card({ name: 'E3', type: 'ally', data: { attack: 0, health: 2 }, keywords: [] }),
+          ];
+          targets.forEach(t => g.opponent.battlefield.add(t));
+          const choices = [...targets];
+          g.promptTarget = async () => choices.shift();
+          await g.effects.execute(card.effects, { game: g, player: g.player, card: g.player.hero });
+          targets.forEach(t => expect(t.data.health).toBe(1));
+        } else {
+          const enemy = new Card({ name: 'Enemy', type: 'ally', data: { attack: 0, health: 2 }, keywords: [] });
+          g.opponent.battlefield.add(enemy);
+          g.promptTarget = async () => enemy;
+          const before = enemy.data.health;
+          await g.effects.execute(card.effects, { game: g, player: g.player, card: g.player.hero });
+          expect(enemy.data.health).toBe(before - effect.amount);
+          if (effect.freeze) expect(enemy.data.freezeTurns).toBe(effect.freeze);
+        }
       } else if (effect.type === 'draw') {
         const handBefore = g.player.hand.cards.length;
         await g.effects.execute(card.effects, { game: g, player: g.player, card: g.player.hero });
         expect(g.player.hand.cards.length).toBe(handBefore + effect.count);
+      } else if (effect.type === 'buff') {
+        if (effect.target === 'character') {
+          const ally = new Card({ name: 'Ally', type: 'ally', data: { attack: 1, health: 1 }, keywords: [] });
+          g.player.battlefield.add(ally);
+          g.promptTarget = async () => ally;
+          const before = ally.data[effect.property];
+          await g.effects.execute(card.effects, { game: g, player: g.player, card: g.player.hero });
+          expect(ally.data[effect.property]).toBe(before + effect.amount);
+        } else {
+          const before = g.player.hero.data[effect.property] || 0;
+          await g.effects.execute(card.effects, { game: g, player: g.player, card: g.player.hero });
+          expect(g.player.hero.data[effect.property]).toBe(before + effect.amount);
+        }
+      } else if (effect.type === 'equip') {
+        await g.effects.execute(card.effects, { game: g, player: g.player, card: g.player.hero });
+        expect(g.player.hero.equipment.length).toBe(1);
       }
       return;
     }
@@ -59,15 +92,21 @@ describe.each(effectCards)('$id executes its effect', (card) => {
           g.opponent.battlefield.add(enemy);
           g.promptTarget = async () => enemy;
           const before = enemy.data.health;
+          if (effect.beastBonus) {
+            g.player.battlefield.add(new Card({ name: 'Beast', type: 'ally', data: { attack: 0, health: 1 }, keywords: ['Beast'] }));
+          }
           await g.playFromHand(g.player, card.id);
-          expect(enemy.data.health).toBe(before - effect.amount);
+          const dmg = effect.amount + (effect.beastBonus ? effect.beastBonus : 0);
+          expect(enemy.data.health).toBe(before - dmg);
+          if (effect.freeze) expect(enemy.data.freezeTurns).toBe(effect.freeze);
         } else {
           const oppBefore = g.opponent.hero.data.health;
           const playerBefore = g.player.hero.data.health;
           await g.playFromHand(g.player, card.id);
-          expect(g.opponent.hero.data.health).toBe(oppBefore - effect.amount);
+          const dmg = effect.amount + (effect.beastBonus ? effect.beastBonus : 0);
+          expect(g.opponent.hero.data.health).toBe(oppBefore - dmg);
           if (effect.target === 'allCharacters') {
-            expect(g.player.hero.data.health).toBe(playerBefore - effect.amount);
+            expect(g.player.hero.data.health).toBe(playerBefore - dmg);
           }
         }
         break;
@@ -84,10 +123,28 @@ describe.each(effectCards)('$id executes its effect', (card) => {
         break;
       }
       case 'buff': {
-        g.player.battlefield.add(new Card({ name: 'Ally', type: 'ally', data: { attack: 1, health: 1 }, keywords: [] }));
-        const heroAttack = g.player.hero.data.attack || 0;
+        if (effect.target === 'character') {
+          const ally = new Card({ name: 'Ally', type: 'ally', data: { attack: 1, health: 1 }, keywords: [] });
+          g.player.battlefield.add(ally);
+          g.promptTarget = async () => ally;
+          const before = ally.data[effect.property];
+          await g.playFromHand(g.player, card.id);
+          expect(ally.data[effect.property]).toBe(before + effect.amount);
+        } else {
+          g.player.battlefield.add(new Card({ name: 'Ally', type: 'ally', data: { attack: 1, health: 1 }, keywords: [] }));
+          const heroProp = g.player.hero.data[effect.property] || 0;
+          await g.playFromHand(g.player, card.id);
+          expect(g.player.hero.data[effect.property]).toBe(heroProp + effect.amount);
+        }
+        break;
+      }
+      case 'damageArmor': {
+        g.player.hero.data.armor = 5;
+        const enemy = new Card({ name: 'Enemy', type: 'ally', data: { attack: 0, health: 6 }, keywords: [] });
+        g.opponent.battlefield.add(enemy);
+        g.promptTarget = async () => enemy;
         await g.playFromHand(g.player, card.id);
-        expect(g.player.hero.data.attack).toBe(heroAttack + effect.amount);
+        expect(enemy.data.health).toBe(1);
         break;
       }
       case 'overload': {

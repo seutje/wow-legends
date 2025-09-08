@@ -5,8 +5,10 @@
     "type": "hero",
     "effects": [
       {
-        "type": "rawText",
-        "text": "Frostbolt — Deal 1 damage; if target survives, Freeze it next turn."
+        "type": "damage",
+        "target": "character",
+        "amount": 1,
+        "freeze": 1
       }
     ],
     "keywords": [
@@ -22,8 +24,9 @@
     "type": "hero",
     "effects": [
       {
-        "type": "rawText",
-        "text": "Chain Spark — Deal 1 damage to up to three different targets."
+        "type": "damage",
+        "target": "upToThreeTargets",
+        "amount": 1
       }
     ],
     "keywords": [
@@ -38,8 +41,11 @@
     "type": "hero",
     "effects": [
       {
-        "type": "rawText",
-        "text": "Heroic Strike — Your hero gains +1 ATK this turn."
+        "type": "buff",
+        "target": "hero",
+        "property": "attack",
+        "amount": 1,
+        "duration": "thisTurn"
       }
     ],
     "keywords": [
@@ -54,8 +60,12 @@
     "type": "hero",
     "effects": [
       {
-        "type": "rawText",
-        "text": "Dagger Mastery — Equip 1/1 Dagger (Durability 2)."
+        "type": "equip",
+        "item": {
+          "name": "Dagger",
+          "attack": 1,
+          "durability": 2
+        }
       }
     ],
     "keywords": [
@@ -88,8 +98,18 @@
     "type": "hero",
     "effects": [
       {
-        "type": "rawText",
-        "text": "Blessing — Give a friendly character +1/+1 until end of turn; if it attacks, keep the buff."
+        "type": "buff",
+        "target": "character",
+        "property": "attack",
+        "amount": 1,
+        "duration": "thisTurn"
+      },
+      {
+        "type": "buff",
+        "target": "character",
+        "property": "health",
+        "amount": 1,
+        "duration": "thisTurn"
       }
     ],
     "keywords": [
@@ -104,8 +124,17 @@
     "type": "hero",
     "effects": [
       {
-        "type": "rawText",
-        "text": "Shapeshift — Choose one: +1 ATK this turn; or gain 2 Armor."
+        "type": "buff",
+        "target": "hero",
+        "property": "attack",
+        "amount": 1,
+        "duration": "thisTurn"
+      },
+      {
+        "type": "buff",
+        "target": "hero",
+        "property": "armor",
+        "amount": 2
       }
     ],
     "keywords": [
@@ -196,8 +225,8 @@
     "cost": 1,
     "effects": [
       {
-        "type": "rawText",
-        "text": "Deal damage equal to your Armor to a minion."
+        "type": "damageArmor",
+        "target": "minion"
       }
     ],
     "keywords": [
@@ -232,8 +261,9 @@
     "cost": 2,
     "effects": [
       {
-        "type": "rawText",
-        "text": "Deal 2 damage. Combo: Deal 4 instead."
+        "type": "damage",
+        "target": "any",
+        "amount": 2
       }
     ],
     "keywords": [
@@ -325,8 +355,16 @@
     "cost": 4,
     "effects": [
       {
-        "type": "rawText",
-        "text": "Give a friendly character +4/+4 until it dies."
+        "type": "buff",
+        "target": "character",
+        "property": "attack",
+        "amount": 4
+      },
+      {
+        "type": "buff",
+        "target": "character",
+        "property": "health",
+        "amount": 4
       }
     ],
     "keywords": [
@@ -431,8 +469,10 @@
     "cost": 3,
     "effects": [
       {
-        "type": "rawText",
-        "text": "Deal 3 damage; if you control a Beast, deal 5 instead."
+        "type": "damage",
+        "target": "any",
+        "amount": 3,
+        "beastBonus": 2
       }
     ],
     "keywords": [

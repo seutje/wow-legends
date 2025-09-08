@@ -1,4 +1,6 @@
 import Card from '../entities/card.js';
+import Equipment from '../entities/equipment.js';
+import { freezeTarget } from './keywords.js';
 
 export class EffectSystem {
   constructor(game) {
@@ -25,7 +27,7 @@ export class EffectSystem {
           this.summonUnit(effect, context);
           break;
         case 'buff':
-          this.applyBuff(effect, context);
+          await this.applyBuff(effect, context);
           break;
         case 'overload':
           this.applyOverload(effect, context);
@@ -48,6 +50,12 @@ export class EffectSystem {
         case 'transform':
           this.transformCharacter(effect, context);
           break;
+        case 'equip':
+          this.equipItem(effect, context);
+          break;
+        case 'damageArmor':
+          await this.dealDamage({ target: effect.target, amount: context.player.hero.data.armor }, context);
+          break;
         default:
           console.log(`Unknown effect type: ${effect.type}`);
       }
@@ -55,8 +63,13 @@ export class EffectSystem {
   }
 
   async dealDamage(effect, context) {
-    const { target, amount } = effect;
+    const { target, amount, freeze, beastBonus } = effect;
     const { game, player } = context;
+    let dmgAmount = amount;
+    if (beastBonus) {
+      const hasBeast = player.battlefield.cards.some(c => c.keywords?.includes('Beast'));
+      if (hasBeast) dmgAmount += beastBonus;
+    }
 
     let actualTargets = [];
 
@@ -81,6 +94,22 @@ export class EffectSystem {
         ];
         const chosen = await game.promptTarget(candidates);
         if (chosen) actualTargets.push(chosen);
+        break;
+      }
+      case 'upToThreeTargets': {
+        const candidates = [
+          game.opponent.hero,
+          ...game.opponent.battlefield.cards,
+          player.hero,
+          ...player.battlefield.cards,
+        ];
+        const chosen = new Set();
+        for (let i = 0; i < 3; i++) {
+          const pick = await game.promptTarget(candidates.filter(c => !chosen.has(c)));
+          if (!pick) break;
+          chosen.add(pick);
+        }
+        actualTargets.push(...chosen);
         break;
       }
       case 'allCharacters':
@@ -118,12 +147,14 @@ export class EffectSystem {
 
     for (const t of actualTargets) {
       if (t.data && t.data.health != null) {
-        t.data.health -= amount;
-        console.log(`${t.name} took ${amount} damage. Remaining health: ${t.data.health}`);
+        t.data.health -= dmgAmount;
+        console.log(`${t.name} took ${dmgAmount} damage. Remaining health: ${t.data.health}`);
+        if (t.data.health > 0 && freeze) freezeTarget(t, freeze);
         if (t.data.health <= 0) t.data.dead = true;
       } else if (t.health != null) {
-        t.health -= amount;
-        console.log(`${t.name} took ${amount} damage. Remaining health: ${t.health}`);
+        t.health -= dmgAmount;
+        console.log(`${t.name} took ${dmgAmount} damage. Remaining health: ${t.health}`);
+        if (t.health > 0 && freeze) freezeTarget(t, freeze);
       }
     }
 
@@ -255,7 +286,7 @@ export class EffectSystem {
     console.log('Cleaned up temporary effects.');
   }
 
-  applyBuff(effect, context) {
+  async applyBuff(effect, context) {
     const { target, property, amount, duration } = effect;
     const { player, game } = context;
 
@@ -269,11 +300,12 @@ export class EffectSystem {
       case 'hero':
         actualTargets.push(player.hero);
         break;
-      case 'character':
-        // This requires target selection from the player.
-        // For now, I'll just target the player's hero.
-        actualTargets.push(player.hero);
+      case 'character': {
+        const candidates = [player.hero, ...player.battlefield.cards];
+        const chosen = await game.promptTarget(candidates);
+        if (chosen) actualTargets.push(chosen);
         break;
+      }
       default:
         console.warn(`Unknown buff target: ${target}`);
         return;
@@ -310,6 +342,14 @@ export class EffectSystem {
       }
       console.log(`Applied +${amount} ${property} to ${t.name}.`);
     }
+  }
+
+  equipItem(effect, context) {
+    const { item } = effect;
+    const { player } = context;
+    const eq = new Equipment(item);
+    player.equip(eq);
+    console.log(`Equipped ${eq.name}.`);
   }
 
   applyOverload(effect, context) {
