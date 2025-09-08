@@ -15,11 +15,11 @@ export class EffectSystem {
     });
   }
 
-  execute(cardEffects, context) {
+  async execute(cardEffects, context) {
     for (const effect of cardEffects) {
       switch (effect.type) {
         case 'damage':
-          this.dealDamage(effect, context);
+          await this.dealDamage(effect, context);
           break;
         case 'summon':
           this.summonUnit(effect, context);
@@ -54,18 +54,35 @@ export class EffectSystem {
     }
   }
 
-  dealDamage(effect, context) {
+  async dealDamage(effect, context) {
     const { target, amount } = effect;
-    const { game, player, card } = context;
+    const { game, player } = context;
 
     let actualTargets = [];
 
     switch (target) {
-      case 'any':
-        // This requires target selection from the player.
-        // For now, I'll just target the opponent's hero.
-        actualTargets.push(game.opponent.hero);
+      case 'any': {
+        const candidates = [
+          game.opponent.hero,
+          ...game.opponent.battlefield.cards,
+          player.hero,
+          ...player.battlefield.cards,
+        ];
+        const chosen = await game.promptTarget(candidates);
+        if (chosen) actualTargets.push(chosen);
         break;
+      }
+      case 'character': {
+        const candidates = [
+          player.hero,
+          game.opponent.hero,
+          ...player.battlefield.cards,
+          ...game.opponent.battlefield.cards,
+        ];
+        const chosen = await game.promptTarget(candidates);
+        if (chosen) actualTargets.push(chosen);
+        break;
+      }
       case 'allCharacters':
         actualTargets.push(player.hero);
         actualTargets.push(game.opponent.hero);
@@ -76,20 +93,24 @@ export class EffectSystem {
         actualTargets.push(game.opponent.hero);
         actualTargets.push(...game.opponent.battlefield.cards);
         break;
-      case 'minion':
-        // This requires target selection from the player.
-        // For now, I'll just target a random enemy minion if available, otherwise opponent hero.
-        if (game.opponent.battlefield.cards.length > 0) {
-          actualTargets.push(game.rng.pick(game.opponent.battlefield.cards));
-        } else {
-          actualTargets.push(game.opponent.hero);
-        }
+      case 'minion': {
+        const candidates = [
+          ...player.battlefield.cards,
+          ...game.opponent.battlefield.cards,
+        ];
+        const chosen = await game.promptTarget(candidates);
+        if (chosen) actualTargets.push(chosen);
         break;
-      case 'enemyHeroOrMinionWithoutTaunt':
-        // This requires target selection from the player.
-        // For now, I'll just target opponent hero.
-        actualTargets.push(game.opponent.hero);
+      }
+      case 'enemyHeroOrMinionWithoutTaunt': {
+        const candidates = [
+          game.opponent.hero,
+          ...game.opponent.battlefield.cards.filter(c => !c.keywords?.includes('Taunt')),
+        ];
+        const chosen = await game.promptTarget(candidates);
+        if (chosen) actualTargets.push(chosen);
         break;
+      }
       default:
         console.warn(`Unknown damage target: ${target}`);
         return;
@@ -100,7 +121,7 @@ export class EffectSystem {
         t.data.health -= amount;
         console.log(`${t.name} took ${amount} damage. Remaining health: ${t.data.health}`);
         if (t.data.health <= 0) t.data.dead = true;
-      } else if (t.health != null) { // For hero
+      } else if (t.health != null) {
         t.health -= amount;
         console.log(`${t.name} took ${amount} damage. Remaining health: ${t.health}`);
       }
