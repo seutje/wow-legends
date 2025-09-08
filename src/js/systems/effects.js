@@ -32,6 +32,9 @@ export class EffectSystem {
         case 'overload':
           this.applyOverload(effect, context);
           break;
+        case 'restore':
+          this.restoreResources(effect, context);
+          break;
         case 'rawText':
           console.warn(`Raw text effect (not implemented): ${effect.text}`);
           break;
@@ -363,6 +366,16 @@ export class EffectSystem {
     console.log('applyOverload: game.resources', game.resources);
     game.resources.addOverloadNextTurn(player, amount);
     console.log(`Applied ${amount} overload to ${player.name}.`);
+  }
+
+  restoreResources(effect, context) {
+    const { amount, requiresSpent } = effect;
+    const { game, player } = context;
+    if (requiresSpent) {
+      const used = game.resources.available(player) - game.resources.pool(player);
+      if (used < requiresSpent) return;
+    }
+    game.resources.restore(player, amount);
   }
 }
 

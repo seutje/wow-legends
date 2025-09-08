@@ -33,6 +33,14 @@ export class ResourceSystem {
     return true;
   }
 
+  restore(player, amount) {
+    const avail = this.available(player);
+    const p = this.pool(player);
+    const missing = avail - p;
+    if (missing <= 0) return;
+    this._pool.set(player, p + Math.min(missing, amount));
+  }
+
   addOverloadNextTurn(player, amount) {
     const cur = this._overloadNext.get(player) || 0;
     this._overloadNext.set(player, cur + amount);
