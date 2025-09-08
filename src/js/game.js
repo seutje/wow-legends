@@ -145,7 +145,7 @@ export default class Game {
 
     // Execute the card's effect
     if (card.effects && card.effects.length > 0) {
-      this.effects.execute(card.effects, { player: player, card: card });
+      this.effects.execute(card.effects, { game: this, player: player, card: card });
     }
 
     // Move the card to the appropriate zone

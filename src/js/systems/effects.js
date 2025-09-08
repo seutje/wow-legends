@@ -3,6 +3,7 @@ import Card from '../entities/card.js';
 export class EffectSystem {
   constructor(game) {
     this.game = game;
+    console.log('EffectSystem constructor: game object', this.game);
     this.effectRegistry = new Map();
     this.temporaryEffects = [];
     this.registerDefaults();
@@ -289,6 +290,8 @@ export class EffectSystem {
   applyOverload(effect, context) {
     const { amount } = effect;
     const { player, game } = context;
+    console.log('applyOverload: game object', game);
+    console.log('applyOverload: game.resources', game.resources);
     game.resources.addOverloadNextTurn(player, amount);
     console.log(`Applied ${amount} overload to ${player.name}.`);
   }
