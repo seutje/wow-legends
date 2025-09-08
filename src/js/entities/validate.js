@@ -1,6 +1,6 @@
 import { invariant } from '../utils/assert.js';
 
-const validTypes = new Set(['ally','spell','equipment','quest','consumable']);
+const validTypes = new Set(['hero', 'ally','spell','equipment','quest','consumable']);
 
 export function validateCardShape(obj) {
   const errs = [];
