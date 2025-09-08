@@ -25,6 +25,12 @@ export default class Game {
     this.effects = new EffectSystem(this);
     this.rng = new RNG();
 
+    this.turns.bus.on('turn:start', ({ player }) => {
+      if (player?.hero?.equipment?.some(eq => eq.id === 'equipment-arcanist-s-signet')) {
+        player.hero.data.arcanistsSignetUsed = false;
+      }
+    });
+
     // Players
     this.player = new Player({ name: 'You' });
     this.opponent = new Player({ name: 'AI' });
@@ -163,9 +169,24 @@ export default class Game {
     const cost = card.cost || 0;
     if (!this.resources.pay(player, cost)) return false;
 
+    let signetApplied = false;
+    if (
+      card.type === 'spell' &&
+      player.hero.equipment?.some(eq => eq.id === 'equipment-arcanist-s-signet') &&
+      !player.hero.data.arcanistsSignetUsed
+    ) {
+      player.hero.data.spellDamage = (player.hero.data.spellDamage || 0) + 1;
+      player.hero.data.arcanistsSignetUsed = true;
+      signetApplied = true;
+    }
+
     // Execute the card's effect
     if (card.effects && card.effects.length > 0) {
       await this.effects.execute(card.effects, { game: this, player: player, card: card });
+    }
+
+    if (signetApplied) {
+      player.hero.data.spellDamage -= 1;
     }
 
     // Move the card to the appropriate zone
