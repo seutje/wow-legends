@@ -44,6 +44,9 @@ export class EffectSystem {
         case 'draw':
           this.drawCard(effect, context);
           break;
+        case 'playRandomConsumableFromLibrary':
+          await this.playRandomConsumableFromLibrary(effect, context);
+          break;
         case 'destroy':
           this.destroyMinion(effect, context);
           break;
@@ -281,6 +284,19 @@ export class EffectSystem {
     } else {
       console.log('No player ally found to transform.');
     }
+  }
+
+  async playRandomConsumableFromLibrary(effect, context) {
+    const { player, game } = context;
+    const consumables = player.library.cards.filter(c => c.type === 'consumable');
+    if (!consumables.length) return;
+    const card = game.rng.pick(consumables);
+    player.library.removeById(card.id);
+    player.hand.add(card);
+    const originalCost = card.cost || 0;
+    card.cost = 0;
+    await game.playFromHand(player, card.id);
+    card.cost = originalCost;
   }
 
   registerDefaults() {

@@ -205,6 +205,15 @@ describe.each(effectCards)('$id executes its effect', (card) => {
         expect(g.player.hero.data.nextSpellDamageBonus.amount).toBe(effect.amount);
         break;
       }
+      case 'playRandomConsumableFromLibrary': {
+        const consumable = g.allCards.find(c => c.type === 'consumable');
+        g.player.library.cards = [new Card(consumable)];
+        g.player.hero.data.maxHealth = 30;
+        g.player.hero.data.health = 20;
+        await g.playFromHand(g.player, card.id);
+        expect(g.player.graveyard.cards.some(c => c.id === consumable.id)).toBe(true);
+        break;
+      }
       default:
         throw new Error('Unhandled effect type: ' + effect.type);
     }

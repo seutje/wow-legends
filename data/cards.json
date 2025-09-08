@@ -739,19 +739,17 @@
     "cost": 2,
     "effects": [
       {
-        "type": "rawText",
-        "text": "Battlecry — Discover a Consumable from your deck (draw it)."
+        "type": "playRandomConsumableFromLibrary"
       }
     ],
     "keywords": [
-      "Discover",
       "Tutor"
     ],
     "data": {
       "attack": 2,
       "health": 1
     },
-    "text": "Battlecry — Discover a Consumable from your deck (draw it)."
+    "text": "Battlecry — Play a random Consumable from your deck."
   },
   {
     "id": "ally-argent-healer",
