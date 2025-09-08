@@ -5,6 +5,8 @@ import TurnSystem from './systems/turns.js';
 import ResourceSystem from './systems/resources.js';
 import CombatSystem from './systems/combat.js';
 import { validateCardData } from './systems/content.js';
+import { RNG } from './utils/rng.js';
+import Hero from './entities/hero.js';
 
 export default class Game {
   constructor(rootEl, opts = {}) {
@@ -49,12 +51,45 @@ export default class Game {
       const res = await fetch(new URL('../../data/cards.json', import.meta.url));
       allCards = await res.json();
     }
-    const libData = allCards.filter(c => c.type !== 'hero').slice(0, 5);
-    for (const c of libData) validateCardData(c);
-    const playerLib = libData.map(c => new Card(c));
-    const opponentLib = libData.map(c => new Card(c));
-    for (const c of playerLib) this.player.library.add(c);
-    for (const c of opponentLib) this.opponent.library.add(c);
+
+    const heroes = allCards.filter(c => c.type === 'hero');
+    const otherCards = allCards.filter(c => c.type !== 'hero');
+
+    const rng = new RNG();
+
+    // Assign heroes
+    const playerHeroData = rng.pick(heroes);
+    this.player.hero = new Hero(playerHeroData);
+
+    let opponentHeroData = rng.pick(heroes);
+    while (opponentHeroData.id === playerHeroData.id) {
+      opponentHeroData = rng.pick(heroes);
+    }
+    this.opponent.hero = new Hero(opponentHeroData);
+
+    // Create player's library
+    const playerLibData = [];
+    for (let i = 0; i < 60; i++) {
+      playerLibData.push(rng.pick(otherCards));
+    }
+
+    // Create opponent's library
+    const opponentLibData = [];
+    for (let i = 0; i < 60; i++) {
+      opponentLibData.push(rng.pick(otherCards));
+    }
+
+    // Populate libraries
+    this.player.library.cards = [];
+    for (const cardData of playerLibData) {
+      validateCardData(cardData);
+      this.player.library.add(new Card(cardData));
+    }
+    this.opponent.library.cards = [];
+    for (const cardData of opponentLibData) {
+      validateCardData(cardData);
+      this.opponent.library.add(new Card(cardData));
+    }
 
     this.player.library.shuffle();
     this.opponent.library.shuffle();

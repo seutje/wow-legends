@@ -1,19 +1,16 @@
-import { readFile } from 'fs/promises';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
 import Game from '../src/js/game.js';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-
-async function loadCards() {
-  const data = await readFile(join(__dirname, '../data/cards.json'), 'utf8');
-  return JSON.parse(data);
-}
-
-test('setupMatch uses cards.json for libraries', async () => {
+test('setupMatch creates a 60 card library', async () => {
   const g = new Game();
   await g.setupMatch();
-  const cards = await loadCards();
-  const libData = cards.filter(c => c.type !== 'hero').slice(0, 5);
-  expect(g.player.library.cards.length + g.player.hand.cards.length).toBe(libData.length);
+  expect(g.player.library.cards.length + g.player.hand.cards.length).toBe(60);
+  expect(g.opponent.library.cards.length + g.opponent.hand.cards.length).toBe(60);
+});
+
+test('setupMatch assigns different heroes to players', async () => {
+  const g = new Game();
+  await g.setupMatch();
+  expect(g.player.hero).toBeDefined();
+  expect(g.opponent.hero).toBeDefined();
+  expect(g.player.hero.id).not.toBe(g.opponent.hero.id);
 });
