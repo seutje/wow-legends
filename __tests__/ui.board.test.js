@@ -3,8 +3,8 @@ import { renderBoard, wireInteractions } from '../src/js/ui/board.js';
 import Player from '../src/js/entities/player.js';
 import Card from '../src/js/entities/card.js';
 
-describe('UI Board', () => {
-  test('clicking library draws to hand; clicking hand moves to resources', () => {
+  describe('UI Board', () => {
+    test('clicking library draws to hand; clicking hand moves to resources', () => {
     const container = document.createElement('div');
     const p = new Player({ name: 'U' });
     const c = new Card({ type: 'ally', name: 'A' });
@@ -19,6 +19,14 @@ describe('UI Board', () => {
     const handItem = container.querySelector('ul[data-zone="hand"] li');
     handItem.click();
     expect(p.resourcesZone.size()).toBe(1);
+    });
+
+    test('hero appears in battlefield zone', () => {
+      const container = document.createElement('div');
+      const p = new Player({ name: 'U' });
+      renderBoard(container, p);
+      const bfItems = container.querySelectorAll('ul[data-zone="battlefield"] li');
+      expect(Array.from(bfItems).map(li => li.textContent)).toContain(p.hero.name);
+    });
   });
-});
 

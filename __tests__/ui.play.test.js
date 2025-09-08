@@ -158,5 +158,23 @@ describe('UI Play', () => {
     Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: prevW });
     Object.defineProperty(window, 'innerHeight', { configurable: true, writable: true, value: prevH });
   });
+
+  test('includes hero in battlefield zone list', () => {
+    const container = document.createElement('div');
+    const playerHero = new Hero({ name: 'Player Hero', data: { health: 25 } });
+    const enemyHero = new Hero({ name: 'Enemy Hero', data: { health: 20 } });
+
+    const game = {
+      player: { hero: playerHero, battlefield: { cards: [] }, hand: { cards: [], size: () => 0 } },
+      opponent: { hero: enemyHero, battlefield: { cards: [] }, hand: { cards: [], size: () => 0 } },
+      resources: { pool: () => 0, available: () => 0 },
+      draw: jest.fn(), resolveCombat: jest.fn(), endTurn: jest.fn(), toggleAttacker: jest.fn(), playFromHand: () => true,
+    };
+
+    renderPlay(container, game);
+
+    const battlefieldList = container.querySelector('.row.player .zone-list');
+    expect(battlefieldList.textContent).toContain('Player Hero');
+  });
 });
 

@@ -237,7 +237,7 @@ export default class Game {
   }
 
   toggleAttacker(player, cardId) {
-    const card = player.battlefield.cards.find(c => c.id === cardId);
+    const card = [player.hero, ...player.battlefield.cards].find(c => c.id === cardId);
     if (!card) return false;
     if (this.attacking.has(cardId)) this.attacking.delete(cardId);
     else this.attacking.add(cardId);
@@ -247,7 +247,7 @@ export default class Game {
   resolveCombat(attacker = this.player, defender = this.opponent) {
     this.combat.clear();
     for (const id of this.attacking) {
-      const card = attacker.battlefield.cards.find(c => c.id === id);
+      const card = [attacker.hero, ...attacker.battlefield.cards].find(c => c.id === id);
       if (card) this.combat.declareAttacker(card);
     }
     this.combat.setDefenderHero(defender.hero);

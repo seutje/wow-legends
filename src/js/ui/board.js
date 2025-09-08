@@ -6,7 +6,7 @@ export function renderBoard(container, player) {
     ['Library', player.library],
     ['Hand', player.hand],
     ['Resources', player.resourcesZone],
-    ['Battlefield', player.battlefield],
+    ['Battlefield', { cards: [player.hero, ...player.battlefield.cards] }],
     ['Graveyard', player.graveyard],
   ];
   for (const [name, zone] of zones) {
