@@ -184,27 +184,35 @@ export default class Game {
   }
 
   endTurn() {
-    // End player turn, then AI performs a simple turn
-    this.turns.nextPhase(); // through End -> loops to Start
+    // End player's turn
+    while(this.turns.current !== 'End') {
+      this.turns.nextPhase();
+    }
+    this.turns.nextPhase(); // End -> Start, turn increments for opponent
+
+    // AI's turn
     this.turns.setActivePlayer(this.opponent);
     this.turns.startTurn();
     this.resources.startTurn(this.opponent);
-    // AI: draw one, place a resource, play cheapest, attack all
     this.draw(this.opponent, 1);
-    // play cheapest affordable once
     const affordable = this.opponent.hand.cards.filter(c => this.canPlay(this.opponent, c)).sort((a,b)=> (a.cost||0)-(b.cost||0));
     if (affordable[0]) this.playFromHand(this.opponent, affordable[0].id);
-    // attack with all
     for (const c of this.opponent.battlefield.cards) this.combat.declareAttacker(c);
     this.combat.setDefenderHero(this.player.hero);
     this.combat.resolve();
     this.cleanupDeaths(this.player);
     this.cleanupDeaths(this.opponent);
-    // Switch back to player
+
+    // End AI's turn
+    while(this.turns.current !== 'End') {
+      this.turns.nextPhase();
+    }
+    this.turns.nextPhase(); // End -> Start, turn increments for player
+
+    // Start player's turn
     this.turns.setActivePlayer(this.player);
     this.turns.startTurn();
     this.resources.startTurn(this.player);
-    // Player draws one at start of turn
     this.draw(this.player, 1);
   }
 
