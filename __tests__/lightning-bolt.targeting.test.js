@@ -31,3 +31,32 @@ test('playing Lightning Bolt prompts for a target', async () => {
   expect(enemy.data.health).toBe(2); // 5 - 3 damage
 });
 
+test('quests are excluded from spell target prompts', async () => {
+  const g = new Game();
+  await g.setupMatch();
+
+  g.player.hand.cards = [];
+  g.opponent.battlefield.cards = [];
+  g.resources._pool.set(g.player, 10);
+
+  const enemy = new Card({ name: 'Target Dummy', type: 'ally', data: { attack: 0, health: 5 }, keywords: [] });
+  const quest = new Card({ name: 'Quest', type: 'quest', data: {} });
+  g.opponent.battlefield.add(enemy);
+  g.opponent.battlefield.add(quest);
+
+  g.addCardToHand('spell-lightning-bolt');
+  const bolt = g.player.hand.cards.find(c => c.id === 'spell-lightning-bolt');
+
+  const promptSpy = jest.fn(async (candidates) => {
+    expect(candidates).not.toContain(quest);
+    return enemy;
+  });
+  g.promptTarget = promptSpy;
+
+  await g.playFromHand(g.player, bolt.id);
+
+  expect(promptSpy).toHaveBeenCalled();
+  expect(enemy.data.health).toBe(2);
+  expect(g.opponent.battlefield.cards).toContain(quest);
+});
+
