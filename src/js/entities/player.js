@@ -13,6 +13,7 @@ export class Player {
     this.armor = 0;
     this.resources = 0; // legacy numeric; use resourceZone + pool
     this.status = {};
+    this.cardsPlayedThisTurn = 0;
 
     this.library = new Deck('library');
     this.hand = new Hand('hand');

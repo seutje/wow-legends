@@ -19,6 +19,7 @@ export class CardEntity {
     this.data = props.data ? { ...props.data } : {};
     this.text = props.text || '';
     this.effects = props.effects || [];
+    this.combo = props.combo || [];
   }
 }
 
