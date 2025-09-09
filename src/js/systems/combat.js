@@ -40,12 +40,12 @@ export class CombatSystem {
   setDefenderHero(hero) { this._defenderHero = hero; }
 
   resolve() {
-    // Simultaneous damage: compute all, then apply
-    const damage = new Map(); // cardId -> dmgTaken
+    // Track individual damage events for logging
+    const events = [];
 
-    const addDmg = (card, amount) => {
-      if (!card) return;
-      damage.set(card.id, (damage.get(card.id) || 0) + amount);
+    const addDmg = (target, amount, source) => {
+      if (!target || amount <= 0) return;
+      events.push({ target, amount, source });
     };
 
     // For each attack group
@@ -54,11 +54,11 @@ export class CombatSystem {
       let dealt = 0;
       if (blockers.length === 0) {
         // Unblocked: route full to hero if present
-        if (this._defenderHero) addDmg(this._defenderHero, atk);
+        if (this._defenderHero) addDmg(this._defenderHero, atk, attacker);
       } else {
         const per = Math.floor(atk / blockers.length) || atk; // naive equal split
         for (const b of blockers) {
-          addDmg(b, per);
+          addDmg(b, per, attacker);
           dealt += per;
           // Lethal: mark to zero health irrespective of current
           if (attacker?.keywords?.includes?.('Lethal')) {
@@ -68,10 +68,10 @@ export class CombatSystem {
         }
         // Overflow to hero if flagged
         if (attacker?.keywords?.includes?.('Overflow') && this._defenderHero && dealt < atk) {
-          addDmg(this._defenderHero, atk - dealt);
+          addDmg(this._defenderHero, atk - dealt, attacker);
         }
         // Blockers strike back at attacker
-        for (const b of blockers) addDmg(attacker, getStat(b, 'attack', 0));
+        for (const b of blockers) addDmg(attacker, getStat(b, 'attack', 0), b);
       }
 
       // Equipment durability loss on attack: if attacker has equipment list
@@ -85,23 +85,13 @@ export class CombatSystem {
       }
     }
 
-    // Apply damage
-    for (const [id, amt] of damage) {
-      // Find the card reference in the recorded groups
-      let ref = null;
-      for (const { attacker, blockers } of this._attacks.values()) {
-        if (attacker.id === id) { ref = attacker; break; }
-        const f = blockers.find(x => x.id === id);
-        if (f) { ref = f; break; }
-      }
-      if (!ref && this._defenderHero && this._defenderHero.id === id) ref = this._defenderHero;
-      if (!ref) continue;
-      let rem = amt;
-      // Apply armor first
-      rem = armorApply(ref, rem);
-      const hp = getStat(ref, 'health', 0);
-      setStat(ref, 'health', Math.max(0, hp - rem));
-      if (getStat(ref, 'health', 0) <= 0) setStat(ref, 'dead', true);
+    // Apply damage events sequentially
+    for (const { target, amount, source } of events) {
+      let rem = armorApply(target, amount);
+      const hp = getStat(target, 'health', 0);
+      setStat(target, 'health', Math.max(0, hp - rem));
+      console.log(`${target.name} took ${rem} damage from ${source?.name ?? 'an unknown source'}. Remaining health: ${getStat(target, 'health', 0)}`);
+      if (getStat(target, 'health', 0) <= 0) setStat(target, 'dead', true);
     }
 
     this.clear();
