@@ -132,6 +132,8 @@ export default class Game {
     const hero = player?.hero;
     if (!hero || hero.powerUsed) return false;
     if (!hero.active?.length) return false;
+    const cost = 2;
+    if (!this.resources.pay(player, cost)) return false;
     await this.effects.execute(hero.active, { game: this, player, card: hero });
     hero.powerUsed = true;
     return true;
