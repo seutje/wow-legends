@@ -9,6 +9,8 @@ import { validateCardData } from './systems/content.js';
 import { RNG } from './utils/rng.js';
 import Hero from './entities/hero.js';
 import { renderBoard } from './ui/board.js';
+import QuestSystem from './systems/quests.js';
+import { EventBus } from './utils/events.js';
 
 export default class Game {
   constructor(rootEl, opts = {}) {
@@ -24,6 +26,8 @@ export default class Game {
     this.combat = new CombatSystem();
     this.effects = new EffectSystem(this);
     this.rng = new RNG();
+    this.bus = new EventBus();
+    this.quests = new QuestSystem(this);
 
     this.turns.bus.on('turn:start', ({ player }) => {
       if (player) player.cardsPlayedThisTurn = 0;
@@ -211,10 +215,14 @@ export default class Game {
     if (card.type === 'ally' || card.type === 'equipment') {
       player.hand.moveTo(player.battlefield, cardId);
       if (card.type === 'equipment') player.hero.equipment.push(card);
+    } else if (card.type === 'quest') {
+      player.hand.moveTo(player.quests, cardId);
+      this.quests.addQuest(player, card);
     } else {
       player.hand.moveTo(player.graveyard, cardId);
     }
 
+    this.bus.emit('cardPlayed', { player, card });
     player.cardsPlayedThisTurn += 1;
 
     return true;
@@ -305,15 +313,18 @@ export default class Game {
     this.combat.setDefenderHero(defender.hero);
     if (target) this.combat.assignBlocker(card.id, target);
     this.combat.resolve();
-    this.cleanupDeaths(player);
-    this.cleanupDeaths(defender);
+    this.cleanupDeaths(player, defender);
+    this.cleanupDeaths(defender, player);
     card.data.attacked = true;
     return true;
   }
 
-  cleanupDeaths(player) {
+  cleanupDeaths(player, killer) {
     const dead = player.battlefield.cards.filter(c => c.data?.dead);
-    for (const c of dead) player.battlefield.moveTo(player.graveyard, c.id);
+    for (const c of dead) {
+      player.battlefield.moveTo(player.graveyard, c.id);
+      if (killer) this.bus.emit('allyDefeated', { player: killer, card: c });
+    }
   }
 
   async endTurn() {
@@ -326,8 +337,8 @@ export default class Game {
     for (const c of this.opponent.battlefield.cards) this.combat.declareAttacker(c);
     this.combat.setDefenderHero(this.player.hero);
     this.combat.resolve();
-    this.cleanupDeaths(this.player);
-    this.cleanupDeaths(this.opponent);
+    this.cleanupDeaths(this.player, this.opponent);
+    this.cleanupDeaths(this.opponent, this.player);
 
     // End AI's turn and start player's turn
     while(this.turns.current !== 'End') {

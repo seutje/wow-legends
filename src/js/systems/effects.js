@@ -185,10 +185,11 @@ export class EffectSystem {
         console.log(`${t.name} took ${remaining} damage. Remaining health: ${t.health}`);
         if (t.health > 0 && freeze) freezeTarget(t, freeze);
       }
+      game.bus.emit('damageDealt', { player, source: card, amount: remaining, target: t });
     }
 
-    game.cleanupDeaths(player);
-    game.cleanupDeaths(game.opponent);
+    game.cleanupDeaths(player, player);
+    game.cleanupDeaths(game.opponent, player);
   }
 
   summonUnit(effect, context) {
@@ -265,6 +266,7 @@ export class EffectSystem {
       game.opponent.battlefield.moveTo(game.opponent.hand, allyToReturn.id);
       allyToReturn.cost += costIncrease; // Increase cost
       console.log(`Returned ${allyToReturn.name} to hand. New cost: ${allyToReturn.cost}`);
+      game.bus.emit('cardReturned', { player, card: allyToReturn });
     } else {
       console.log('No enemy ally found to return to hand.');
     }

@@ -54,6 +54,8 @@
  * @property {Keyword[]=} keywords
  * @property {Record<string, any>=} data
  * @property {Card=} summonedBy
+ * @property {Object=} requirement
+ * @property {Object[]=} reward
  */
 
 export {}; // purely for typedefs
