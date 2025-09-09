@@ -239,6 +239,7 @@ export default class Game {
   }
 
   async promptTarget(candidates, { allowNoMore = false } = {}) {
+    candidates = candidates?.filter(c => c.type !== 'quest');
     if (!candidates?.length) return null;
 
     // If it's the AI's turn, auto-select a target without prompting
@@ -315,8 +316,11 @@ export default class Game {
     const atk = typeof card.totalAttack === 'function' ? card.totalAttack() : (card.data?.attack ?? 0);
     if (atk < 1 || card.data?.attacked) return false;
     let target = null;
-    const candidates = [defender.hero, ...defender.battlefield.cards.filter(c => c.type !== 'equipment')];
-    if (defender.battlefield.cards.length > 0) {
+    const candidates = [
+      defender.hero,
+      ...defender.battlefield.cards.filter(c => c.type !== 'equipment' && c.type !== 'quest')
+    ];
+    if (candidates.length > 1) {
       if (targetId) {
         target = candidates.find(c => c.id === targetId) || null;
         if (target?.id === defender.hero.id) target = null;

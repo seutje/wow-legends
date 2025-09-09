@@ -21,3 +21,22 @@ test('equipment cannot be targeted by ally attacks', async () => {
   expect(g.opponent.hero.data.health).toBe(initial - 2);
   expect(g.opponent.battlefield.cards).toContain(equipment);
 });
+
+// Quests should not be selectable as attack targets.
+test('quest cannot be targeted by ally attacks', async () => {
+  const g = new Game();
+  g.player.hero = new Hero({ name: 'Hero', data: { health: 10 } });
+  g.opponent.hero = new Hero({ name: 'Enemy', data: { health: 10 } });
+
+  const ally = new Card({ name: 'Attacker', type: 'ally', data: { attack: 2, health: 2 } });
+  const quest = new Card({ name: 'Quest', type: 'quest', data: {} });
+
+  g.player.battlefield.cards = [ally];
+  g.opponent.battlefield.cards = [quest];
+
+  const initial = g.opponent.hero.data.health;
+  await g.attack(g.player, ally.id, quest.id);
+
+  expect(g.opponent.hero.data.health).toBe(initial - 2);
+  expect(g.opponent.battlefield.cards).toContain(quest);
+});

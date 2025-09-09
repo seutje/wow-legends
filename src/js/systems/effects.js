@@ -94,9 +94,9 @@ export class EffectSystem {
       case 'any': {
         const candidates = [
           opponent.hero,
-          ...opponent.battlefield.cards,
+          ...opponent.battlefield.cards.filter(c => c.type !== 'quest'),
           player.hero,
-          ...player.battlefield.cards,
+          ...player.battlefield.cards.filter(c => c.type !== 'quest'),
         ];
         const chosen = await game.promptTarget(candidates);
         if (chosen) actualTargets.push(chosen);
@@ -106,8 +106,8 @@ export class EffectSystem {
         const candidates = [
           player.hero,
           opponent.hero,
-          ...player.battlefield.cards,
-          ...opponent.battlefield.cards,
+          ...player.battlefield.cards.filter(c => c.type !== 'quest'),
+          ...opponent.battlefield.cards.filter(c => c.type !== 'quest'),
         ];
         const chosen = await game.promptTarget(candidates);
         if (chosen) actualTargets.push(chosen);
@@ -116,9 +116,9 @@ export class EffectSystem {
       case 'upToThreeTargets': {
         const candidates = [
           opponent.hero,
-          ...opponent.battlefield.cards,
+          ...opponent.battlefield.cards.filter(c => c.type !== 'quest'),
           player.hero,
-          ...player.battlefield.cards,
+          ...player.battlefield.cards.filter(c => c.type !== 'quest'),
         ];
         const chosen = new Set();
         for (let i = 0; i < 3; i++) {
@@ -135,17 +135,17 @@ export class EffectSystem {
       case 'allCharacters':
         actualTargets.push(player.hero);
         actualTargets.push(opponent.hero);
-        actualTargets.push(...player.battlefield.cards);
-        actualTargets.push(...opponent.battlefield.cards);
+        actualTargets.push(...player.battlefield.cards.filter(c => c.type !== 'quest'));
+        actualTargets.push(...opponent.battlefield.cards.filter(c => c.type !== 'quest'));
         break;
       case 'allEnemies':
         actualTargets.push(opponent.hero);
-        actualTargets.push(...opponent.battlefield.cards);
+        actualTargets.push(...opponent.battlefield.cards.filter(c => c.type !== 'quest'));
         break;
       case 'minion': {
         const candidates = [
-          ...player.battlefield.cards,
-          ...opponent.battlefield.cards,
+          ...player.battlefield.cards.filter(c => c.type !== 'quest'),
+          ...opponent.battlefield.cards.filter(c => c.type !== 'quest'),
         ];
         const chosen = await game.promptTarget(candidates);
         if (chosen) actualTargets.push(chosen);
@@ -154,7 +154,7 @@ export class EffectSystem {
       case 'enemyHeroOrMinionWithoutTaunt': {
         const candidates = [
           opponent.hero,
-          ...opponent.battlefield.cards.filter(c => !c.keywords?.includes('Taunt')),
+          ...opponent.battlefield.cards.filter(c => !c.keywords?.includes('Taunt') && c.type !== 'quest'),
         ];
         const chosen = await game.promptTarget(candidates);
         if (chosen) actualTargets.push(chosen);
@@ -249,6 +249,7 @@ export class EffectSystem {
 
     // For now, destroy a random enemy minion that meets the condition
     const targetMinions = game.opponent.battlefield.cards.filter(c => {
+      if (c.type === 'quest') return false;
       if (condition.type === 'attackLessThan') {
         return c.data.attack <= condition.amount;
       }
@@ -269,8 +270,9 @@ export class EffectSystem {
     const { game, player } = context;
 
     // For now, return a random enemy ally to hand
-    if (game.opponent.battlefield.cards.length > 0) {
-      const allyToReturn = game.rng.pick(game.opponent.battlefield.cards);
+    const opponents = game.opponent.battlefield.cards.filter(c => c.type !== 'quest');
+    if (opponents.length > 0) {
+      const allyToReturn = game.rng.pick(opponents);
       game.opponent.battlefield.moveTo(game.opponent.hand, allyToReturn.id);
       allyToReturn.cost += costIncrease; // Increase cost
       console.log(`Returned ${allyToReturn.name} to hand. New cost: ${allyToReturn.cost}`);
@@ -284,7 +286,7 @@ export class EffectSystem {
     const { target, into, duration } = effect;
     const { game, player } = context;
 
-    let pool = player.battlefield.cards;
+    let pool = player.battlefield.cards.filter(c => c.type !== 'quest');
     if (target === 'randomAlly') {
       pool = pool.filter(c => c.type === 'ally' || c.summonedBy);
     }
@@ -352,13 +354,13 @@ export class EffectSystem {
     switch (target) {
       case 'allies':
         actualTargets.push(player.hero);
-        actualTargets.push(...player.battlefield.cards);
+        actualTargets.push(...player.battlefield.cards.filter(c => c.type !== 'quest'));
         break;
       case 'hero':
         actualTargets.push(player.hero);
         break;
       case 'character': {
-        const candidates = [player.hero, ...player.battlefield.cards];
+        const candidates = [player.hero, ...player.battlefield.cards.filter(c => c.type !== 'quest')];
         const chosen = await game.promptTarget(candidates);
         if (chosen) actualTargets.push(chosen);
         break;
