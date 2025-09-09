@@ -305,5 +305,40 @@ describe('UI Play', () => {
     const battlefieldList = container.querySelector('.row.player .zone-list');
     expect(battlefieldList.textContent).toContain('Player Hero');
   });
+
+  test('shows win dialog and restarts game', async () => {
+    const container = document.createElement('div');
+    const playerHero = new Hero({ name: 'Player', data: { health: 10 } });
+    const enemyHero = new Hero({ name: 'Enemy', data: { health: 0 } });
+    const reset = jest.fn().mockResolvedValue();
+    const game = {
+      player: { hero: playerHero, battlefield: { cards: [] }, hand: { cards: [], size: () => 0 } },
+      opponent: { hero: enemyHero, battlefield: { cards: [] }, hand: { cards: [], size: () => 0 } },
+      resources: { pool: () => 0, available: () => 0 },
+      draw: jest.fn(), attack: jest.fn(), endTurn: jest.fn(), playFromHand: () => true, reset,
+    };
+    renderPlay(container, game, { onUpdate: jest.fn() });
+    const dialog = container.querySelector('.game-over');
+    expect(dialog.textContent).toContain('You win!');
+    const btn = dialog.querySelector('button');
+    btn.dispatchEvent(new Event('click'));
+    await Promise.resolve();
+    expect(reset).toHaveBeenCalled();
+  });
+
+  test('shows lose dialog when player hero health is zero', () => {
+    const container = document.createElement('div');
+    const playerHero = new Hero({ name: 'Player', data: { health: 0 } });
+    const enemyHero = new Hero({ name: 'Enemy', data: { health: 5 } });
+    const game = {
+      player: { hero: playerHero, battlefield: { cards: [] }, hand: { cards: [], size: () => 0 } },
+      opponent: { hero: enemyHero, battlefield: { cards: [] }, hand: { cards: [], size: () => 0 } },
+      resources: { pool: () => 0, available: () => 0 },
+      draw: jest.fn(), attack: jest.fn(), endTurn: jest.fn(), playFromHand: () => true, reset: jest.fn(),
+    };
+    renderPlay(container, game);
+    const dialog = container.querySelector('.game-over');
+    expect(dialog.textContent).toContain('You lose!');
+  });
 });
 

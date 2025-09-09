@@ -126,5 +126,18 @@ export function renderPlay(container, game, { onUpdate } = {}) {
   );
 
   container.append(header, controls, enemyRow, playerRow);
+
+  const pDead = p.hero.data.health <= 0;
+  const eDead = e.hero.data.health <= 0;
+  if (pDead || eDead) {
+    const msg = pDead ? 'You lose!' : 'You win!';
+    const dialog = el('div', { class: 'game-over' },
+      el('div', {},
+        el('p', {}, msg),
+        el('button', { onclick: async () => { await game.reset(); onUpdate?.(); } }, 'Restart')
+      )
+    );
+    container.append(dialog);
+  }
 }
 
