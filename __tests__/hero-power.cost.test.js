@@ -31,3 +31,16 @@ test('Hero power button disabled when insufficient mana', async () => {
   let btn = [...container.querySelectorAll('button')].find(b => b.textContent === 'Hero Power');
   expect(btn.disabled).toBe(true);
 });
+
+test('Hero power button enabled when sufficient mana', async () => {
+  const g = new Game();
+  g.player.hero = new Hero(thrallData);
+  g.opponent.hero = new Hero(thrallData);
+  g.turns.setActivePlayer(g.player);
+  g.turns.turn = 2;
+  g.resources.startTurn(g.player);
+  const container = document.createElement('div');
+  renderPlay(container, g);
+  const btn = [...container.querySelectorAll('button')].find(b => b.textContent === 'Hero Power');
+  expect(btn.disabled).toBe(false);
+});

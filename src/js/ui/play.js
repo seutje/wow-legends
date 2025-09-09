@@ -3,7 +3,12 @@ import { t } from '../i18n/strings.js';
 function el(tag, attrs = {}, ...children) {
   const e = document.createElement(tag);
   for (const [k,v] of Object.entries(attrs)) {
-    if (k === 'class') e.className = v; else if (k === 'dataset') Object.assign(e.dataset, v); else if (k.startsWith('on') && typeof v === 'function') e.addEventListener(k.slice(2), v); else e.setAttribute(k, v);
+    if (k === 'class') e.className = v;
+    else if (k === 'dataset') Object.assign(e.dataset, v);
+    else if (k.startsWith('on') && typeof v === 'function') e.addEventListener(k.slice(2), v);
+    else if (v === false || v == null) continue;
+    else if (typeof v === 'boolean') e[k] = v;
+    else e.setAttribute(k, v);
   }
   for (const c of children) e.append(c.nodeType ? c : document.createTextNode(String(c)));
   return e;
