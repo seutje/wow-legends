@@ -60,6 +60,26 @@ describe('EffectSystem', () => {
     expect(player.hero.data.health).toBe(9);
   });
 
+  test('dealDamage logs source of damage', async () => {
+    const game = new Game();
+    const player = game.player;
+    const enemy = new Card({ type: 'ally', name: 'E', data: { attack: 0, health: 5 } });
+    game.opponent.battlefield.add(enemy);
+    game.promptTarget = async () => enemy;
+    const source = new Card({ type: 'spell', name: 'Fireball' });
+    const logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+
+    await game.effects.dealDamage(
+      { target: 'character', amount: 3 },
+      { game, player, card: source }
+    );
+
+    expect(logSpy).toHaveBeenCalledWith(
+      `${enemy.name} took 3 damage from ${source.name}. Remaining health: ${enemy.data.health}`
+    );
+    logSpy.mockRestore();
+  });
+
   test('buff can increase armor', async () => {
     const game = new Game();
     const player = game.player;
