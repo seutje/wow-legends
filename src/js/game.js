@@ -236,6 +236,32 @@ export default class Game {
     });
   }
 
+  async promptOption(options) {
+    if (!options?.length) return 0;
+    if (typeof document === 'undefined') {
+      return 0;
+    }
+    return new Promise((resolve) => {
+      const overlay = document.createElement('div');
+      overlay.className = 'option-prompt';
+
+      const list = document.createElement('ul');
+
+      options.forEach((t, idx) => {
+        const li = document.createElement('li');
+        li.textContent = t;
+        li.addEventListener('click', () => {
+          document.body.removeChild(overlay);
+          resolve(idx);
+        });
+        list.appendChild(li);
+      });
+
+      overlay.appendChild(list);
+      document.body.appendChild(overlay);
+    });
+  }
+
   toggleAttacker(player, cardId) {
     const card = [player.hero, ...player.battlefield.cards].find(c => c.id === cardId);
     if (!card) return false;

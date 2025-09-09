@@ -1,0 +1,26 @@
+import fs from 'fs';
+import Game from '../src/js/game.js';
+import Hero from '../src/js/entities/hero.js';
+
+const cards = JSON.parse(fs.readFileSync(new URL('../data/cards.json', import.meta.url)));
+const malfData = cards.find(c => c.id === 'hero-malfurion-stormrage-archdruid');
+
+test("Malfurion's hero power can grant attack", async () => {
+  const g = new Game();
+  await g.setupMatch();
+  g.player.hero = new Hero(malfData);
+  g.promptOption = async () => 0; // choose attack option
+  await g.useHeroPower(g.player);
+  expect(g.player.hero.data.attack).toBe(1);
+  expect(g.player.hero.data.armor).toBe(0);
+});
+
+test("Malfurion's hero power can grant armor", async () => {
+  const g = new Game();
+  await g.setupMatch();
+  g.player.hero = new Hero(malfData);
+  g.promptOption = async () => 1; // choose armor option
+  await g.useHeroPower(g.player);
+  expect(g.player.hero.data.attack).toBe(0);
+  expect(g.player.hero.data.armor).toBe(2);
+});

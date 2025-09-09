@@ -65,6 +65,9 @@ export class EffectSystem {
         case 'damageArmor':
           await this.dealDamage({ target: effect.target, amount: context.player.hero.data.armor }, context);
           break;
+        case 'chooseOne':
+          await this.handleChooseOne(effect, context);
+          break;
         default:
           console.log(`Unknown effect type: ${effect.type}`);
       }
@@ -391,6 +394,16 @@ export class EffectSystem {
     console.log('applyOverload: game.resources', game.resources);
     game.resources.addOverloadNextTurn(player, amount);
     console.log(`Applied ${amount} overload to ${player.name}.`);
+  }
+
+  async handleChooseOne(effect, context) {
+    const { game } = context;
+    const optionTexts = effect.options?.map(o => o.text) || [];
+    const idx = await game.promptOption(optionTexts);
+    const chosen = effect.options?.[idx] || effect.options?.[0];
+    if (chosen?.effects) {
+      await this.execute(chosen.effects, context);
+    }
   }
 
   restoreResources(effect, context) {
