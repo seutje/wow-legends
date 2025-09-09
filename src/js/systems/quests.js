@@ -27,7 +27,7 @@ export class QuestSystem {
     const idx = arr.indexOf(rec);
     if (idx !== -1) arr.splice(idx, 1);
     // move quest card to graveyard
-    player.quests.moveTo(player.graveyard, rec.card.id);
+    player.battlefield.moveTo(player.graveyard, rec.card.id);
     if (rec.card.reward?.length) {
       this.game.effects.execute(rec.card.reward, { game: this.game, player, card: rec.card });
     }

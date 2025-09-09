@@ -21,7 +21,6 @@ export class Player {
     this.graveyard = new Zone('graveyard');
     this.battlefield = new Zone('battlefield');
     this.removed = new Zone('removed');
-    this.quests = new Zone('quests');
   }
 
   equip(item) {
