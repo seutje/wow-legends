@@ -51,28 +51,28 @@ export class CombatSystem {
     // For each attack group
     for (const { attacker, blockers } of this._attacks.values()) {
       const atk = getStat(attacker, 'attack', 0);
+      let dealt = 0;
       if (blockers.length === 0) {
         // Unblocked: route full to hero if present
         if (this._defenderHero) addDmg(this._defenderHero, atk);
-        continue;
-      }
-      const per = Math.floor(atk / blockers.length) || atk; // naive equal split
-      let dealt = 0;
-      for (const b of blockers) {
-        addDmg(b, per);
-        dealt += per;
-        // Lethal: mark to zero health irrespective of current
-        if (attacker?.keywords?.includes?.('Lethal')) {
-          setStat(b, 'health', 0);
-          setStat(b, 'dead', true);
+      } else {
+        const per = Math.floor(atk / blockers.length) || atk; // naive equal split
+        for (const b of blockers) {
+          addDmg(b, per);
+          dealt += per;
+          // Lethal: mark to zero health irrespective of current
+          if (attacker?.keywords?.includes?.('Lethal')) {
+            setStat(b, 'health', 0);
+            setStat(b, 'dead', true);
+          }
         }
+        // Overflow to hero if flagged
+        if (attacker?.keywords?.includes?.('Overflow') && this._defenderHero && dealt < atk) {
+          addDmg(this._defenderHero, atk - dealt);
+        }
+        // Blockers strike back at attacker
+        for (const b of blockers) addDmg(attacker, getStat(b, 'attack', 0));
       }
-      // Overflow to hero if flagged
-      if (attacker?.keywords?.includes?.('Overflow') && this._defenderHero && dealt < atk) {
-        addDmg(this._defenderHero, atk - dealt);
-      }
-      // Blockers strike back at attacker
-      for (const b of blockers) addDmg(attacker, getStat(b, 'attack', 0));
 
       // Equipment durability loss on attack: if attacker has equipment list
       if (attacker?.equipment && Array.isArray(attacker.equipment)) {
