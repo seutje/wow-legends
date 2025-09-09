@@ -280,11 +280,15 @@ export class EffectSystem {
     const { target, into, duration } = effect;
     const { game, player } = context;
 
-    // For now, transform a random player ally
-    if (player.battlefield.cards.length > 0) {
-      const allyToTransform = game.rng.pick(player.battlefield.cards);
+    let pool = player.battlefield.cards;
+    if (target === 'randomAlly') {
+      pool = pool.filter(c => c.type === 'ally' || c.summonedBy);
+    }
+
+    if (pool.length > 0) {
+      const allyToTransform = game.rng.pick(pool);
       const originalData = { ...allyToTransform.data };
-      const originalKeywords = [...allyToTransform.keywords];
+      const originalKeywords = [...(allyToTransform.keywords || [])];
       const originalName = allyToTransform.name; // Store original name
 
       allyToTransform.name = into.name;
@@ -305,7 +309,7 @@ export class EffectSystem {
       }
       console.log(`Transformed ${allyToTransform.name} into a ${into.name}.`);
     } else {
-      console.log('No player ally found to transform.');
+      console.log('No valid ally found to transform.');
     }
   }
 
