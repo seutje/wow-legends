@@ -21,9 +21,9 @@ function zoneList(title, cards, { clickCard, game, showTooltip, hideTooltip } = 
     const li = el('li', { dataset: { cardId: c.id } }, `${c.name}${cost}`);
     if (clickCard) li.addEventListener('click', async () => { await clickCard(c); });
 
-    // Add mouseover and mouseout listeners
-    li.addEventListener('mouseover', (e) => showTooltip(c, e, game));
-    li.addEventListener('mouseout', () => hideTooltip());
+    // Add mouseenter and mouseleave listeners to prevent duplicate tooltips
+    li.addEventListener('mouseenter', (e) => showTooltip(c, e, game));
+    li.addEventListener('mouseleave', () => hideTooltip());
 
     ul.append(li);
   }
