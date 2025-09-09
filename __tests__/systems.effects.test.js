@@ -35,5 +35,39 @@ describe('EffectSystem', () => {
     expect(promptSpy).toHaveBeenCalled();
     expect(enemy.data.health).toBe(1);
   });
+
+  test('armor absorbs damage before health', async () => {
+    const game = new Game();
+    const player = game.player;
+    player.hero.data.armor = 3;
+    player.hero.data.health = 10;
+    game.promptTarget = async () => player.hero;
+
+    await game.effects.dealDamage(
+      { target: 'character', amount: 2 },
+      { game, player, card: null }
+    );
+
+    expect(player.hero.data.armor).toBe(1);
+    expect(player.hero.data.health).toBe(10);
+
+    await game.effects.dealDamage(
+      { target: 'character', amount: 2 },
+      { game, player, card: null }
+    );
+
+    expect(player.hero.data.armor).toBe(0);
+    expect(player.hero.data.health).toBe(9);
+  });
+
+  test('buff can increase armor', async () => {
+    const game = new Game();
+    const player = game.player;
+    await game.effects.applyBuff(
+      { target: 'hero', property: 'armor', amount: 2 },
+      { game, player }
+    );
+    expect(player.hero.data.armor).toBe(2);
+  });
 });
 

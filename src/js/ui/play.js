@@ -39,7 +39,7 @@ function heroPane(hero) {
   }
   return el('div', { class: 'hero-pane' },
     el('h3', {}, hero.name),
-    el('p', {}, `Health: ${hero.data.health}`),
+    el('p', {}, `Health: ${hero.data.health} Armor: ${hero.data.armor}`),
     ...abilities
   );
 }
@@ -101,7 +101,7 @@ export function renderPlay(container, game, { onUpdate } = {}) {
 
   const header = el('div', { class: 'hud' },
     el('strong', {}, t('app_title')), ' — ',
-    `Your HP ${p.hero.data.health} | Enemy HP ${e.hero.data.health} | Pool ${game.resources.pool(p)} / ${game.resources.available(p)}`
+    `Your HP ${p.hero.data.health} (Armor ${p.hero.data.armor}) | Enemy HP ${e.hero.data.health} (Armor ${e.hero.data.armor}) | Pool ${game.resources.pool(p)} / ${game.resources.available(p)}`
   );
 
   const controls = el('div', { class: 'controls' },
