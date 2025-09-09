@@ -177,12 +177,16 @@ export class EffectSystem {
       if (remaining <= 0) continue;
       if (t.data && t.data.health != null) {
         t.data.health -= remaining;
-        console.log(`${t.name} took ${remaining} damage. Remaining health: ${t.data.health}`);
+        console.log(
+          `${t.name} took ${remaining} damage from ${card?.name ?? 'an unknown source'}. Remaining health: ${t.data.health}`
+        );
         if (t.data.health > 0 && freeze) freezeTarget(t, freeze);
         if (t.data.health <= 0) t.data.dead = true;
       } else if (t.health != null) {
         t.health -= remaining;
-        console.log(`${t.name} took ${remaining} damage. Remaining health: ${t.health}`);
+        console.log(
+          `${t.name} took ${remaining} damage from ${card?.name ?? 'an unknown source'}. Remaining health: ${t.health}`
+        );
         if (t.health > 0 && freeze) freezeTarget(t, freeze);
       }
       game.bus.emit('damageDealt', { player, source: card, amount: remaining, target: t });
