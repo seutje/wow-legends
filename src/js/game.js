@@ -201,7 +201,13 @@ export default class Game {
     const context = { game: this, player, card };
 
     if (card.effects && card.effects.length > 0) {
-      await this.effects.execute(card.effects, context);
+      const hasDeathrattle = card.keywords?.includes('Deathrattle');
+      if (card.type === 'ally' && hasDeathrattle) {
+        card.deathrattle = card.effects;
+        card.effects = [];
+      } else {
+        await this.effects.execute(card.effects, context);
+      }
     }
 
     if (comboActive && card.combo && card.combo.length > 0) {
@@ -313,16 +319,19 @@ export default class Game {
     this.combat.setDefenderHero(defender.hero);
     if (target) this.combat.assignBlocker(card.id, target);
     this.combat.resolve();
-    this.cleanupDeaths(player, defender);
-    this.cleanupDeaths(defender, player);
+    await this.cleanupDeaths(player, defender);
+    await this.cleanupDeaths(defender, player);
     card.data.attacked = true;
     return true;
   }
 
-  cleanupDeaths(player, killer) {
+  async cleanupDeaths(player, killer) {
     const dead = player.battlefield.cards.filter(c => c.data?.dead);
     for (const c of dead) {
       player.battlefield.moveTo(player.graveyard, c.id);
+      if (c.keywords?.includes('Deathrattle') && c.deathrattle?.length) {
+        await this.effects.execute(c.deathrattle, { game: this, player, card: c });
+      }
       if (killer) this.bus.emit('allyDefeated', { player: killer, card: c });
     }
   }
@@ -339,8 +348,8 @@ export default class Game {
     }
     this.combat.setDefenderHero(this.player.hero);
     this.combat.resolve();
-    this.cleanupDeaths(this.player, this.opponent);
-    this.cleanupDeaths(this.opponent, this.player);
+    await this.cleanupDeaths(this.player, this.opponent);
+    await this.cleanupDeaths(this.opponent, this.player);
 
     // End AI's turn and start player's turn
     while(this.turns.current !== 'End') {

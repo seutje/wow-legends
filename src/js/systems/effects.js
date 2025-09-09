@@ -188,8 +188,8 @@ export class EffectSystem {
       game.bus.emit('damageDealt', { player, source: card, amount: remaining, target: t });
     }
 
-    game.cleanupDeaths(player, player);
-    game.cleanupDeaths(game.opponent, player);
+    await game.cleanupDeaths(player, player);
+    await game.cleanupDeaths(game.opponent, player);
   }
 
   summonUnit(effect, context) {

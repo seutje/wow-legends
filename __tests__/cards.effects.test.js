@@ -4,7 +4,7 @@ import Hero from '../src/js/entities/hero.js';
 import Card from '../src/js/entities/card.js';
 
 const cards = JSON.parse(fs.readFileSync(new URL('../data/cards.json', import.meta.url)));
-const effectCards = cards.filter(c => c.effects && c.effects[0] && c.effects[0].type !== 'rawText');
+const effectCards = cards.filter(c => c.effects && c.effects[0] && c.effects[0].type !== 'rawText' && !c.keywords?.includes('Deathrattle'));
 
 describe.each(effectCards)('$id executes its effect', (card) => {
   test('effect works as defined', async () => {
