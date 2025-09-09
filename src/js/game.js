@@ -26,6 +26,7 @@ export default class Game {
     this.rng = new RNG();
 
     this.turns.bus.on('turn:start', ({ player }) => {
+      if (player) player.cardsPlayedThisTurn = 0;
       const bonus = player?.hero?.data?.nextSpellDamageBonus;
       if (bonus?.eachTurn) bonus.used = false;
       if (player?.hero) {
@@ -192,22 +193,29 @@ export default class Game {
       tempSpellDamage = bonus.amount;
     }
 
-    // Execute the card's effect
+    const comboActive = player.cardsPlayedThisTurn > 0;
+    const context = { game: this, player, card };
+
     if (card.effects && card.effects.length > 0) {
-      await this.effects.execute(card.effects, { game: this, player: player, card: card });
+      await this.effects.execute(card.effects, context);
+    }
+
+    if (comboActive && card.combo && card.combo.length > 0) {
+      await this.effects.execute(card.combo, context);
     }
 
     if (tempSpellDamage) {
       player.hero.data.spellDamage -= tempSpellDamage;
     }
 
-    // Move the card to the appropriate zone
     if (card.type === 'ally' || card.type === 'equipment') {
       player.hand.moveTo(player.battlefield, cardId);
       if (card.type === 'equipment') player.hero.equipment.push(card);
     } else {
       player.hand.moveTo(player.graveyard, cardId);
     }
+
+    player.cardsPlayedThisTurn += 1;
 
     return true;
   }
