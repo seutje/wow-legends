@@ -55,38 +55,41 @@ export function renderPlay(container, game, { onUpdate } = {}) {
     const tooltipCard = card.summonedBy || card;
 
     tooltipEl = el('div', { class: 'card-tooltip' });
-    tooltipEl.style.position = 'absolute';
-    tooltipEl.style.zIndex = '1000';
-    tooltipEl.style.maxWidth = `${window.innerWidth - 20}px`;
-    tooltipEl.style.maxHeight = `${window.innerHeight - 20}px`;
-    container.append(tooltipEl);
+    const currentTooltip = tooltipEl;
+    currentTooltip.style.position = 'absolute';
+    currentTooltip.style.zIndex = '1000';
+    currentTooltip.style.maxWidth = `${window.innerWidth - 20}px`;
+    currentTooltip.style.maxHeight = `${window.innerHeight - 20}px`;
+    container.append(currentTooltip);
 
     function position() {
-      tooltipEl.style.left = `${event.clientX + 10}px`;
-      tooltipEl.style.top = `${event.clientY + 10}px`;
-      const rect = tooltipEl.getBoundingClientRect();
+      currentTooltip.style.left = `${event.clientX + 10}px`;
+      currentTooltip.style.top = `${event.clientY + 10}px`;
+      const rect = currentTooltip.getBoundingClientRect();
       if (rect.right > window.innerWidth) {
-        tooltipEl.style.left = `${window.innerWidth - rect.width - 10}px`;
+        currentTooltip.style.left = `${window.innerWidth - rect.width - 10}px`;
       }
       if (rect.bottom > window.innerHeight) {
-        tooltipEl.style.top = `${window.innerHeight - rect.height - 10}px`;
+        currentTooltip.style.top = `${window.innerHeight - rect.height - 10}px`;
       }
     }
 
     const img = new Image();
     img.alt = tooltipCard.name;
     img.onload = () => {
+      if (tooltipEl !== currentTooltip) return;
       img.style.maxWidth = '100%';
       img.style.maxHeight = '100%';
-      tooltipEl.append(img);
+      currentTooltip.append(img);
       position();
     };
     img.onerror = () => {
-      tooltipEl.textContent = tooltipCard.text;
-      tooltipEl.style.backgroundColor = 'rgba(0,0,0,0.8)';
-      tooltipEl.style.color = 'white';
-      tooltipEl.style.padding = '5px';
-      tooltipEl.style.borderRadius = '3px';
+      if (tooltipEl !== currentTooltip) return;
+      currentTooltip.textContent = tooltipCard.text;
+      currentTooltip.style.backgroundColor = 'rgba(0,0,0,0.8)';
+      currentTooltip.style.color = 'white';
+      currentTooltip.style.padding = '5px';
+      currentTooltip.style.borderRadius = '3px';
       position();
     };
     img.src = `src/assets/cards/${tooltipCard.id}.png`;
