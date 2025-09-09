@@ -216,7 +216,7 @@ export default class Game {
       player.hand.moveTo(player.battlefield, cardId);
       if (card.type === 'equipment') player.hero.equipment.push(card);
     } else if (card.type === 'quest') {
-      player.hand.moveTo(player.quests, cardId);
+      player.hand.moveTo(player.battlefield, cardId);
       this.quests.addQuest(player, card);
     } else {
       player.hand.moveTo(player.graveyard, cardId);
@@ -334,7 +334,9 @@ export default class Game {
     this.resources.startTurn(this.opponent);
     const affordable = this.opponent.hand.cards.filter(c => this.canPlay(this.opponent, c)).sort((a,b)=> (a.cost||0)-(b.cost||0));
     if (affordable[0]) await this.playFromHand(this.opponent, affordable[0].id);
-    for (const c of this.opponent.battlefield.cards) this.combat.declareAttacker(c);
+    for (const c of this.opponent.battlefield.cards) {
+      if (c.type === 'ally' || c.type === 'equipment') this.combat.declareAttacker(c);
+    }
     this.combat.setDefenderHero(this.player.hero);
     this.combat.resolve();
     this.cleanupDeaths(this.player, this.opponent);

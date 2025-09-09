@@ -27,10 +27,11 @@ test('quest rewards trigger when requirements met', async () => {
   g.resources._pool.set(g.player, 20);
 
   await g.playFromHand(g.player, quest.id);
+  expect(g.player.battlefield.cards.some(c => c.id === quest.id)).toBe(true);
   await g.playFromHand(g.player, e1.id);
   await g.playFromHand(g.player, e2.id);
   await g.playFromHand(g.player, e3.id);
 
-  expect(g.player.quests.cards.length).toBe(0);
+  expect(g.player.battlefield.cards.some(c => c.id === quest.id)).toBe(false);
   expect(g.player.hand.cards.some(c => c.id === filler.id)).toBe(true);
 });
