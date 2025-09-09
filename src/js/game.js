@@ -236,9 +236,16 @@ export default class Game {
 
   async promptTarget(candidates, { allowNoMore = false } = {}) {
     if (!candidates?.length) return null;
+
+    // If it's the AI's turn, auto-select a target without prompting
+    if (this.turns.activePlayer && this.turns.activePlayer !== this.player) {
+      return this.rng.pick(candidates);
+    }
+
     if (typeof document === 'undefined') {
       return candidates[0];
     }
+
     return new Promise((resolve) => {
       const overlay = document.createElement('div');
       overlay.className = 'target-prompt';
