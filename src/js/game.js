@@ -221,6 +221,10 @@ export default class Game {
     if (card.type === 'ally' || card.type === 'equipment') {
       player.hand.moveTo(player.battlefield, cardId);
       if (card.type === 'equipment') player.hero.equipment.push(card);
+      if (card.type === 'ally' && !card.keywords?.includes('Rush')) {
+        card.data = card.data || {};
+        card.data.attacked = true;
+      }
     } else if (card.type === 'quest') {
       player.hand.moveTo(player.battlefield, cardId);
       this.quests.addQuest(player, card);

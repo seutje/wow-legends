@@ -103,6 +103,7 @@ Unlike typical TCGs, WoW RPG TCG includes **persistent progression**:
 
 -   Represent summoned creatures, mercenaries, or lore characters.\
 -   Example: *Grunt of Orgrimmar -- 2 ATK, 2 HP, Taunt.*
+-   Cannot attack the turn they enter play unless they have the **Rush** keyword.
 
 ### Equipment Cards
 

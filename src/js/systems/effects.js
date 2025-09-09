@@ -209,6 +209,9 @@ export class EffectSystem {
         keywords: unit.keywords,
         summonedBy: card
       });
+      if (!newUnit.keywords?.includes('Rush')) {
+        newUnit.data.attacked = true;
+      }
       player.battlefield.add(newUnit);
       console.log(`Summoned ${newUnit.name} to battlefield.`);
     }
