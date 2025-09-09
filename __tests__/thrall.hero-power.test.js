@@ -9,10 +9,13 @@ test("Thrall's hero power applies Overload 1", async () => {
   const g = new Game();
   await g.setupMatch();
   g.player.hero = new Hero(thrallData);
-  g.promptTarget = async () => null;
-  await g.useHeroPower(g.player);
-  expect(g.resources._overloadNext.get(g.player)).toBe(1);
   g.turns.turn = 2;
   g.resources.startTurn(g.player);
-  expect(g.resources.pool(g.player)).toBe(1);
+  g.promptTarget = async () => null;
+  await g.useHeroPower(g.player);
+  expect(g.resources.pool(g.player)).toBe(0);
+  expect(g.resources._overloadNext.get(g.player)).toBe(1);
+  g.turns.turn = 3;
+  g.resources.startTurn(g.player);
+  expect(g.resources.pool(g.player)).toBe(2);
 });

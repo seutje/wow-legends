@@ -9,18 +9,24 @@ test("Malfurion's hero power can grant attack", async () => {
   const g = new Game();
   await g.setupMatch();
   g.player.hero = new Hero(malfData);
+  g.turns.turn = 2;
+  g.resources.startTurn(g.player);
   g.promptOption = async () => 0; // choose attack option
   await g.useHeroPower(g.player);
   expect(g.player.hero.data.attack).toBe(1);
   expect(g.player.hero.data.armor).toBe(0);
+  expect(g.resources.pool(g.player)).toBe(0);
 });
 
 test("Malfurion's hero power can grant armor", async () => {
   const g = new Game();
   await g.setupMatch();
   g.player.hero = new Hero(malfData);
+  g.turns.turn = 2;
+  g.resources.startTurn(g.player);
   g.promptOption = async () => 1; // choose armor option
   await g.useHeroPower(g.player);
   expect(g.player.hero.data.attack).toBe(0);
   expect(g.player.hero.data.armor).toBe(2);
+  expect(g.resources.pool(g.player)).toBe(0);
 });

@@ -21,14 +21,18 @@ describe('hero effects', () => {
     g.turns.setActivePlayer(g.player);
     g.turns.bus.emit('turn:start', { player: g.player });
     await Promise.resolve();
+    g.turns.turn = 2;
+    g.resources.startTurn(g.player);
 
     await g.useHeroPower(g.player);
     expect(g.player.hero.data.armor).toBe(1);
     await g.useHeroPower(g.player);
     expect(g.player.hero.data.armor).toBe(1);
 
+    g.turns.turn++;
     g.turns.bus.emit('turn:start', { player: g.player });
     await Promise.resolve();
+    g.resources.startTurn(g.player);
     await g.useHeroPower(g.player);
     expect(g.player.hero.data.armor).toBe(2);
   });
