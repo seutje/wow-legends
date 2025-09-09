@@ -87,3 +87,8 @@ ul.zone-list li {
   margin: 0.25em 0;
   padding: 4px 6px;
 }
+
+.target-prompt button {
+  margin-top: 0.5em;
+  padding: 4px 6px;
+}

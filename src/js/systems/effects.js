@@ -121,7 +121,10 @@ export class EffectSystem {
         ];
         const chosen = new Set();
         for (let i = 0; i < 3; i++) {
-          const pick = await game.promptTarget(candidates.filter(c => !chosen.has(c)));
+          const pick = await game.promptTarget(
+            candidates.filter(c => !chosen.has(c)),
+            { allowNoMore: chosen.size > 0 }
+          );
           if (!pick) break;
           chosen.add(pick);
         }
