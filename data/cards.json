@@ -55,7 +55,7 @@
     "keywords": [
       "Armor — Starts with 2 Armor."
     ],
-    "data": {},
+    "data": { "armor": 2 },
     "text": "Heroic Strike — Your hero gains +1 ATK this turn."
   },
   {

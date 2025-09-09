@@ -165,14 +165,21 @@ export class EffectSystem {
     }
 
     for (const t of actualTargets) {
+      let remaining = dmgAmount;
+      if (t.data && typeof t.data.armor === 'number') {
+        const use = Math.min(t.data.armor, remaining);
+        t.data.armor -= use;
+        remaining -= use;
+      }
+      if (remaining <= 0) continue;
       if (t.data && t.data.health != null) {
-        t.data.health -= dmgAmount;
-        console.log(`${t.name} took ${dmgAmount} damage. Remaining health: ${t.data.health}`);
+        t.data.health -= remaining;
+        console.log(`${t.name} took ${remaining} damage. Remaining health: ${t.data.health}`);
         if (t.data.health > 0 && freeze) freezeTarget(t, freeze);
         if (t.data.health <= 0) t.data.dead = true;
       } else if (t.health != null) {
-        t.health -= dmgAmount;
-        console.log(`${t.name} took ${dmgAmount} damage. Remaining health: ${t.health}`);
+        t.health -= remaining;
+        console.log(`${t.name} took ${remaining} damage. Remaining health: ${t.health}`);
         if (t.health > 0 && freeze) freezeTarget(t, freeze);
       }
     }

@@ -11,6 +11,9 @@ describe.each(effectCards)('$id executes its effect', (card) => {
     const g = new Game();
     await g.setupMatch();
 
+    g.player.hero.data.armor = 0;
+    g.opponent.hero.data.armor = 0;
+
     // clean zones for deterministic counts
     g.player.hand.cards = [];
     g.opponent.hand.cards = [];
