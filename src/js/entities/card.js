@@ -21,6 +21,8 @@ export class CardEntity {
     this.effects = props.effects || [];
     this.combo = props.combo || [];
     this.summonedBy = props.summonedBy || null;
+    this.requirement = props.requirement || null;
+    this.reward = props.reward || [];
   }
 }
 

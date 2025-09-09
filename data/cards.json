@@ -1045,86 +1045,72 @@
     "name": "Purge the Scourge",
     "type": "quest",
     "cost": 1,
-    "effects": [
-      {
-        "type": "rawText",
-        "text": "Objective: Defeat 3 Undead allies. Reward: Draw 2 cards; gain +1 Alliance reputation."
-      }
-    ],
+    "effects": [],
+    "requirement": { "event": "allyDefeated", "filter": { "keyword": "Undead" }, "count": 3 },
+    "reward": [ { "type": "draw", "count": 2 } ],
     "keywords": [],
     "data": {},
-    "text": "Objective: Defeat 3 Undead allies. Reward: Draw 2 cards; gain +1 Alliance reputation."
+    "text": "Objective: Defeat 3 Undead allies. Reward: Draw 2 cards."
   },
   {
     "id": "quest-trial-of-the-elements",
     "name": "Trial of the Elements",
     "type": "quest",
     "cost": 1,
-    "effects": [
-      {
-        "type": "rawText",
-        "text": "Objective: Play 3 Elemental cards. Reward: Discover an Elemental; your next Elemental costs (1) less."
-      }
-    ],
+    "effects": [],
+    "requirement": { "event": "cardPlayed", "filter": { "keyword": "Elemental" }, "count": 3 },
+    "reward": [ { "type": "draw", "count": 1 } ],
     "keywords": [],
     "data": {},
-    "text": "Objective: Play 3 Elemental cards. Reward: Discover an Elemental; your next Elemental costs (1) less."
+    "text": "Objective: Play 3 Elemental cards. Reward: Draw a card."
   },
   {
     "id": "quest-bounty-the-defias-kingpin",
     "name": "Bounty: The Defias Kingpin",
     "type": "quest",
     "cost": 1,
-    "effects": [
-      {
-        "type": "rawText",
-        "text": "Objective: Return 2 enemy allies to hand (or defeat the Kingpin boss in PvE). Reward: Add “Kingpin’s Cutlass” (2‑cost 2/2 weapon) to your hand."
-      }
-    ],
+    "effects": [],
+    "requirement": { "event": "cardReturned", "filter": { "type": "ally" }, "count": 2 },
+    "reward": [ { "type": "equip", "item": { "name": "Kingpin's Cutlass", "attack": 2, "durability": 2 } } ],
     "keywords": [],
     "data": {},
-    "text": "Objective: Return 2 enemy allies to hand (or defeat the Kingpin boss in PvE). Reward: Add “Kingpin’s Cutlass” (2‑cost 2/2 weapon) to your hand."
+    "text": "Objective: Return 2 enemy allies to hand. Reward: Equip Kingpin's Cutlass (2/2)."
   },
   {
     "id": "quest-hunt-the-great-kodo",
     "name": "Hunt the Great Kodo",
     "type": "quest",
     "cost": 1,
-    "effects": [
-      {
-        "type": "rawText",
-        "text": "Objective: Deal 10 damage with Beasts. Reward: Create a 3/3 Kodo companion token with Rush."
-      }
-    ],
+    "effects": [],
+    "requirement": { "event": "damageDealt", "filter": { "keyword": "Beast" }, "amount": 10 },
+    "reward": [ { "type": "summon", "unit": { "name": "Kodo Companion", "attack": 3, "health": 3, "keywords": ["Rush", "Beast"] }, "count": 1 } ],
     "keywords": [],
     "data": {},
-    "text": "Objective: Deal 10 damage with Beasts. Reward: Create a 3/3 Kodo companion token with Rush."
+    "text": "Objective: Deal 10 damage with Beasts. Reward: Summon a 3/3 Kodo with Rush."
   },
   {
     "id": "quest-forge-the-relic",
     "name": "Forge the Relic",
     "type": "quest",
     "cost": 1,
-    "effects": [
-      {
-        "type": "rawText",
-        "text": "Objective: Play 3 Equipment cards. Reward: Discover a Trinket."
-      }
-    ],
+    "effects": [],
+    "requirement": { "event": "cardPlayed", "filter": { "type": "equipment" }, "count": 3 },
+    "reward": [ { "type": "draw", "count": 1 } ],
     "keywords": [],
     "data": {},
-    "text": "Objective: Play 3 Equipment cards. Reward: Discover a Trinket."
+    "text": "Objective: Play 3 Equipment cards. Reward: Draw a card."
   },
   {
     "id": "quest-call-to-arms",
     "name": "Call to Arms",
     "type": "quest",
     "cost": 1,
-    "effects": [
-      {
-        "type": "draw",
-        "count": 1
-      }
+    "effects": [],
+    "requirement": { "event": "turnEnd", "filter": { "keyword": "Taunt" }, "count": 3 },
+    "reward": [
+      { "type": "buff", "target": "allies", "property": "attack", "amount": 1, "duration": "thisTurn" },
+      { "type": "buff", "target": "allies", "property": "health", "amount": 1, "duration": "thisTurn" },
+      { "type": "draw", "count": 1 }
     ],
     "keywords": [],
     "data": {},
