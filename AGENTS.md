@@ -25,6 +25,7 @@ Code Conventions
 
 Testing
 - Run tests: `npm test`
+- Run linters: `npm run lint`
 - Add or update tests under `__tests__/` for every new module or behavior change.
 
 Live Reload Requirements (Important)

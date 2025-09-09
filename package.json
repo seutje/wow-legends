@@ -13,7 +13,7 @@
     "test:coverage": "npm run test -- --coverage",
     "simulate": "node tools/simulate.mjs",
     "ingest": "node tools/cards-ingest.mjs",
-    "lint": "htmlhint index.html"
+    "lint": "eslint . --ext .js,.mjs && htmlhint index.html"
   },
   "keywords": [],
   "author": "AI Agents",
@@ -22,6 +22,8 @@
     "http-server": "^14.1.1"
   },
   "devDependencies": {
+    "eslint": "^9.35.0",
+    "globals": "^16.3.0",
     "htmlhint": "^1.1.4",
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^30.1.2"
