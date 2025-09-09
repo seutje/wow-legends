@@ -9,6 +9,7 @@ test('Spell Damage +1 from Scarlet Sorcerer boosts Whirlwind', async () => {
   g.player.hand.cards = [];
   g.player.battlefield.cards = [];
   g.opponent.battlefield.cards = [];
+  g.opponent.hero.data.armor = 0;
   g.resources._pool.set(g.player, 10);
 
   // Add Scarlet Sorcerer to grant Spell Damage +1

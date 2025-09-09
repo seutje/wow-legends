@@ -107,14 +107,13 @@ export function renderPlay(container, game, { onUpdate } = {}) {
 
   const controls = el('div', { class: 'controls' },
     el('button', { onclick: () => { onUpdate?.(); } }, 'Refresh'),
-    el('button', { onclick: () => { game.resolveCombat(p, e); onUpdate?.(); } }, 'Resolve Combat'),
     el('button', { onclick: async () => { await game.useHeroPower(p); onUpdate?.(); }, disabled: p.hero.powerUsed || game.resources.pool(p) < 2 }, 'Hero Power'),
     el('button', { onclick: async () => { await game.endTurn(); onUpdate?.(); } }, 'End Turn')
   );
 
   const playerRow = el('div', { class: 'row player' },
     heroPane(p.hero),
-    el('div', { class: 'zone' }, zoneList('Player Battlefield', [p.hero, ...p.battlefield.cards], { clickCard: (c)=>{ game.toggleAttacker(p, c.id); onUpdate?.(); }, game: game, showTooltip: showTooltip, hideTooltip: hideTooltip })),
+    el('div', { class: 'zone' }, zoneList('Player Battlefield', [p.hero, ...p.battlefield.cards], { clickCard: async (c)=>{ await game.attack(p, c.id); onUpdate?.(); }, game: game, showTooltip: showTooltip, hideTooltip: hideTooltip })),
     el('div', { class: 'zone' }, zoneList('Player Hand', p.hand.cards, { clickCard: async (c)=>{ if (!await game.playFromHand(p, c.id)) { /* ignore */ } onUpdate?.(); }, game: game, showTooltip: showTooltip, hideTooltip: hideTooltip }))
   );
   const enemyRow = el('div', { class: 'row enemy' },

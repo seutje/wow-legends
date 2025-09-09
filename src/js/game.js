@@ -31,6 +31,8 @@ export default class Game {
       if (bonus?.eachTurn) bonus.used = false;
       if (player?.hero) {
         player.hero.powerUsed = false;
+        player.hero.data.attacked = false;
+        for (const c of player.battlefield.cards) { if (c.data) c.data.attacked = false; }
         if (player.hero.passive?.length) {
           this.effects.execute(player.hero.passive, { game: this, player, card: player.hero });
         }
@@ -41,9 +43,6 @@ export default class Game {
     // Players
     this.player = new Player({ name: 'You' });
     this.opponent = new Player({ name: 'AI' });
-
-    // Attack selection
-    this.attacking = new Set();
 
     this.state = { frame: 0, startedAt: 0 };
   }
@@ -284,25 +283,31 @@ export default class Game {
     });
   }
 
-  toggleAttacker(player, cardId) {
+  async attack(player, cardId, targetId = null) {
+    const defender = player === this.player ? this.opponent : this.player;
     const card = [player.hero, ...player.battlefield.cards].find(c => c.id === cardId);
     if (!card) return false;
-    if (this.attacking.has(cardId)) this.attacking.delete(cardId);
-    else this.attacking.add(cardId);
-    return true;
-  }
-
-  resolveCombat(attacker = this.player, defender = this.opponent) {
-    this.combat.clear();
-    for (const id of this.attacking) {
-      const card = [attacker.hero, ...attacker.battlefield.cards].find(c => c.id === id);
-      if (card) this.combat.declareAttacker(card);
+    const atk = typeof card.totalAttack === 'function' ? card.totalAttack() : (card.data?.attack ?? 0);
+    if (atk < 1 || card.data?.attacked) return false;
+    let target = null;
+    const candidates = [defender.hero, ...defender.battlefield.cards];
+    if (defender.battlefield.cards.length > 0) {
+      if (targetId) {
+        target = candidates.find(c => c.id === targetId) || null;
+        if (target?.id === defender.hero.id) target = null;
+      } else {
+        const choice = await this.promptTarget(candidates);
+        if (choice && choice.id !== defender.hero.id) target = choice;
+      }
     }
+    this.combat.clear();
+    if (!this.combat.declareAttacker(card)) return false;
     this.combat.setDefenderHero(defender.hero);
+    if (target) this.combat.assignBlocker(card.id, target);
     this.combat.resolve();
-    this.cleanupDeaths(attacker);
+    this.cleanupDeaths(player);
     this.cleanupDeaths(defender);
-    this.attacking.clear();
+    card.data.attacked = true;
     return true;
   }
 
@@ -340,7 +345,6 @@ export default class Game {
     this.state.startedAt = 0;
     this.player = new Player({ name: 'You' });
     this.opponent = new Player({ name: 'AI' });
-    this.attacking.clear();
     await this.setupMatch();
   }
 

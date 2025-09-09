@@ -13,7 +13,7 @@ describe('UI Play', () => {
       player: { hero: playerHero, battlefield: { cards: [] }, hand: { cards: [], size: () => 0 } },
       opponent: { hero: enemyHero, battlefield: { cards: [] }, hand: { cards: [], size: () => 0 } },
       resources: { pool: () => 0, available: () => 0 },
-      draw: jest.fn(), resolveCombat: jest.fn(), endTurn: jest.fn(), toggleAttacker: jest.fn(), playFromHand: () => true,
+      draw: jest.fn(), attack: jest.fn(), endTurn: jest.fn(), playFromHand: () => true,
     };
 
     renderPlay(container, game);
@@ -56,7 +56,7 @@ describe('UI Play', () => {
       player: { hero: playerHero, battlefield: { cards: [] }, hand: { cards: [card], size: () => 1 } },
       opponent: { hero: enemyHero, battlefield: { cards: [] }, hand: { cards: [], size: () => 0 } },
       resources: { pool: () => 0, available: () => 0 },
-      draw: jest.fn(), resolveCombat: jest.fn(), endTurn: jest.fn(), toggleAttacker: jest.fn(), playFromHand: () => true,
+      draw: jest.fn(), attack: jest.fn(), endTurn: jest.fn(), playFromHand: () => true,
     };
 
     renderPlay(container, game);
@@ -97,7 +97,7 @@ describe('UI Play', () => {
       player: { hero: playerHero, battlefield: { cards: [summoned] }, hand: { cards: [], size: () => 0 } },
       opponent: { hero: enemyHero, battlefield: { cards: [] }, hand: { cards: [], size: () => 0 } },
       resources: { pool: () => 0, available: () => 0 },
-      draw: jest.fn(), resolveCombat: jest.fn(), endTurn: jest.fn(), toggleAttacker: jest.fn(), playFromHand: () => true,
+      draw: jest.fn(), attack: jest.fn(), endTurn: jest.fn(), playFromHand: () => true,
     };
 
     renderPlay(container, game);
@@ -137,7 +137,7 @@ describe('UI Play', () => {
       player: { hero: playerHero, battlefield: { cards: [] }, hand: { cards: [card], size: () => 1 } },
       opponent: { hero: enemyHero, battlefield: { cards: [] }, hand: { cards: [], size: () => 0 } },
       resources: { pool: () => 0, available: () => 0 },
-      draw: jest.fn(), resolveCombat: jest.fn(), endTurn: jest.fn(), toggleAttacker: jest.fn(), playFromHand: () => true,
+      draw: jest.fn(), attack: jest.fn(), endTurn: jest.fn(), playFromHand: () => true,
     };
 
     renderPlay(container, game);
@@ -182,7 +182,7 @@ describe('UI Play', () => {
       player: { hero: playerHero, battlefield: { cards: [] }, hand: { cards: [card], size: () => 1 } },
       opponent: { hero: enemyHero, battlefield: { cards: [] }, hand: { cards: [], size: () => 0 } },
       resources: { pool: () => 0, available: () => 0 },
-      draw: jest.fn(), resolveCombat: jest.fn(), endTurn: jest.fn(), toggleAttacker: jest.fn(), playFromHand: () => true,
+      draw: jest.fn(), attack: jest.fn(), endTurn: jest.fn(), playFromHand: () => true,
     };
 
     renderPlay(container, game);
@@ -228,7 +228,7 @@ describe('UI Play', () => {
       player: { hero: playerHero, battlefield: { cards: [] }, hand: { cards: [card1, card2], size: () => 2 } },
       opponent: { hero: enemyHero, battlefield: { cards: [] }, hand: { cards: [], size: () => 0 } },
       resources: { pool: () => 0, available: () => 0 },
-      draw: jest.fn(), resolveCombat: jest.fn(), endTurn: jest.fn(), toggleAttacker: jest.fn(), playFromHand: () => true,
+      draw: jest.fn(), attack: jest.fn(), endTurn: jest.fn(), playFromHand: () => true,
     };
 
     renderPlay(container, game);
@@ -255,7 +255,7 @@ describe('UI Play', () => {
       player: { hero: playerHero, battlefield: { cards: [] }, hand: { cards: [], size: () => 0 } },
       opponent: { hero: enemyHero, battlefield: { cards: [] }, hand: { cards: [], size: () => 0 } },
       resources: { pool: () => 0, available: () => 0 },
-      draw: jest.fn(), resolveCombat: jest.fn(), endTurn: jest.fn(), toggleAttacker: jest.fn(), playFromHand: () => true,
+      draw: jest.fn(), attack: jest.fn(), endTurn: jest.fn(), playFromHand: () => true,
     };
 
     renderPlay(container, game);
