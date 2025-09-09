@@ -159,6 +159,9 @@ export class EffectSystem {
         if (chosen) actualTargets.push(chosen);
         break;
       }
+      case 'selfHero':
+        actualTargets.push(player.hero);
+        break;
       default:
         console.warn(`Unknown damage target: ${target}`);
         return;
