@@ -135,17 +135,32 @@
     "type": "hero",
     "effects": [
       {
-        "type": "buff",
-        "target": "hero",
-        "property": "attack",
-        "amount": 1,
-        "duration": "thisTurn"
-      },
-      {
-        "type": "buff",
-        "target": "hero",
-        "property": "armor",
-        "amount": 2
+        "type": "chooseOne",
+        "options": [
+          {
+            "text": "+1 ATK this turn",
+            "effects": [
+              {
+                "type": "buff",
+                "target": "hero",
+                "property": "attack",
+                "amount": 1,
+                "duration": "thisTurn"
+              }
+            ]
+          },
+          {
+            "text": "Gain 2 Armor",
+            "effects": [
+              {
+                "type": "buff",
+                "target": "hero",
+                "property": "armor",
+                "amount": 2
+              }
+            ]
+          }
+        ]
       }
     ],
     "keywords": [
