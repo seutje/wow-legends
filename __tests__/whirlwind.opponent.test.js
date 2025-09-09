@@ -10,6 +10,8 @@ test('Whirlwind damages both sides when cast by opponent', async () => {
   g.player.battlefield.cards = [];
   g.opponent.hand.cards = [];
   g.opponent.battlefield.cards = [];
+  g.player.hero.data.armor = 0;
+  g.opponent.hero.data.armor = 0;
   g.resources._pool.set(g.opponent, 10);
 
   // friendly minion

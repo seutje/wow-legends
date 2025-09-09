@@ -311,7 +311,7 @@ export default class Game {
     const atk = typeof card.totalAttack === 'function' ? card.totalAttack() : (card.data?.attack ?? 0);
     if (atk < 1 || card.data?.attacked) return false;
     let target = null;
-    const candidates = [defender.hero, ...defender.battlefield.cards];
+    const candidates = [defender.hero, ...defender.battlefield.cards.filter(c => c.type !== 'equipment')];
     if (defender.battlefield.cards.length > 0) {
       if (targetId) {
         target = candidates.find(c => c.id === targetId) || null;
