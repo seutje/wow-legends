@@ -78,4 +78,22 @@ describe('CombatSystem', () => {
     expect(p.hero.equipment.length).toBe(1);
     expect(p.hero.equipment[0].durability).toBe(1);
   });
+
+  test('unblocked attacks consume equipment durability until it breaks', () => {
+    const atk = new Player({ name: 'Atk' });
+    const dagger = new Equipment({ name: 'Dagger', attack: 1, durability: 2 });
+    atk.equip(dagger);
+    const def = new Player({ name: 'Def' });
+    const c = new CombatSystem();
+
+    c.declareAttacker(atk.hero);
+    c.setDefenderHero(def.hero);
+    c.resolve();
+    expect(atk.hero.equipment[0].durability).toBe(1);
+
+    c.declareAttacker(atk.hero);
+    c.setDefenderHero(def.hero);
+    c.resolve();
+    expect(atk.hero.equipment.length).toBe(0);
+  });
 });
