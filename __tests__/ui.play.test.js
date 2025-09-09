@@ -246,6 +246,48 @@ describe('UI Play', () => {
     global.Image = OriginalImage;
   });
 
+  test('does not error if tooltip is removed before image loads', () => {
+    jest.useFakeTimers();
+    const OriginalImage = global.Image;
+    global.Image = class {
+      constructor() {
+        const img = document.createElement('img');
+        Object.defineProperty(img, 'src', {
+          set(v) {
+            img.setAttribute('src', v);
+            setTimeout(() => img.onload?.(), 0);
+          },
+          get() { return img.getAttribute('src'); }
+        });
+        return img;
+      }
+    };
+
+    const container = document.createElement('div');
+    const card = { id: 'hero-jaina-proudmoore-archmage', name: 'Jaina', text: 'Archmage' };
+    const playerHero = new Hero({ name: 'Player Hero', data: { health: 25 } });
+    const enemyHero = new Hero({ name: 'Enemy Hero', data: { health: 20 } });
+
+    const game = {
+      player: { hero: playerHero, battlefield: { cards: [] }, hand: { cards: [card], size: () => 1 } },
+      opponent: { hero: enemyHero, battlefield: { cards: [] }, hand: { cards: [], size: () => 0 } },
+      resources: { pool: () => 0, available: () => 0 },
+      draw: jest.fn(), attack: jest.fn(), endTurn: jest.fn(), playFromHand: () => true,
+    };
+
+    renderPlay(container, game);
+
+    const li = container.querySelector(`[data-card-id="${card.id}"]`);
+    li.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true, clientX: 0, clientY: 0 }));
+    li.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
+
+    expect(() => { jest.runAllTimers(); }).not.toThrow();
+    expect(container.querySelector('.card-tooltip')).toBeNull();
+
+    global.Image = OriginalImage;
+    jest.useRealTimers();
+  });
+
   test('includes hero in battlefield zone list', () => {
     const container = document.createElement('div');
     const playerHero = new Hero({ name: 'Player Hero', data: { health: 25 } });
