@@ -106,7 +106,6 @@ export function renderPlay(container, game, { onUpdate } = {}) {
   );
 
   const controls = el('div', { class: 'controls' },
-    el('button', { onclick: () => { game.draw(p, 1); onUpdate?.(); } }, 'Draw'),
     el('button', { onclick: () => { onUpdate?.(); } }, 'Refresh'),
     el('button', { onclick: () => { game.resolveCombat(p, e); onUpdate?.(); } }, 'Resolve Combat'),
     el('button', { onclick: async () => { await game.useHeroPower(p); onUpdate?.(); }, disabled: p.hero.powerUsed || game.resources.pool(p) < 2 }, 'Hero Power'),

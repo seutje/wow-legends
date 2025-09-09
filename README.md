@@ -11,8 +11,8 @@ Getting Started
 
 How To Play
 - Goal: Reduce the enemy hero’s health to 0 before yours reaches 0.
+- At the start of each turn, you automatically draw a card.
 - Your Turn — controls at the top of the page:
-  - Draw: Draw 1 card from your Library to your Hand.
   - Place Resource (first): Pitch the first card from your Hand to your Resources (limit 1 per turn). Resources determine how many costs you can pay this turn.
   - Resolve Combat: Resolves attacks you’ve declared from your Battlefield.
   - End Turn: Ends your turn and lets the AI take a turn. Your next turn starts and you auto-draw 1 card.
