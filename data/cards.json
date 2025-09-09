@@ -194,6 +194,11 @@
       {
         "type": "draw",
         "count": 1
+      },
+      {
+        "type": "damage",
+        "target": "selfHero",
+        "amount": 2
       }
     ],
     "keywords": [
