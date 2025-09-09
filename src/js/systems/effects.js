@@ -77,6 +77,7 @@ export class EffectSystem {
   async dealDamage(effect, context) {
     const { target, amount, freeze, beastBonus } = effect;
     const { game, player, card } = context;
+    const opponent = player === game.player ? game.opponent : game.player;
       let dmgAmount = amount;
       if (beastBonus) {
         const hasBeast = player.battlefield.cards.some(c => c.keywords?.includes('Beast'));
@@ -92,8 +93,8 @@ export class EffectSystem {
     switch (target) {
       case 'any': {
         const candidates = [
-          game.opponent.hero,
-          ...game.opponent.battlefield.cards,
+          opponent.hero,
+          ...opponent.battlefield.cards,
           player.hero,
           ...player.battlefield.cards,
         ];
@@ -104,9 +105,9 @@ export class EffectSystem {
       case 'character': {
         const candidates = [
           player.hero,
-          game.opponent.hero,
+          opponent.hero,
           ...player.battlefield.cards,
-          ...game.opponent.battlefield.cards,
+          ...opponent.battlefield.cards,
         ];
         const chosen = await game.promptTarget(candidates);
         if (chosen) actualTargets.push(chosen);
@@ -114,8 +115,8 @@ export class EffectSystem {
       }
       case 'upToThreeTargets': {
         const candidates = [
-          game.opponent.hero,
-          ...game.opponent.battlefield.cards,
+          opponent.hero,
+          ...opponent.battlefield.cards,
           player.hero,
           ...player.battlefield.cards,
         ];
@@ -133,18 +134,18 @@ export class EffectSystem {
       }
       case 'allCharacters':
         actualTargets.push(player.hero);
-        actualTargets.push(game.opponent.hero);
+        actualTargets.push(opponent.hero);
         actualTargets.push(...player.battlefield.cards);
-        actualTargets.push(...game.opponent.battlefield.cards);
+        actualTargets.push(...opponent.battlefield.cards);
         break;
       case 'allEnemies':
-        actualTargets.push(game.opponent.hero);
-        actualTargets.push(...game.opponent.battlefield.cards);
+        actualTargets.push(opponent.hero);
+        actualTargets.push(...opponent.battlefield.cards);
         break;
       case 'minion': {
         const candidates = [
           ...player.battlefield.cards,
-          ...game.opponent.battlefield.cards,
+          ...opponent.battlefield.cards,
         ];
         const chosen = await game.promptTarget(candidates);
         if (chosen) actualTargets.push(chosen);
@@ -152,8 +153,8 @@ export class EffectSystem {
       }
       case 'enemyHeroOrMinionWithoutTaunt': {
         const candidates = [
-          game.opponent.hero,
-          ...game.opponent.battlefield.cards.filter(c => !c.keywords?.includes('Taunt')),
+          opponent.hero,
+          ...opponent.battlefield.cards.filter(c => !c.keywords?.includes('Taunt')),
         ];
         const chosen = await game.promptTarget(candidates);
         if (chosen) actualTargets.push(chosen);
@@ -193,7 +194,7 @@ export class EffectSystem {
     }
 
     await game.cleanupDeaths(player, player);
-    await game.cleanupDeaths(game.opponent, player);
+    await game.cleanupDeaths(opponent, player);
   }
 
   summonUnit(effect, context) {
