@@ -35,6 +35,7 @@ export default class Game {
           this.effects.execute(player.hero.passive, { game: this, player, card: player.hero });
         }
       }
+      if (player) this.draw(player, 1);
     });
 
     // Players
@@ -116,11 +117,11 @@ export default class Game {
     
 
     this.turns.setActivePlayer(this.player);
-    this.turns.startTurn();
-    this.resources.startTurn(this.player);
     // Draw opening hand
     this.draw(this.player, 3);
     this.draw(this.opponent, 3);
+    this.turns.startTurn();
+    this.resources.startTurn(this.player);
   }
 
   draw(player, n = 1) {
@@ -315,7 +316,6 @@ export default class Game {
     this.turns.setActivePlayer(this.opponent);
     this.turns.startTurn();
     this.resources.startTurn(this.opponent);
-    this.draw(this.opponent, 1);
     const affordable = this.opponent.hand.cards.filter(c => this.canPlay(this.opponent, c)).sort((a,b)=> (a.cost||0)-(b.cost||0));
     if (affordable[0]) await this.playFromHand(this.opponent, affordable[0].id);
     for (const c of this.opponent.battlefield.cards) this.combat.declareAttacker(c);
@@ -333,7 +333,6 @@ export default class Game {
     this.turns.setActivePlayer(this.player);
     this.turns.startTurn();
     this.resources.startTurn(this.player);
-    this.draw(this.player, 1);
   }
 
   async reset() {
