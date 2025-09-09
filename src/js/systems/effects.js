@@ -193,14 +193,15 @@ export class EffectSystem {
 
   summonUnit(effect, context) {
     const { unit, count } = effect;
-    const { player } = context;
+    const { player, card } = context;
 
     for (let i = 0; i < count; i++) {
       const newUnit = new Card({
         name: unit.name,
         type: 'ally', // Summoned units are typically allies
         data: { attack: unit.attack, health: unit.health },
-        keywords: unit.keywords
+        keywords: unit.keywords,
+        summonedBy: card
       });
       player.battlefield.add(newUnit);
       console.log(`Summoned ${newUnit.name} to battlefield.`);
