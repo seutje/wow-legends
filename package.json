@@ -13,7 +13,7 @@
     "test:coverage": "npm run test -- --coverage",
     "simulate": "node tools/simulate.mjs",
     "ingest": "node tools/cards-ingest.mjs",
-    "lint": "eslint . --ext .js,.mjs && htmlhint index.html"
+    "lint": "eslint . --ext .js,.mjs && echo ESLint scanned $(git ls-files '*.js' '*.mjs' | wc -l) JS files && htmlhint index.html"
   },
   "keywords": [],
   "author": "AI Agents",
@@ -22,6 +22,7 @@
     "http-server": "^14.1.1"
   },
   "devDependencies": {
+    "@eslint/js": "^9.35.0",
     "eslint": "^9.35.0",
     "globals": "^16.3.0",
     "htmlhint": "^1.1.4",
