@@ -62,7 +62,7 @@ describe('UI Play', () => {
     renderPlay(container, game);
 
     const li = container.querySelector(`[data-card-id="${card.id}"]`);
-    li.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, clientX: 0, clientY: 0 }));
+    li.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true, clientX: 0, clientY: 0 }));
 
     const tooltipImg = container.querySelector('.card-tooltip img');
     expect(tooltipImg).toBeTruthy();
@@ -102,7 +102,7 @@ describe('UI Play', () => {
     renderPlay(container, game);
 
     const li = container.querySelector(`[data-card-id="${card.id}"]`);
-    li.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, clientX: 0, clientY: 0 }));
+    li.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true, clientX: 0, clientY: 0 }));
 
     const tooltip = container.querySelector('.card-tooltip');
     expect(tooltip.textContent).toBe(card.text);
@@ -147,7 +147,7 @@ describe('UI Play', () => {
     renderPlay(container, game);
 
     const li = container.querySelector(`[data-card-id="${card.id}"]`);
-    li.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, clientX: 290, clientY: 190 }));
+    li.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true, clientX: 290, clientY: 190 }));
 
     const tooltip = container.querySelector('.card-tooltip');
     const img = tooltip.querySelector('img');
@@ -159,6 +159,50 @@ describe('UI Play', () => {
     global.Image = OriginalImage;
     Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: prevW });
     Object.defineProperty(window, 'innerHeight', { configurable: true, writable: true, value: prevH });
+  });
+
+  test('shows only one tooltip at a time when hovering multiple cards', () => {
+    const OriginalImage = global.Image;
+    global.Image = class {
+      constructor() {
+        const img = document.createElement('img');
+        Object.defineProperty(img, 'src', {
+          set(v) {
+            img.setAttribute('src', v);
+            img.onload?.();
+          },
+          get() { return img.getAttribute('src'); }
+        });
+        return img;
+      }
+    };
+
+    const container = document.createElement('div');
+    const card1 = { id: 'hero-jaina-proudmoore-archmage', name: 'Jaina', text: 'Archmage' };
+    const card2 = { id: 'hero-thrall-warchief-of-the-horde', name: 'Thrall', text: 'Warchief' };
+    const playerHero = new Hero({ name: 'Player Hero', data: { health: 25 } });
+    const enemyHero = new Hero({ name: 'Enemy Hero', data: { health: 20 } });
+
+    const game = {
+      player: { hero: playerHero, battlefield: { cards: [] }, hand: { cards: [card1, card2], size: () => 2 } },
+      opponent: { hero: enemyHero, battlefield: { cards: [] }, hand: { cards: [], size: () => 0 } },
+      resources: { pool: () => 0, available: () => 0 },
+      draw: jest.fn(), resolveCombat: jest.fn(), endTurn: jest.fn(), toggleAttacker: jest.fn(), playFromHand: () => true,
+    };
+
+    renderPlay(container, game);
+
+    const li1 = container.querySelector(`[data-card-id="${card1.id}"]`);
+    li1.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true, clientX: 0, clientY: 0 }));
+    const li2 = container.querySelector(`[data-card-id="${card2.id}"]`);
+    li2.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true, clientX: 0, clientY: 0 }));
+
+    const tooltips = container.querySelectorAll('.card-tooltip');
+    expect(tooltips).toHaveLength(1);
+    const tooltipImg = tooltips[0].querySelector('img');
+    expect(tooltipImg.getAttribute('src')).toBe(`src/assets/cards/${card2.id}.png`);
+
+    global.Image = OriginalImage;
   });
 
   test('includes hero in battlefield zone list', () => {
