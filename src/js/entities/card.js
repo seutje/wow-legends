@@ -20,6 +20,7 @@ export class CardEntity {
     this.text = props.text || '';
     this.effects = props.effects || [];
     this.combo = props.combo || [];
+    this.summonedBy = props.summonedBy || null;
   }
 }
 

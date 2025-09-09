@@ -53,6 +53,7 @@
  * @property {string=} text
  * @property {Keyword[]=} keywords
  * @property {Record<string, any>=} data
+ * @property {Card=} summonedBy
  */
 
 export {}; // purely for typedefs

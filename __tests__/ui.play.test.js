@@ -71,6 +71,47 @@ describe('UI Play', () => {
     global.Image = OriginalImage;
   });
 
+  test('summoned allies show summoning card in tooltip', () => {
+    const OriginalImage = global.Image;
+    global.Image = class {
+      constructor() {
+        const img = document.createElement('img');
+        Object.defineProperty(img, 'src', {
+          set(v) {
+            img.setAttribute('src', v);
+            img.onload?.();
+          },
+          get() { return img.getAttribute('src'); }
+        });
+        return img;
+      }
+    };
+
+    const container = document.createElement('div');
+    const summoner = { id: 'spell-summon-infernal', name: 'Summon Infernal', text: 'Summon a 6/6 Infernal.' };
+    const summoned = { id: 'token-infernal', name: 'Infernal', summonedBy: summoner };
+    const playerHero = new Hero({ name: 'Player Hero', data: { health: 25 } });
+    const enemyHero = new Hero({ name: 'Enemy Hero', data: { health: 20 } });
+
+    const game = {
+      player: { hero: playerHero, battlefield: { cards: [summoned] }, hand: { cards: [], size: () => 0 } },
+      opponent: { hero: enemyHero, battlefield: { cards: [] }, hand: { cards: [], size: () => 0 } },
+      resources: { pool: () => 0, available: () => 0 },
+      draw: jest.fn(), resolveCombat: jest.fn(), endTurn: jest.fn(), toggleAttacker: jest.fn(), playFromHand: () => true,
+    };
+
+    renderPlay(container, game);
+
+    const li = container.querySelector(`[data-card-id="${summoned.id}"]`);
+    li.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true, clientX: 0, clientY: 0 }));
+
+    const tooltipImg = container.querySelector('.card-tooltip img');
+    expect(tooltipImg).toBeTruthy();
+    expect(tooltipImg.getAttribute('src')).toBe(`src/assets/cards/${summoner.id}.png`);
+
+    global.Image = OriginalImage;
+  });
+
   test('falls back to text tooltip when art is missing', () => {
     const OriginalImage = global.Image;
     global.Image = class {

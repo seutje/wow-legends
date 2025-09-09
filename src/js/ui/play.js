@@ -52,6 +52,7 @@ export function renderPlay(container, game, { onUpdate } = {}) {
 
   function showTooltip(card, event, game) {
     if (tooltipEl) hideTooltip(); // Hide any existing tooltip
+    const tooltipCard = card.summonedBy || card;
 
     tooltipEl = el('div', { class: 'card-tooltip' });
     tooltipEl.style.position = 'absolute';
@@ -73,7 +74,7 @@ export function renderPlay(container, game, { onUpdate } = {}) {
     }
 
     const img = new Image();
-    img.alt = card.name;
+    img.alt = tooltipCard.name;
     img.onload = () => {
       img.style.maxWidth = '100%';
       img.style.maxHeight = '100%';
@@ -81,14 +82,14 @@ export function renderPlay(container, game, { onUpdate } = {}) {
       position();
     };
     img.onerror = () => {
-      tooltipEl.textContent = card.text;
+      tooltipEl.textContent = tooltipCard.text;
       tooltipEl.style.backgroundColor = 'rgba(0,0,0,0.8)';
       tooltipEl.style.color = 'white';
       tooltipEl.style.padding = '5px';
       tooltipEl.style.borderRadius = '3px';
       position();
     };
-    img.src = `src/assets/cards/${card.id}.png`;
+    img.src = `src/assets/cards/${tooltipCard.id}.png`;
     position();
   }
 
