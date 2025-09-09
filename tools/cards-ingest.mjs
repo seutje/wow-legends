@@ -113,7 +113,7 @@ function parseEffect(text, card) {
   }
 
   // Summon effects
-  match = text.match(/Summon (a|two) (\d+)\/(\d+) (.+?)(?: with “(.+?)”|\.)?/i);
+  match = text.match(/Summon (a|two) (\d+)\/(\d+) (.+?)(?= with|\.|$)(?: with “(.+?)”)?/i);
   if (match) {
     const count = match[1] === 'a' ? 1 : 2;
     const attack = parseInt(match[2], 10);
