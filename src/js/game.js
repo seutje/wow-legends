@@ -210,7 +210,7 @@ export default class Game {
     return true;
   }
 
-  async promptTarget(candidates) {
+  async promptTarget(candidates, { allowNoMore = false } = {}) {
     if (!candidates?.length) return null;
     if (typeof document === 'undefined') {
       return candidates[0];
@@ -232,6 +232,17 @@ export default class Game {
       });
 
       overlay.appendChild(list);
+
+      if (allowNoMore) {
+        const done = document.createElement('button');
+        done.textContent = 'No more targets';
+        done.addEventListener('click', () => {
+          document.body.removeChild(overlay);
+          resolve(null);
+        });
+        overlay.appendChild(done);
+      }
+
       document.body.appendChild(overlay);
     });
   }
