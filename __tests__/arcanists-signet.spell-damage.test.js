@@ -8,6 +8,7 @@ test("Arcanist's Signet grants +1 Spell Damage to the first spell each turn", as
   g.player.hand.cards = [];
   g.player.battlefield.cards = [];
   g.opponent.battlefield.cards = [];
+  g.opponent.hero.data.armor = 0;
   g.resources._pool.set(g.player, 10);
   const signet = new Card({
     id: 'equipment-arcanist-s-signet',

@@ -1,3 +1,5 @@
+import { freezeTarget } from './keywords.js';
+
 function getStat(card, key, def = 0) {
   if (key === 'attack' && typeof card?.totalAttack === 'function') return card.totalAttack();
   return (card?.data && typeof card.data[key] === 'number') ? card.data[key] : def;
@@ -89,9 +91,11 @@ export class CombatSystem {
     for (const { target, amount, source } of events) {
       let rem = armorApply(target, amount);
       const hp = getStat(target, 'health', 0);
-      setStat(target, 'health', Math.max(0, hp - rem));
+      const newHp = Math.max(0, hp - rem);
+      setStat(target, 'health', newHp);
       console.log(`${target.name} took ${rem} damage from ${source?.name ?? 'an unknown source'}. Remaining health: ${getStat(target, 'health', 0)}`);
-      if (getStat(target, 'health', 0) <= 0) setStat(target, 'dead', true);
+      if (source?.keywords?.includes?.('Freeze') && newHp > 0) freezeTarget(target, 1);
+      if (newHp <= 0) setStat(target, 'dead', true);
     }
 
     this.clear();

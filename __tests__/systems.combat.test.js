@@ -98,6 +98,18 @@ describe('CombatSystem', () => {
     expect(atk.hero.equipment.length).toBe(0);
   });
 
+  test('freeze keyword freezes surviving targets in combat', () => {
+    const we = new Card({ type: 'ally', name: 'WE', data: { attack: 3, health: 6 }, keywords: ['Freeze'] });
+    const def = new Player({ name: 'Def' });
+    def.hero.data.health = 10;
+    const c = new CombatSystem();
+    c.declareAttacker(we);
+    c.setDefenderHero(def.hero);
+    c.resolve();
+    expect(def.hero.data.health).toBe(7);
+    expect(def.hero.data.freezeTurns).toBe(1);
+  });
+
   test('damage dealt in combat is logged with source', () => {
     const a = new Card({ type: 'ally', name: 'A', data: { attack: 3, health: 2 } });
     const b = new Card({ type: 'ally', name: 'B', data: { attack: 2, health: 3 } });
