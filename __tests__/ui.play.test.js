@@ -76,6 +76,9 @@ describe('UI Play', () => {
     expect(tooltipImg.getAttribute('src')).toBe(`src/assets/art/${card.id}-art.png`);
     expect(tooltip.textContent).toContain(card.name);
     expect(tooltip.textContent).toContain(card.text);
+    expect(tooltip.querySelector('.stat.cost').textContent).toBe(String(card.cost));
+    expect(tooltip.querySelector('.stat.attack').textContent).toBe(String(card.data.attack));
+    expect(tooltip.querySelector('.stat.health').textContent).toBe(String(card.data.health));
 
     global.Image = OriginalImage;
   });
