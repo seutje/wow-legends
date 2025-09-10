@@ -26,6 +26,9 @@ export class EffectSystem {
         case 'summon':
           this.summonUnit(effect, context);
           break;
+        case 'summonBuff':
+          this.registerSummonBuff(effect, context);
+          break;
         case 'buff':
           await this.applyBuff(effect, context);
           break;
@@ -199,7 +202,7 @@ export class EffectSystem {
 
   summonUnit(effect, context) {
     const { unit, count } = effect;
-    const { player, card } = context;
+    const { player, card, game } = context;
 
     for (let i = 0; i < count; i++) {
       const newUnit = new Card({
@@ -214,7 +217,36 @@ export class EffectSystem {
       }
       player.battlefield.add(newUnit);
       console.log(`Summoned ${newUnit.name} to battlefield.`);
+      game?.bus.emit('unitSummoned', { player, card: newUnit });
     }
+  }
+
+  registerSummonBuff(effect, context) {
+    const { keyword, attack = 0, health = 0 } = effect;
+    const { game, player, card } = context;
+
+    const applyBuff = (unit) => {
+      if (!player.hero.equipment.includes(card)) return;
+      if (!unit.keywords?.includes(keyword)) return;
+      unit.data = unit.data || {};
+      unit.data.attack = (unit.data.attack || 0) + attack;
+      unit.data.health = (unit.data.health || 0) + health;
+    };
+
+    const onPlay = ({ player: evtPlayer, card: played }) => {
+      if (evtPlayer !== player) return;
+      if (played === card) return;
+      if (played.type !== 'ally') return;
+      applyBuff(played);
+    };
+
+    const onSummon = ({ player: evtPlayer, card: summoned }) => {
+      if (evtPlayer !== player) return;
+      applyBuff(summoned);
+    };
+
+    game.bus.on('cardPlayed', onPlay);
+    game.bus.on('unitSummoned', onSummon);
   }
 
   healCharacter(effect, context) {
