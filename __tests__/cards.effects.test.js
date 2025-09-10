@@ -217,6 +217,22 @@ describe.each(effectCards)('$id executes its effect', (card) => {
         expect(g.player.graveyard.cards.some(c => c.id === consumable.id)).toBe(true);
         break;
       }
+      case 'summonBuff': {
+        await g.playFromHand(g.player, card.id);
+        const demon = new Card({
+          id: 'test-demon',
+          name: 'Test Demon',
+          type: 'ally',
+          cost: 0,
+          data: { attack: 1, health: 1 },
+          keywords: ['Demon'],
+        });
+        g.player.hand.add(demon);
+        await g.playFromHand(g.player, demon.id);
+        expect(demon.data.attack).toBe(2);
+        expect(demon.data.health).toBe(2);
+        break;
+      }
       default:
         throw new Error('Unhandled effect type: ' + effect.type);
     }

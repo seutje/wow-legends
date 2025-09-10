@@ -1011,8 +1011,10 @@
     "cost": 3,
     "effects": [
       {
-        "type": "rawText",
-        "text": "Demons you summon gain +1/+1."
+        "type": "summonBuff",
+        "keyword": "Demon",
+        "attack": 1,
+        "health": 1
       }
     ],
     "keywords": [
