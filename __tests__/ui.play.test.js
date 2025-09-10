@@ -31,7 +31,7 @@ describe('UI Play', () => {
     expect(enemyPane.textContent).toContain('Enemy ability');
   });
 
-  test('shows card image tooltip when art is available', () => {
+  test('shows card tooltip with art, name, and text when art is available', () => {
     const OriginalImage = global.Image;
     global.Image = class {
       constructor() {
@@ -64,9 +64,12 @@ describe('UI Play', () => {
     const li = container.querySelector(`[data-card-id="${card.id}"]`);
     li.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true, clientX: 0, clientY: 0 }));
 
-    const tooltipImg = container.querySelector('.card-tooltip img');
+    const tooltip = container.querySelector('.card-tooltip');
+    const tooltipImg = tooltip.querySelector('img');
     expect(tooltipImg).toBeTruthy();
-    expect(tooltipImg.getAttribute('src')).toBe(`src/assets/cards/${card.id}.png`);
+    expect(tooltipImg.getAttribute('src')).toBe(`src/assets/art/${card.id}-art.png`);
+    expect(tooltip.textContent).toContain(card.name);
+    expect(tooltip.textContent).toContain(card.text);
 
     global.Image = OriginalImage;
   });
@@ -105,9 +108,12 @@ describe('UI Play', () => {
     const li = container.querySelector(`[data-card-id="${summoned.id}"]`);
     li.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true, clientX: 0, clientY: 0 }));
 
-    const tooltipImg = container.querySelector('.card-tooltip img');
+    const tooltip = container.querySelector('.card-tooltip');
+    const tooltipImg = tooltip.querySelector('img');
     expect(tooltipImg).toBeTruthy();
-    expect(tooltipImg.getAttribute('src')).toBe(`src/assets/cards/${summoner.id}.png`);
+    expect(tooltipImg.getAttribute('src')).toBe(`src/assets/art/${summoner.id}-art.png`);
+    expect(tooltip.textContent).toContain(summoner.name);
+    expect(tooltip.textContent).toContain(summoner.text);
 
     global.Image = OriginalImage;
   });
@@ -146,7 +152,8 @@ describe('UI Play', () => {
     li.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true, clientX: 0, clientY: 0 }));
 
     const tooltip = container.querySelector('.card-tooltip');
-    expect(tooltip.textContent).toBe(card.text);
+    expect(tooltip.textContent).toContain(card.name);
+    expect(tooltip.textContent).toContain(card.text);
     expect(tooltip.querySelector('img')).toBeNull();
 
     global.Image = OriginalImage;
@@ -240,8 +247,10 @@ describe('UI Play', () => {
 
     const tooltips = container.querySelectorAll('.card-tooltip');
     expect(tooltips).toHaveLength(1);
-    const tooltipImg = tooltips[0].querySelector('img');
-    expect(tooltipImg.getAttribute('src')).toBe(`src/assets/cards/${card2.id}.png`);
+    const tooltip = tooltips[0];
+    const tooltipImg = tooltip.querySelector('img');
+    expect(tooltipImg.getAttribute('src')).toBe(`src/assets/art/${card2.id}-art.png`);
+    expect(tooltip.textContent).toContain(card2.name);
 
     global.Image = OriginalImage;
   });

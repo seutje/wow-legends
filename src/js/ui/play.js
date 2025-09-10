@@ -60,6 +60,13 @@ export function renderPlay(container, game, { onUpdate } = {}) {
     currentTooltip.style.zIndex = '1000';
     currentTooltip.style.maxWidth = `${window.innerWidth - 20}px`;
     currentTooltip.style.maxHeight = `${window.innerHeight - 20}px`;
+    currentTooltip.style.backgroundColor = 'rgba(0,0,0,0.8)';
+    currentTooltip.style.color = 'white';
+    currentTooltip.style.padding = '5px';
+    currentTooltip.style.borderRadius = '3px';
+    currentTooltip.style.display = 'flex';
+    currentTooltip.style.flexDirection = 'column';
+    currentTooltip.style.alignItems = 'center';
     container.append(currentTooltip);
 
     function position() {
@@ -76,23 +83,23 @@ export function renderPlay(container, game, { onUpdate } = {}) {
 
     const img = new Image();
     img.alt = tooltipCard.name;
+    const info = el('div', { class: 'card-info' },
+      el('h4', {}, tooltipCard.name),
+      el('p', {}, tooltipCard.text)
+    );
     img.onload = () => {
       if (tooltipEl !== currentTooltip) return;
       img.style.maxWidth = '100%';
       img.style.maxHeight = '100%';
-      currentTooltip.append(img);
+      currentTooltip.append(img, info);
       position();
     };
     img.onerror = () => {
       if (tooltipEl !== currentTooltip) return;
-      currentTooltip.textContent = tooltipCard.text;
-      currentTooltip.style.backgroundColor = 'rgba(0,0,0,0.8)';
-      currentTooltip.style.color = 'white';
-      currentTooltip.style.padding = '5px';
-      currentTooltip.style.borderRadius = '3px';
+      currentTooltip.append(info);
       position();
     };
-    img.src = `src/assets/cards/${tooltipCard.id}.png`;
+    img.src = `src/assets/art/${tooltipCard.id}-art.png`;
     position();
   }
 
