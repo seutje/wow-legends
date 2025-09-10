@@ -48,7 +48,13 @@ describe('UI Play', () => {
     };
 
     const container = document.createElement('div');
-    const card = { id: 'hero-jaina-proudmoore-archmage', name: 'Jaina', text: 'Archmage' };
+    const card = {
+      id: 'ally-scarlet-sorcerer',
+      name: 'Scarlet Sorcerer',
+      text: 'Spell Damage +1.',
+      cost: 3,
+      data: { attack: 3, health: 3 }
+    };
     const playerHero = new Hero({ name: 'Player Hero', data: { health: 25 } });
     const enemyHero = new Hero({ name: 'Enemy Hero', data: { health: 20 } });
 
@@ -70,6 +76,9 @@ describe('UI Play', () => {
     expect(tooltipImg.getAttribute('src')).toBe(`src/assets/art/${card.id}-art.png`);
     expect(tooltip.textContent).toContain(card.name);
     expect(tooltip.textContent).toContain(card.text);
+    expect(tooltip.querySelector('.stat.cost').textContent).toBe(String(card.cost));
+    expect(tooltip.querySelector('.stat.attack').textContent).toBe(String(card.data.attack));
+    expect(tooltip.querySelector('.stat.health').textContent).toBe(String(card.data.health));
 
     global.Image = OriginalImage;
   });
