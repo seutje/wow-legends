@@ -93,6 +93,30 @@ ul.zone-list li {
   padding: 4px 6px;
 }
 
+.option-prompt {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.option-prompt ul {
+  background: #0b0f14;
+  list-style: none;
+  padding: 1em;
+}
+
+.option-prompt li {
+  cursor: pointer;
+  margin: 0.25em 0;
+  padding: 4px 6px;
+}
+
 .game-over {
   position: fixed;
   top: 0;
