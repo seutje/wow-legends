@@ -91,10 +91,13 @@ export class EffectSystem {
   }
 
   async dealDamage(effect, context) {
-    const { target, amount, freeze, beastBonus } = effect;
-    const { game, player, card } = context;
+    const { target, amount, freeze, beastBonus, comboAmount } = effect;
+    const { game, player, card, comboActive } = context;
     const opponent = player === game.player ? game.opponent : game.player;
       let dmgAmount = amount;
+      if (comboActive && typeof comboAmount === 'number') {
+        dmgAmount = comboAmount;
+      }
       if (beastBonus) {
         const hasBeast = player.battlefield.cards.some(c => c.keywords?.includes('Beast'));
         if (hasBeast) dmgAmount += beastBonus;
