@@ -153,7 +153,7 @@ describe('UI Play', () => {
 
     const container = document.createElement('div');
     const summoner = { id: 'spell-summon-infernal', name: 'Summon Infernal', text: 'Summon a 6/6 Infernal.', type: 'spell' };
-    const summoned = { id: 'token-infernal', name: 'Infernal', type: 'ally', summonedBy: summoner };
+    const summoned = { id: 'token-infernal', name: 'Infernal', type: 'ally', data: { attack: 6, health: 6 }, summonedBy: summoner };
     const playerHero = new Hero({ name: 'Player Hero', data: { health: 25 } });
     const enemyHero = new Hero({ name: 'Enemy Hero', data: { health: 20 } });
 
@@ -175,6 +175,8 @@ describe('UI Play', () => {
     expect(tooltipImg.getAttribute('src')).toBe(`src/assets/art/${summoner.id}-art.png`);
     expect(tooltip.textContent).toContain(summoner.name);
     expect(tooltip.textContent).toContain(summoner.text);
+    expect(tooltip.querySelector('.stat.attack').textContent).toBe('6');
+    expect(tooltip.querySelector('.stat.health').textContent).toBe('6');
 
     global.Image = OriginalImage;
   });
