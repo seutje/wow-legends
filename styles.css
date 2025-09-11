@@ -142,6 +142,7 @@ ul.zone-list li {
 }
 
 /* Card tooltip styling */
+
 .card-tooltip {
   background: #102029;
   border: 2px solid #0e5957;
@@ -150,6 +151,9 @@ ul.zone-list li {
   font-size: 14px;
   overflow: hidden;
   width: 220px;
+  height: 360px;
+  display: flex;
+  flex-direction: column;
 }
 
 .card-image-wrapper {
@@ -158,6 +162,7 @@ ul.zone-list li {
   aspect-ratio: 1280 / 896;
   overflow: hidden;
   background: #000;
+  flex: 0 0 auto;
 }
 
 .card-image-wrapper img {
@@ -197,10 +202,28 @@ ul.zone-list li {
   background: #e74c3c;
 }
 
-.card-tooltip h4 {
+.card-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.card-type {
+  margin: 4px 8px 0;
+  font-size: 12px;
+  text-transform: capitalize;
+}
+
+.card-info h4 {
   margin: 4px 8px;
 }
 
-.card-tooltip p {
+.card-text {
+  flex: 1;
+  margin: 0 8px;
+}
+
+.card-keywords {
   margin: 0 8px 8px;
+  font-style: italic;
 }
