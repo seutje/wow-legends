@@ -4,31 +4,24 @@ import { renderPlay } from '../src/js/ui/play.js';
 import Hero from '../src/js/entities/hero.js';
 
 describe('UI Play', () => {
-  test('renders hero panes with name, health, armor, and abilities', () => {
+  test('renders log panes with player and enemy actions', () => {
     const container = document.createElement('div');
-    const playerHero = new Hero({ name: 'Player Hero', data: { health: 25, armor: 5 }, text: 'Player ability', keywords: ['Swift'] });
-    const enemyHero = new Hero({ name: 'Enemy Hero', data: { health: 20, armor: 3 }, text: 'Enemy ability', keywords: ['Stealth'] });
+    const playerHero = new Hero({ name: 'Player Hero', data: { health: 25, armor: 5 } });
+    const enemyHero = new Hero({ name: 'Enemy Hero', data: { health: 20, armor: 3 } });
 
     const game = {
-      player: { hero: playerHero, battlefield: { cards: [] }, hand: { cards: [], size: () => 0 } },
-      opponent: { hero: enemyHero, battlefield: { cards: [] }, hand: { cards: [], size: () => 0 } },
+      player: { hero: playerHero, battlefield: { cards: [] }, hand: { cards: [], size: () => 0 }, log: ['Played Card', 'Attacked Enemy'] },
+      opponent: { hero: enemyHero, battlefield: { cards: [] }, hand: { cards: [], size: () => 0 }, log: ['Played Other'] },
       resources: { pool: () => 0, available: () => 0 },
       draw: jest.fn(), attack: jest.fn(), endTurn: jest.fn(), playFromHand: () => true,
     };
 
     renderPlay(container, game);
 
-    const playerPane = container.querySelector('.row.player .hero-pane');
-    expect(playerPane.textContent).toContain('Player Hero');
-    expect(playerPane.textContent).toContain('Health: 25');
-    expect(playerPane.textContent).toContain('Armor: 5');
-    expect(playerPane.textContent).toContain('Player ability');
-
-    const enemyPane = container.querySelector('.row.enemy .hero-pane');
-    expect(enemyPane.textContent).toContain('Enemy Hero');
-    expect(enemyPane.textContent).toContain('Health: 20');
-    expect(enemyPane.textContent).toContain('Armor: 3');
-    expect(enemyPane.textContent).toContain('Enemy ability');
+    const playerLog = container.querySelector('.row.player .log-pane');
+    expect(playerLog.textContent).toContain('Played Card');
+    const enemyLog = container.querySelector('.row.enemy .log-pane');
+    expect(enemyLog.textContent).toContain('Played Other');
   });
 
   test('shows card tooltip with art, name, and text when art is available', () => {

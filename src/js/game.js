@@ -245,6 +245,7 @@ export default class Game {
     }
 
     this.bus.emit('cardPlayed', { player, card });
+    player.log.push(`Played ${card.name}`);
     player.cardsPlayedThisTurn += 1;
 
     return true;
@@ -352,6 +353,8 @@ export default class Game {
     this.combat.resolve();
     await this.cleanupDeaths(player, defender);
     await this.cleanupDeaths(defender, player);
+    const actualTarget = target || defender.hero;
+    player.log.push(`Attacked ${actualTarget.name} with ${card.name}`);
     card.data.attacked = true;
     return true;
   }
@@ -390,7 +393,9 @@ export default class Game {
           const choices = legal.filter(t => t.id !== this.player.hero.id);
           block = this.rng.pick(choices);
         }
+        const target = block || this.player.hero;
         if (block) this.combat.assignBlocker(c.id, block);
+        this.opponent.log.push(`Attacked ${target.name} with ${c.name}`);
       }
     }
     this.combat.setDefenderHero(this.player.hero);
