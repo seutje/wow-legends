@@ -1,5 +1,7 @@
 /** Simple targeting helpers. */
 
+import { enforceTaunt, isTargetable } from './keywords.js';
+
 export function isTargetLegal(target, criteria = {}) {
   if (!target) return false;
   if (target.type === 'quest') return false;
@@ -8,7 +10,10 @@ export function isTargetLegal(target, criteria = {}) {
   return true;
 }
 
-export function selectTargets(candidates, criteria = {}) {
-  return candidates.filter((t) => isTargetLegal(t, criteria));
+export function selectTargets(candidates, criteria = {}, options = {}) {
+  const legal = candidates
+    .filter((t) => isTargetLegal(t, criteria))
+    .filter((t) => isTargetable(t, options));
+  return enforceTaunt(legal);
 }
 
