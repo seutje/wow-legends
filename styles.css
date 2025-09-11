@@ -146,7 +146,7 @@ ul.zone-list li {
 .card-tooltip {
   position: relative;
   color: #e5eef8;
-  font-size: 14px;
+  font-size: 12px;
   width: 220px;
   aspect-ratio: 1024 / 1536;
 }
@@ -183,29 +183,29 @@ ul.zone-list li {
 
 .card-tooltip .stat.cost,
 .card-tooltip .stat.armor {
-  top: 4%;
-  left: 4%;
+  top: 10.5%;
+  right: 10%;
   background: #1e90ff;
 }
 
 .card-tooltip .stat.attack {
-  bottom: 4%;
-  left: 4%;
+  bottom: 5%;
+  left: 8%;
   background: #f0b429;
 }
 
 .card-tooltip .stat.health {
-  bottom: 4%;
-  right: 4%;
+  bottom: 5%;
+  right: 8%;
   background: #e74c3c;
 }
 
 .card-info {
   position: absolute;
-  left: 8.4%;
-  top: 50.1%;
-  width: 84.8%;
-  height: 45.5%;
+  left: 12.4%;
+  top: 52.1%;
+  width: 78.8%;
+  height: 41.5%;
   display: flex;
   flex-direction: column;
   z-index: 2;
@@ -213,7 +213,7 @@ ul.zone-list li {
 
 .card-type {
   margin: 4px 8px 0;
-  font-size: 12px;
+  font-size: 10px;
   text-transform: capitalize;
 }
 
@@ -227,6 +227,7 @@ ul.zone-list li {
 }
 
 .card-keywords {
-  margin: 0 8px 8px;
+  margin: 0 30px 8px;
   font-style: italic;
+  font-size: 10px;
 }
