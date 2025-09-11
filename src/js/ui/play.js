@@ -49,6 +49,7 @@ export function renderPlay(container, game, { onUpdate } = {}) {
   container.innerHTML = '';
 
   let tooltipEl = null; // To store the tooltip element
+  let armorInterval = null; // Interval for updating hero armor in tooltip
 
   function showTooltip(card, event, game) {
     if (tooltipEl) hideTooltip(); // Hide any existing tooltip
@@ -80,7 +81,20 @@ export function renderPlay(container, game, { onUpdate } = {}) {
     img.style.maxHeight = '100%';
 
     const imgWrapper = el('div', { class: 'card-image-wrapper' }, img);
-    if (tooltipCard.cost != null) imgWrapper.append(el('div', { class: 'stat cost' }, tooltipCard.cost));
+    if (tooltipCard.type === 'hero' && tooltipCard.data?.armor != null) {
+      const armorEl = el('div', { class: 'stat armor' }, tooltipCard.data.armor);
+      imgWrapper.append(armorEl);
+      let lastArmor = tooltipCard.data.armor;
+      armorInterval = setInterval(() => {
+        if (!tooltipEl) { clearInterval(armorInterval); armorInterval = null; return; }
+        if (tooltipCard.data.armor !== lastArmor) {
+          lastArmor = tooltipCard.data.armor;
+          armorEl.textContent = tooltipCard.data.armor;
+        }
+      }, 100);
+    } else if (tooltipCard.cost != null) {
+      imgWrapper.append(el('div', { class: 'stat cost' }, tooltipCard.cost));
+    }
     if (tooltipCard.data?.attack != null) imgWrapper.append(el('div', { class: 'stat attack' }, tooltipCard.data.attack));
     if (tooltipCard.data?.health != null) imgWrapper.append(el('div', { class: 'stat health' }, tooltipCard.data.health));
 
@@ -101,6 +115,10 @@ export function renderPlay(container, game, { onUpdate } = {}) {
     if (tooltipEl && tooltipEl.parentNode) {
       tooltipEl.parentNode.removeChild(tooltipEl);
       tooltipEl = null;
+    }
+    if (armorInterval) {
+      clearInterval(armorInterval);
+      armorInterval = null;
     }
   }
 

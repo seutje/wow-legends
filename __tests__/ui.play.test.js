@@ -83,6 +83,54 @@ describe('UI Play', () => {
     global.Image = OriginalImage;
   });
 
+  test('hero tooltip shows armor and updates when armor changes', () => {
+    jest.useFakeTimers();
+    const OriginalImage = global.Image;
+    global.Image = class {
+      constructor() {
+        const img = document.createElement('img');
+        Object.defineProperty(img, 'src', {
+          set(v) {
+            img.setAttribute('src', v);
+            img.onload?.();
+          },
+          get() { return img.getAttribute('src'); }
+        });
+        return img;
+      }
+    };
+
+    const container = document.createElement('div');
+    const playerHero = new Hero({ name: 'Player Hero', data: { health: 25, armor: 5 } });
+    const enemyHero = new Hero({ name: 'Enemy Hero', data: { health: 20, armor: 0 } });
+
+    const game = {
+      player: { hero: playerHero, battlefield: { cards: [] }, hand: { cards: [], size: () => 0 } },
+      opponent: { hero: enemyHero, battlefield: { cards: [] }, hand: { cards: [], size: () => 0 } },
+      resources: { pool: () => 0, available: () => 0 },
+      draw: jest.fn(), attack: jest.fn(), endTurn: jest.fn(), playFromHand: () => true,
+    };
+
+    renderPlay(container, game);
+
+    const li = container.querySelector(`[data-card-id="${playerHero.id}"]`);
+    li.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true, clientX: 0, clientY: 0 }));
+
+    const armorEl = container.querySelector('.card-tooltip .stat.armor');
+    expect(armorEl).toBeTruthy();
+    expect(armorEl.textContent).toBe('5');
+
+    playerHero.data.armor = 8;
+    jest.advanceTimersByTime(200);
+    expect(armorEl.textContent).toBe('8');
+
+    li.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
+    jest.runOnlyPendingTimers();
+
+    global.Image = OriginalImage;
+    jest.useRealTimers();
+  });
+
   test('summoned allies show summoning card in tooltip', () => {
     const OriginalImage = global.Image;
     global.Image = class {
