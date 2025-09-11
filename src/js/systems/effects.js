@@ -1,6 +1,7 @@
 import Card from '../entities/card.js';
 import Equipment from '../entities/equipment.js';
 import { freezeTarget, getSpellDamageBonus, computeSpellDamage } from './keywords.js';
+import { selectTargets } from './targeting.js';
 
 export class EffectSystem {
   constructor(game) {
@@ -42,7 +43,7 @@ export class EffectSystem {
           console.warn(`Raw text effect (not implemented): ${effect.text}`);
           break;
         case 'heal':
-          this.healCharacter(effect, context);
+          await this.healCharacter(effect, context);
           break;
         case 'draw':
           this.drawCard(effect, context);
@@ -252,19 +253,36 @@ export class EffectSystem {
     game.bus.on('unitSummoned', onSummon);
   }
 
-  healCharacter(effect, context) {
+  async healCharacter(effect, context) {
     const { target, amount } = effect;
     const { game, player, card } = context;
+    const opponent = player === game.player ? game.opponent : game.player;
 
     let actualTargets = [];
-    // For now, always target player's hero
-    actualTargets.push(player.hero);
+
+    switch (target) {
+      case 'character': {
+        const friendly = [player.hero, ...player.battlefield.cards.filter(c => c.type !== 'quest')];
+        const enemy = selectTargets([
+          opponent.hero,
+          ...opponent.battlefield.cards.filter(c => c.type !== 'quest')
+        ]);
+        const candidates = [...friendly, ...enemy];
+        const chosen = await game.promptTarget(candidates);
+        if (chosen) actualTargets.push(chosen);
+        break;
+      }
+      case 'selfHero':
+      default:
+        actualTargets.push(player.hero);
+        break;
+    }
 
     for (const t of actualTargets) {
       if (t.data && t.data.health != null) {
         t.data.health = Math.min(t.data.health + amount, t.data.maxHealth || t.data.health);
         console.log(`${t.name} healed for ${amount}. Current health: ${t.data.health}`);
-      } else if (t.health != null) { // For hero
+      } else if (t.health != null) {
         t.health = Math.min(t.health + amount, t.maxHealth || t.health);
         console.log(`${t.name} healed for ${amount}. Current health: ${t.health}`);
       }
