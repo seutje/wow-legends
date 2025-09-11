@@ -24,6 +24,28 @@ describe('UI Play', () => {
     expect(enemyLog.textContent).toContain('Played Other');
   });
 
+  test('log pane has zone styling and auto-scrolls to bottom', async () => {
+    const container = document.createElement('div');
+    const playerHero = new Hero({ name: 'Player Hero', data: { health: 25, armor: 5 } });
+    const enemyHero = new Hero({ name: 'Enemy Hero', data: { health: 20, armor: 3 } });
+
+    const entries = Array.from({ length: 20 }, (_, i) => `Entry ${i}`);
+    const game = {
+      player: { hero: playerHero, battlefield: { cards: [] }, hand: { cards: [], size: () => 0 }, log: entries },
+      opponent: { hero: enemyHero, battlefield: { cards: [] }, hand: { cards: [], size: () => 0 }, log: [] },
+      resources: { pool: () => 0, available: () => 0 },
+      draw: jest.fn(), attack: jest.fn(), endTurn: jest.fn(), playFromHand: () => true,
+    };
+
+    renderPlay(container, game);
+    await new Promise(r => setTimeout(r, 0));
+
+    const pane = container.querySelector('.row.player .log-pane');
+    const list = pane.querySelector('ul');
+    expect(pane.classList.contains('zone')).toBe(true);
+    expect(list.scrollTop + list.clientHeight).toBe(list.scrollHeight);
+  });
+
   test('shows card tooltip with art, name, and text when art is available', () => {
     const OriginalImage = global.Image;
     global.Image = class {
