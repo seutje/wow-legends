@@ -53,6 +53,8 @@ describe('UI Play', () => {
       name: 'Scarlet Sorcerer',
       text: 'Spell Damage +1.',
       cost: 3,
+      type: 'ally',
+      keywords: ['Mage', 'Fire'],
       data: { attack: 3, health: 3 }
     };
     const playerHero = new Hero({ name: 'Player Hero', data: { health: 25 } });
@@ -79,6 +81,8 @@ describe('UI Play', () => {
     expect(tooltip.querySelector('.stat.cost').textContent).toBe(String(card.cost));
     expect(tooltip.querySelector('.stat.attack').textContent).toBe(String(card.data.attack));
     expect(tooltip.querySelector('.stat.health').textContent).toBe(String(card.data.health));
+    expect(tooltip.querySelector('.card-type').textContent).toBe(card.type);
+    expect(tooltip.querySelector('.card-keywords').textContent).toBe(card.keywords.join(', '));
 
     global.Image = OriginalImage;
   });
@@ -148,8 +152,8 @@ describe('UI Play', () => {
     };
 
     const container = document.createElement('div');
-    const summoner = { id: 'spell-summon-infernal', name: 'Summon Infernal', text: 'Summon a 6/6 Infernal.' };
-    const summoned = { id: 'token-infernal', name: 'Infernal', summonedBy: summoner };
+    const summoner = { id: 'spell-summon-infernal', name: 'Summon Infernal', text: 'Summon a 6/6 Infernal.', type: 'spell' };
+    const summoned = { id: 'token-infernal', name: 'Infernal', type: 'ally', summonedBy: summoner };
     const playerHero = new Hero({ name: 'Player Hero', data: { health: 25 } });
     const enemyHero = new Hero({ name: 'Enemy Hero', data: { health: 20 } });
 
@@ -192,7 +196,7 @@ describe('UI Play', () => {
     };
 
     const container = document.createElement('div');
-    const card = { id: 'hero-thrall-warchief-of-the-horde', name: 'Thrall', text: 'Warchief' };
+    const card = { id: 'hero-thrall-warchief-of-the-horde', name: 'Thrall', text: 'Warchief', type: 'hero' };
     const playerHero = new Hero({ name: 'Player Hero', data: { health: 25 } });
     const enemyHero = new Hero({ name: 'Enemy Hero', data: { health: 20 } });
 
@@ -238,7 +242,7 @@ describe('UI Play', () => {
     Object.defineProperty(window, 'innerHeight', { configurable: true, writable: true, value: 200 });
 
     const container = document.createElement('div');
-    const card = { id: 'hero-jaina-proudmoore-archmage', name: 'Jaina', text: 'Archmage' };
+    const card = { id: 'hero-jaina-proudmoore-archmage', name: 'Jaina', text: 'Archmage', type: 'hero' };
     const playerHero = new Hero({ name: 'Player Hero', data: { health: 25 } });
     const enemyHero = new Hero({ name: 'Enemy Hero', data: { health: 20 } });
 
@@ -283,8 +287,8 @@ describe('UI Play', () => {
     };
 
     const container = document.createElement('div');
-    const card1 = { id: 'hero-jaina-proudmoore-archmage', name: 'Jaina', text: 'Archmage' };
-    const card2 = { id: 'hero-thrall-warchief-of-the-horde', name: 'Thrall', text: 'Warchief' };
+    const card1 = { id: 'hero-jaina-proudmoore-archmage', name: 'Jaina', text: 'Archmage', type: 'hero' };
+    const card2 = { id: 'hero-thrall-warchief-of-the-horde', name: 'Thrall', text: 'Warchief', type: 'hero' };
     const playerHero = new Hero({ name: 'Player Hero', data: { health: 25 } });
     const enemyHero = new Hero({ name: 'Enemy Hero', data: { health: 20 } });
 
@@ -330,7 +334,7 @@ describe('UI Play', () => {
     };
 
     const container = document.createElement('div');
-    const card = { id: 'hero-jaina-proudmoore-archmage', name: 'Jaina', text: 'Archmage' };
+    const card = { id: 'hero-jaina-proudmoore-archmage', name: 'Jaina', text: 'Archmage', type: 'hero' };
     const playerHero = new Hero({ name: 'Player Hero', data: { health: 25 } });
     const enemyHero = new Hero({ name: 'Enemy Hero', data: { health: 20 } });
 

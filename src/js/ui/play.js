@@ -98,10 +98,15 @@ export function renderPlay(container, game, { onUpdate } = {}) {
     if (tooltipCard.data?.attack != null) imgWrapper.append(el('div', { class: 'stat attack' }, tooltipCard.data.attack));
     if (tooltipCard.data?.health != null) imgWrapper.append(el('div', { class: 'stat health' }, tooltipCard.data.health));
 
-    const info = el('div', { class: 'card-info' },
+    const infoChildren = [
+      el('div', { class: 'card-type' }, tooltipCard.type),
       el('h4', {}, tooltipCard.name),
-      el('p', {}, tooltipCard.text)
-    );
+      el('p', { class: 'card-text' }, tooltipCard.text)
+    ];
+    if (tooltipCard.keywords?.length) {
+      infoChildren.push(el('p', { class: 'card-keywords' }, tooltipCard.keywords.join(', ')));
+    }
+    const info = el('div', { class: 'card-info' }, ...infoChildren);
 
     img.onload = () => { if (tooltipEl === currentTooltip) position(); };
     img.onerror = () => { if (tooltipEl === currentTooltip) { img.remove(); position(); } };
