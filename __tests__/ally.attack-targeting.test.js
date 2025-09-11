@@ -40,3 +40,22 @@ test('quest cannot be targeted by ally attacks', async () => {
   expect(g.opponent.hero.data.health).toBe(initial - 2);
   expect(g.opponent.battlefield.cards).toContain(quest);
 });
+
+// Taunt allies must be attacked before the enemy hero.
+test('taunt forces attacks to target taunt ally', async () => {
+  const g = new Game();
+  g.player.hero = new Hero({ name: 'Hero', data: { health: 10 } });
+  g.opponent.hero = new Hero({ name: 'Enemy', data: { health: 10 } });
+
+  const attacker = new Card({ name: 'Attacker', type: 'ally', data: { attack: 2, health: 2 } });
+  const taunt = new Card({ name: 'Orgrimmar Grunt', type: 'ally', data: { attack: 2, health: 2 }, keywords: ['Taunt'] });
+
+  g.player.battlefield.cards = [attacker];
+  g.opponent.battlefield.cards = [taunt];
+
+  const initial = g.opponent.hero.data.health;
+  await g.attack(g.player, attacker.id, g.opponent.hero.id);
+
+  expect(g.opponent.hero.data.health).toBe(initial);
+  expect(g.opponent.graveyard.cards).toContain(taunt);
+});

@@ -11,6 +11,7 @@ import Hero from './entities/hero.js';
 import { renderBoard } from './ui/board.js';
 import QuestSystem from './systems/quests.js';
 import { EventBus } from './utils/events.js';
+import { selectTargets } from './systems/targeting.js';
 
 export default class Game {
   constructor(rootEl, opts = {}) {
@@ -320,12 +321,16 @@ export default class Game {
       defender.hero,
       ...defender.battlefield.cards.filter(c => c.type !== 'equipment' && c.type !== 'quest')
     ];
-    if (candidates.length > 1) {
+    const legal = selectTargets(candidates);
+    if (legal.length === 1) {
+      const only = legal[0];
+      if (only.id !== defender.hero.id) target = only;
+    } else if (legal.length > 1) {
       if (targetId) {
-        target = candidates.find(c => c.id === targetId) || null;
+        target = legal.find(c => c.id === targetId) || null;
         if (target?.id === defender.hero.id) target = null;
       } else {
-        const choice = await this.promptTarget(candidates);
+        const choice = await this.promptTarget(legal);
         if (choice && choice.id !== defender.hero.id) target = choice;
       }
     }
@@ -359,7 +364,23 @@ export default class Game {
     const affordable = this.opponent.hand.cards.filter(c => this.canPlay(this.opponent, c)).sort((a,b)=> (a.cost||0)-(b.cost||0));
     if (affordable[0]) await this.playFromHand(this.opponent, affordable[0].id);
     for (const c of this.opponent.battlefield.cards) {
-      if (c.type === 'ally' || c.type === 'equipment') this.combat.declareAttacker(c);
+      if (c.type === 'ally' || c.type === 'equipment') {
+        this.combat.declareAttacker(c);
+        const defenders = [
+          this.player.hero,
+          ...this.player.battlefield.cards.filter(d => d.type !== 'equipment' && d.type !== 'quest')
+        ];
+        const legal = selectTargets(defenders);
+        let block = null;
+        if (legal.length === 1) {
+          const only = legal[0];
+          if (only.id !== this.player.hero.id) block = only;
+        } else if (legal.length > 1) {
+          const choices = legal.filter(t => t.id !== this.player.hero.id);
+          block = this.rng.pick(choices);
+        }
+        if (block) this.combat.assignBlocker(c.id, block);
+      }
     }
     this.combat.setDefenderHero(this.player.hero);
     this.combat.resolve();
