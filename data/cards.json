@@ -840,8 +840,9 @@
     "cost": 5,
     "effects": [
       {
-        "type": "rawText",
-        "text": "Taunt. If you gained Armor this turn, gain +0/+2."
+        "type": "buffOnArmorGain",
+        "attack": 0,
+        "health": 2
       }
     ],
     "keywords": [
@@ -853,7 +854,7 @@
       "attack": 4,
       "health": 6
     },
-    "text": "Taunt. If you gained Armor this turn, gain +0/+2."
+    "text": "Taunt. Whenever your hero gains Armor, gain +0/+2."
   },
   {
     "id": "ally-defias-footpad",

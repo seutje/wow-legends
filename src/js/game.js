@@ -31,7 +31,10 @@ export default class Game {
     this.quests = new QuestSystem(this);
 
     this.turns.bus.on('turn:start', ({ player }) => {
-      if (player) player.cardsPlayedThisTurn = 0;
+      if (player) {
+        player.cardsPlayedThisTurn = 0;
+        player.armorGainedThisTurn = 0;
+      }
       const bonus = player?.hero?.data?.nextSpellDamageBonus;
       if (bonus?.eachTurn) bonus.used = false;
       if (player?.hero) {

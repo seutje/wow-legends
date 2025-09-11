@@ -233,6 +233,18 @@ describe.each(effectCards)('$id executes its effect', (card) => {
         expect(demon.data.health).toBe(2);
         break;
       }
+      case 'buffOnArmorGain': {
+        g.player.hand.add(new Card(card));
+        const treant = g.player.hand.cards[0];
+        await g.playFromHand(g.player, treant.id);
+        const before = treant.data.health;
+        await g.effects.execute(
+          [{ type: 'buff', target: 'hero', property: 'armor', amount: 2 }],
+          { game: g, player: g.player, card: g.player.hero }
+        );
+        expect(treant.data.health).toBe(before + effect.health);
+        break;
+      }
       case 'drawOnHeal': {
         await g.playFromHand(g.player, card.id);
         const handBefore = g.player.hand.cards.length;
