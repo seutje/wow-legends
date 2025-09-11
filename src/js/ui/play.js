@@ -75,28 +75,13 @@ export function renderPlay(container, game, { onUpdate } = {}) {
       }
     }
 
-    const img = new Image();
-    img.alt = tooltipCard.name;
-    img.style.maxWidth = '100%';
-    img.style.maxHeight = '100%';
+    const art = new Image();
+    art.className = 'card-art';
+    art.alt = tooltipCard.name;
 
-    const imgWrapper = el('div', { class: 'card-image-wrapper' }, img);
-    if (tooltipCard.type === 'hero' && tooltipCard.data?.armor != null) {
-      const armorEl = el('div', { class: 'stat armor' }, tooltipCard.data.armor);
-      imgWrapper.append(armorEl);
-      let lastArmor = tooltipCard.data.armor;
-      armorInterval = setInterval(() => {
-        if (!tooltipEl) { clearInterval(armorInterval); armorInterval = null; return; }
-        if (tooltipCard.data.armor !== lastArmor) {
-          lastArmor = tooltipCard.data.armor;
-          armorEl.textContent = tooltipCard.data.armor;
-        }
-      }, 100);
-    } else if (tooltipCard.cost != null) {
-      imgWrapper.append(el('div', { class: 'stat cost' }, tooltipCard.cost));
-    }
-    if (tooltipCard.data?.attack != null) imgWrapper.append(el('div', { class: 'stat attack' }, tooltipCard.data.attack));
-    if (tooltipCard.data?.health != null) imgWrapper.append(el('div', { class: 'stat health' }, tooltipCard.data.health));
+    const frame = new Image();
+    frame.className = 'card-frame';
+    frame.src = 'src/assets/frame.png';
 
     const infoChildren = [
       el('div', { class: 'card-type' }, tooltipCard.type),
@@ -108,11 +93,29 @@ export function renderPlay(container, game, { onUpdate } = {}) {
     }
     const info = el('div', { class: 'card-info' }, ...infoChildren);
 
-    img.onload = () => { if (tooltipEl === currentTooltip) position(); };
-    img.onerror = () => { if (tooltipEl === currentTooltip) { img.remove(); position(); } };
+    currentTooltip.append(art, frame, info);
 
-    img.src = `src/assets/art/${tooltipCard.id}-art.png`;
-    currentTooltip.append(imgWrapper, info);
+    if (tooltipCard.type === 'hero' && tooltipCard.data?.armor != null) {
+      const armorEl = el('div', { class: 'stat armor' }, tooltipCard.data.armor);
+      currentTooltip.append(armorEl);
+      let lastArmor = tooltipCard.data.armor;
+      armorInterval = setInterval(() => {
+        if (!tooltipEl) { clearInterval(armorInterval); armorInterval = null; return; }
+        if (tooltipCard.data.armor !== lastArmor) {
+          lastArmor = tooltipCard.data.armor;
+          armorEl.textContent = tooltipCard.data.armor;
+        }
+      }, 100);
+    } else if (tooltipCard.cost != null) {
+      currentTooltip.append(el('div', { class: 'stat cost' }, tooltipCard.cost));
+    }
+    if (tooltipCard.data?.attack != null) currentTooltip.append(el('div', { class: 'stat attack' }, tooltipCard.data.attack));
+    if (tooltipCard.data?.health != null) currentTooltip.append(el('div', { class: 'stat health' }, tooltipCard.data.health));
+
+    art.onload = () => { if (tooltipEl === currentTooltip) position(); };
+    art.onerror = () => { if (tooltipEl === currentTooltip) { art.remove(); position(); } };
+
+    art.src = `src/assets/art/${tooltipCard.id}-art.png`;
     position();
   }
 
