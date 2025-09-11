@@ -101,7 +101,7 @@ export class EffectSystem {
       }
       if (card?.type === 'spell') {
         const bonus = getSpellDamageBonus(player);
-        if (bonus) dmgAmount = computeSpellDamage(dmgAmount, bonus);
+        dmgAmount = computeSpellDamage(dmgAmount, bonus);
       }
 
     let actualTargets = [];
