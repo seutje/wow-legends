@@ -240,6 +240,14 @@ describe.each(effectCards)('$id executes its effect', (card) => {
         expect(g.player.hand.cards.length).toBe(handBefore + effect.count);
         break;
       }
+      case 'buffOnArmorGain': {
+        await g.playFromHand(g.player, card.id);
+        const treant = g.player.battlefield.cards.find(c => c.name === card.name);
+        const base = treant.data.health;
+        await g.effects.applyBuff({ target: 'hero', property: 'armor', amount: 1 }, { game: g, player: g.player, card: null });
+        expect(treant.data.health).toBe(base + effect.amount);
+        break;
+      }
       default:
         throw new Error('Unhandled effect type: ' + effect.type);
     }

@@ -16,6 +16,9 @@ export class EffectSystem {
         this.cleanupTemporaryEffects();
       }
     });
+    this.game.turns.bus.on('turn:start', ({ player }) => {
+      if (player) player._armorGainedThisTurn = 0;
+    });
   }
 
   async execute(cardEffects, context) {
@@ -50,6 +53,9 @@ export class EffectSystem {
           break;
         case 'drawOnHeal':
           this.drawOnHeal(effect, context);
+          break;
+        case 'buffOnArmorGain':
+          this.buffOnArmorGain(effect, context);
           break;
         case 'playRandomConsumableFromLibrary':
           await this.playRandomConsumableFromLibrary(effect, context);
@@ -339,6 +345,36 @@ export class EffectSystem {
     });
   }
 
+  buffOnArmorGain(effect, context) {
+    const { amount = 2 } = effect;
+    const { game, player, card } = context;
+
+    const handler = ({ player: armorPlayer }) => {
+      if (armorPlayer !== player) return;
+      card.data.health = (card.data.health || 0) + amount;
+    };
+
+    const offArmor = game.bus.on('armorGained', handler);
+
+    const remove = () => {
+      offArmor();
+      offDeath();
+      offReturn();
+    };
+
+    const offDeath = game.bus.on('allyDefeated', ({ card: dead }) => {
+      if (dead === card) remove();
+    });
+
+    const offReturn = game.bus.on('cardReturned', ({ card: returned }) => {
+      if (returned === card) remove();
+    });
+
+    if (player._armorGainedThisTurn > 0) {
+      card.data.health = (card.data.health || 0) + amount;
+    }
+  }
+
   destroyMinion(effect, context) {
     const { target, condition } = effect;
     const { game, player } = context;
@@ -494,6 +530,10 @@ export class EffectSystem {
       } else if (property === 'armor') {
         if (t.data && t.data.armor != null) t.data.armor += amount;
         else if (t.armor != null) t.armor += amount; // For hero
+        if (amount > 0 && t === player.hero) {
+          player._armorGainedThisTurn = (player._armorGainedThisTurn || 0) + amount;
+          game.bus.emit('armorGained', { player, amount });
+        }
       }
       console.log(`Applied +${amount} ${property} to ${t.name}.`);
     }
