@@ -89,5 +89,39 @@ describe('EffectSystem', () => {
     );
     expect(player.hero.data.armor).toBe(2);
   });
+
+  test('explosive trap triggers on hero damage', async () => {
+    const game = new Game();
+    const player = game.player;
+    const opponent = game.opponent;
+
+    player.hero.data.health = 10;
+    opponent.hero.data.health = 10;
+
+    const ally = new Card({ type: 'ally', name: 'Ally', data: { attack: 0, health: 3 } });
+    const enemy = new Card({ type: 'ally', name: 'Enemy', data: { attack: 0, health: 3 } });
+    player.battlefield.add(ally);
+    opponent.battlefield.add(enemy);
+
+    const secret = new Card({ type: 'spell', name: 'Explosive Trap', effects: [{ type: 'explosiveTrap', amount: 2 }] });
+    await game.effects.execute(secret.effects, { game, player, card: secret });
+
+    expect(ally.data.health).toBe(3);
+    expect(enemy.data.health).toBe(3);
+
+    await game.effects.dealDamage({ target: 'selfHero', amount: 1 }, { game, player, card: null });
+    await new Promise(r => setTimeout(r, 0));
+
+    expect(player.hero.data.health).toBe(7);
+    expect(opponent.hero.data.health).toBe(8);
+    expect(ally.data.health).toBe(1);
+    expect(enemy.data.health).toBe(1);
+
+    await game.effects.dealDamage({ target: 'selfHero', amount: 1 }, { game, player, card: null });
+    await new Promise(r => setTimeout(r, 0));
+
+    expect(player.hero.data.health).toBe(6);
+    expect(ally.data.health).toBe(1);
+  });
 });
 
