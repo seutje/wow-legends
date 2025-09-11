@@ -32,7 +32,10 @@ function zoneList(title, cards, { clickCard, game, showTooltip, hideTooltip } = 
 
 function logPane(title, entries = []) {
   const ul = el('ul', {}, ...entries.map(e => el('li', {}, e)));
-  return el('div', { class: 'log-pane' }, el('h3', {}, title), ul);
+  const pane = el('div', { class: 'log-pane zone' }, el('h3', {}, title), ul);
+  // Ensure the latest entries are visible
+  setTimeout(() => { ul.scrollTop = ul.scrollHeight; });
+  return pane;
 }
 
 export function renderPlay(container, game, { onUpdate } = {}) {

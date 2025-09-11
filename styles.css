@@ -46,6 +46,19 @@ footer {
   border-radius: 4px;
 }
 
+.log-pane {
+  display: flex;
+  flex-direction: column;
+}
+
+.log-pane ul {
+  flex: 1;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-y: auto;
+}
+
 ul.zone-list {
   margin: 0;
   padding: 0;
