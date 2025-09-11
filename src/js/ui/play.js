@@ -109,8 +109,8 @@ export function renderPlay(container, game, { onUpdate } = {}) {
     } else if (tooltipCard.cost != null) {
       currentTooltip.append(el('div', { class: 'stat cost' }, tooltipCard.cost));
     }
-    if (tooltipCard.data?.attack != null) currentTooltip.append(el('div', { class: 'stat attack' }, tooltipCard.data.attack));
-    if (tooltipCard.data?.health != null) currentTooltip.append(el('div', { class: 'stat health' }, tooltipCard.data.health));
+    if (card.data?.attack != null) currentTooltip.append(el('div', { class: 'stat attack' }, card.data.attack));
+    if (card.data?.health != null) currentTooltip.append(el('div', { class: 'stat health' }, card.data.health));
 
     art.onload = () => { if (tooltipEl === currentTooltip) position(); };
     art.onerror = () => { if (tooltipEl === currentTooltip) { art.remove(); position(); } };
