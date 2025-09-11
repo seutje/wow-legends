@@ -30,11 +30,11 @@ export default class Game {
     this.bus = new EventBus();
     this.quests = new QuestSystem(this);
 
-    this.turns.bus.on('turn:start', ({ player }) => {
-      if (player) {
-        player.cardsPlayedThisTurn = 0;
-        player.armorGainedThisTurn = 0;
-      }
+      this.turns.bus.on('turn:start', ({ player }) => {
+        if (player) {
+          player.cardsPlayedThisTurn = 0;
+          player.armorGainedThisTurn = 0;
+        }
       const bonus = player?.hero?.data?.nextSpellDamageBonus;
       if (bonus?.eachTurn) bonus.used = false;
       if (player?.hero) {
@@ -45,8 +45,21 @@ export default class Game {
           this.effects.execute(player.hero.passive, { game: this, player, card: player.hero });
         }
       }
-      if (player) this.draw(player, 1);
-    });
+        if (player) this.draw(player, 1);
+      });
+
+      this.turns.bus.on('phase:end', ({ phase }) => {
+        if (phase === 'End') {
+          const p = this.turns.activePlayer;
+          if (p) {
+            const all = [p.hero, ...p.battlefield.cards];
+            for (const c of all) {
+              const ft = c?.data?.freezeTurns || 0;
+              if (ft > 0) c.data.freezeTurns = ft - 1;
+            }
+          }
+        }
+      });
 
     // Players
     this.player = new Player({ name: 'You' });
@@ -151,6 +164,7 @@ export default class Game {
   async useHeroPower(player) {
     const hero = player?.hero;
     if (!hero || hero.powerUsed) return false;
+    if (hero.data?.freezeTurns > 0) return false;
     if (!hero.active?.length) return false;
     const cost = 2;
     if (!this.resources.pay(player, cost)) return false;

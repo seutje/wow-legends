@@ -131,7 +131,7 @@ export function renderPlay(container, game, { onUpdate } = {}) {
 
   const controls = el('div', { class: 'controls' },
     el('button', { onclick: () => { onUpdate?.(); } }, 'Refresh'),
-    el('button', { onclick: async () => { await game.useHeroPower(p); onUpdate?.(); }, disabled: p.hero.powerUsed || game.resources.pool(p) < 2 }, 'Hero Power'),
+    el('button', { onclick: async () => { await game.useHeroPower(p); onUpdate?.(); }, disabled: p.hero.powerUsed || game.resources.pool(p) < 2 || p.hero.data.freezeTurns > 0 }, 'Hero Power'),
     el('button', { onclick: async () => { await game.endTurn(); onUpdate?.(); } }, 'End Turn')
   );
 

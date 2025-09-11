@@ -231,21 +231,21 @@
     "type": "spell",
     "cost": 4,
     "effects": [
-      {
-        "type": "summon",
-        "unit": {
-          "name": "Water Elemental",
-          "attack": 3,
-          "health": 6,
-          "keywords": []
-        },
-        "count": 1
-      }
-    ],
-    "keywords": [
-      "Freeze",
-      "Elemental"
-    ],
+        {
+          "type": "summon",
+          "unit": {
+            "name": "Water Elemental",
+            "attack": 3,
+            "health": 6,
+            "keywords": ["Freeze"]
+          },
+          "count": 1
+        }
+      ],
+      "keywords": [
+        "Freeze",
+        "Elemental"
+      ],
     "data": {},
     "text": "Summon a 3/6 Water Elemental with “Freeze any target it damages.”"
   },
