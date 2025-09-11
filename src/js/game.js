@@ -227,20 +227,29 @@ export default class Game {
     }
 
     const comboActive = player.cardsPlayedThisTurn > 0;
-    const context = { game: this, player, card };
+    const context = { game: this, player, card, comboActive };
 
-    if (card.effects && card.effects.length > 0) {
+    let primaryEffects = card.effects;
+    let comboEffects = comboActive && card.combo && card.combo.length > 0 ? card.combo : null;
+
+    // For spells with combo effects that replace the base effect, only execute the combo effects
+    if (comboActive && card.type === 'spell' && comboEffects) {
+      primaryEffects = comboEffects;
+      comboEffects = null;
+    }
+
+    if (primaryEffects && primaryEffects.length > 0) {
       const hasDeathrattle = card.keywords?.includes('Deathrattle');
       if (card.type === 'ally' && hasDeathrattle) {
-        card.deathrattle = card.effects;
+        card.deathrattle = primaryEffects;
         card.effects = [];
       } else {
-        await this.effects.execute(card.effects, context);
+        await this.effects.execute(primaryEffects, context);
       }
     }
 
-    if (comboActive && card.combo && card.combo.length > 0) {
-      await this.effects.execute(card.combo, context);
+    if (comboEffects) {
+      await this.effects.execute(comboEffects, context);
     }
 
     if (tempSpellDamage) {

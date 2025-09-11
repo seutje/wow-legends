@@ -294,16 +294,11 @@
       {
         "type": "damage",
         "target": "any",
-        "amount": 2
+        "amount": 2,
+        "comboAmount": 4
       }
     ],
-    "combo": [
-      {
-        "type": "damage",
-        "target": "any",
-        "amount": 4
-      }
-    ],
+    "combo": [],
     "keywords": [
       "Combo"
     ],
