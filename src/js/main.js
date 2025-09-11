@@ -7,6 +7,7 @@ function qs(sel) { return document.querySelector(sel); }
 
 const root = qs('#root');
 const statusEl = qs('#status');
+const mainEl = qs('main');
 
 const game = new Game(root);
 await game.init();
@@ -49,6 +50,8 @@ game.setUIRerender(rerender);
 function toggleGameVisible(show) {
   board.style.display = show ? 'block' : 'none';
   controls.style.display = show ? 'block' : 'none';
+  root.style.display = show ? 'block' : 'none';
+  if (mainEl) mainEl.style.gridTemplateColumns = show ? '3fr 1fr' : '1fr';
 }
 
 // Deck Builder + Options

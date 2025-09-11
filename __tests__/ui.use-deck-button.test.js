@@ -12,8 +12,15 @@ function setup() {
     start: jest.fn(),
     allCards
   };
+  const main = document.createElement('main');
+  main.style.display = 'grid';
+  main.style.gridTemplateColumns = '3fr 1fr';
+  const root = document.createElement('div');
   const board = document.createElement('div');
   board.style.display = 'block';
+  root.appendChild(board);
+  root.style.display = 'block';
+  const sidebar = document.createElement('aside');
   const controls = document.createElement('div');
   controls.style.display = 'block';
   const deckRoot = document.createElement('div');
@@ -21,10 +28,15 @@ function setup() {
   const deckBtn = document.createElement('button');
   const useDeckBtn = document.createElement('button');
   useDeckBtn.disabled = true;
+  sidebar.append(deckBtn, useDeckBtn, deckRoot);
+  main.append(root, sidebar);
+  document.body.append(main);
   const deckState = { hero: null, cards: [] };
   const toggleGameVisible = show => {
     board.style.display = show ? 'block' : 'none';
     controls.style.display = show ? 'block' : 'none';
+    root.style.display = show ? 'block' : 'none';
+    main.style.gridTemplateColumns = show ? '3fr 1fr' : '1fr';
   };
   function updateUseDeckBtn() {
     useDeckBtn.disabled = !(deckState.hero && deckState.cards.length === 60);
@@ -48,13 +60,15 @@ function setup() {
     game.start();
   };
   useDeckBtn.addEventListener('click', useDeckHandler);
-  return { game, board, controls, deckRoot, deckBtn, useDeckBtn, deckState, useDeckHandler };
+  return { game, board, controls, deckRoot, deckBtn, useDeckBtn, deckState, useDeckHandler, main, root };
 }
 
 test('use deck button enables after building deck and starts game', async () => {
-  const { game, board, deckRoot, deckBtn, useDeckBtn, useDeckHandler } = setup();
+  const { game, board, deckRoot, deckBtn, useDeckBtn, useDeckHandler, main, root } = setup();
   deckBtn.dispatchEvent(new window.Event('click'));
   expect(board.style.display).toBe('none');
+  expect(root.style.display).toBe('none');
+  expect(main.style.gridTemplateColumns).toBe('1fr');
   const tips = deckRoot.querySelectorAll('.card-tooltip');
   tips[0].dispatchEvent(new window.Event('click'));
   for (let i = 0; i < 60; i++) {
@@ -64,6 +78,8 @@ test('use deck button enables after building deck and starts game', async () => 
   await useDeckHandler();
   expect(deckRoot.style.display).toBe('none');
   expect(board.style.display).toBe('block');
+  expect(root.style.display).toBe('block');
+  expect(main.style.gridTemplateColumns).toBe('3fr 1fr');
   expect(game.reset).toHaveBeenCalled();
   expect(game.setupMatch).toHaveBeenCalled();
   expect(game.start).toHaveBeenCalled();
