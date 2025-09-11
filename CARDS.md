@@ -406,7 +406,7 @@ Conventions
 - Type: Ally — Elemental (Druid)
 - Cost: 5; Rarity: Common
 - Stats: 4 ATK / 6 HP
-- Text: Taunt. If you gained Armor this turn, gain +0/+2.
+- Text: Taunt. Whenever your hero gains Armor, gain +0/+2.
 - Keywords: Taunt, Treant
 - Systems: Guardian talents reward Armor lines; PvE wall.
 - Art: Massive tree‑being with granite plates and glowing eyes.

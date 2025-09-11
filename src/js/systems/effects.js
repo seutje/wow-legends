@@ -33,6 +33,9 @@ export class EffectSystem {
         case 'buff':
           await this.applyBuff(effect, context);
           break;
+        case 'buffOnArmorGain':
+          this.buffOnArmorGain(effect, context);
+          break;
         case 'overload':
           this.applyOverload(effect, context);
           break;
@@ -513,6 +516,7 @@ export class EffectSystem {
   async applyBuff(effect, context) {
     const { target, property, amount, duration } = effect;
     const { player, game } = context;
+    const opponent = player === game.player ? game.opponent : game.player;
 
     let actualTargets = [];
 
@@ -563,16 +567,61 @@ export class EffectSystem {
       } else if (property === 'armor') {
         if (t.data && t.data.armor != null) t.data.armor += amount;
         else if (t.armor != null) t.armor += amount; // For hero
+        if (amount > 0) {
+          let p = null;
+          if (t === player.hero) p = player;
+          else if (t === opponent.hero) p = opponent;
+          if (p) {
+            p.armorGainedThisTurn = (p.armorGainedThisTurn || 0) + amount;
+            game.bus.emit('armorGained', { player: p, amount, source: context.card });
+          }
+        }
       }
       console.log(`Applied +${amount} ${property} to ${t.name}.`);
     }
   }
 
+  buffOnArmorGain(effect, context) {
+    const { attack = 0, health = 0 } = effect;
+    const { game, player, card } = context;
+
+    const apply = () => {
+      card.data = card.data || {};
+      if (attack) card.data.attack = (card.data.attack || 0) + attack;
+      if (health) card.data.health = (card.data.health || 0) + health;
+    };
+
+    const handler = ({ player: armorPlayer }) => {
+      if (armorPlayer !== player) return;
+      apply();
+    };
+
+    const offArmor = game.bus.on('armorGained', handler);
+
+    const remove = () => {
+      offArmor();
+      offDeath();
+      offReturn();
+    };
+
+    const offDeath = game.bus.on('allyDefeated', ({ card: dead }) => {
+      if (dead === card) remove();
+    });
+
+    const offReturn = game.bus.on('cardReturned', ({ card: returned }) => {
+      if (returned === card) remove();
+    });
+  }
+
   equipItem(effect, context) {
     const { item } = effect;
-    const { player } = context;
+    const { player, game } = context;
     const eq = new Equipment(item);
     player.equip(eq);
+    if (eq.armor) {
+      player.armorGainedThisTurn = (player.armorGainedThisTurn || 0) + eq.armor;
+      game.bus.emit('armorGained', { player, amount: eq.armor, source: eq });
+    }
     console.log(`Equipped ${eq.name}.`);
   }
 

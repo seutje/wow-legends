@@ -14,6 +14,7 @@ export class Player {
     this.resources = 0; // legacy numeric; use resourceZone + pool
     this.status = {};
     this.cardsPlayedThisTurn = 0;
+    this.armorGainedThisTurn = 0;
     this.log = [];
 
     this.library = new Deck('library');
