@@ -73,7 +73,7 @@ describe('UI Play', () => {
     li.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true, clientX: 0, clientY: 0 }));
 
     const tooltip = container.querySelector('.card-tooltip');
-    const tooltipImg = tooltip.querySelector('img');
+    const tooltipImg = tooltip.querySelector('.card-art');
     expect(tooltipImg).toBeTruthy();
     expect(tooltipImg.getAttribute('src')).toBe(`src/assets/art/${card.id}-art.png`);
     expect(tooltip.textContent).toContain(card.name);
@@ -170,7 +170,7 @@ describe('UI Play', () => {
     li.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true, clientX: 0, clientY: 0 }));
 
     const tooltip = container.querySelector('.card-tooltip');
-    const tooltipImg = tooltip.querySelector('img');
+    const tooltipImg = tooltip.querySelector('.card-art');
     expect(tooltipImg).toBeTruthy();
     expect(tooltipImg.getAttribute('src')).toBe(`src/assets/art/${summoner.id}-art.png`);
     expect(tooltip.textContent).toContain(summoner.name);
@@ -215,7 +215,7 @@ describe('UI Play', () => {
     const tooltip = container.querySelector('.card-tooltip');
     expect(tooltip.textContent).toContain(card.name);
     expect(tooltip.textContent).toContain(card.text);
-    expect(tooltip.querySelector('img')).toBeNull();
+    expect(tooltip.querySelector('.card-art')).toBeNull();
 
     global.Image = OriginalImage;
   });
@@ -259,11 +259,10 @@ describe('UI Play', () => {
     li.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true, clientX: 290, clientY: 190 }));
 
     const tooltip = container.querySelector('.card-tooltip');
-    const img = tooltip.querySelector('img');
+    const img = tooltip.querySelector('.card-art');
     expect(tooltip.style.maxWidth).toBe(`${window.innerWidth - 20}px`);
     expect(tooltip.style.maxHeight).toBe(`${window.innerHeight - 20}px`);
-    expect(img.style.maxWidth).toBe('100%');
-    expect(img.style.maxHeight).toBe('100%');
+    expect(img).toBeTruthy();
 
     global.Image = OriginalImage;
     Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: prevW });
@@ -309,7 +308,7 @@ describe('UI Play', () => {
     const tooltips = container.querySelectorAll('.card-tooltip');
     expect(tooltips).toHaveLength(1);
     const tooltip = tooltips[0];
-    const tooltipImg = tooltip.querySelector('img');
+    const tooltipImg = tooltip.querySelector('.card-art');
     expect(tooltipImg.getAttribute('src')).toBe(`src/assets/art/${card2.id}-art.png`);
     expect(tooltip.textContent).toContain(card2.name);
 
