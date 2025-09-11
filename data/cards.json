@@ -519,25 +519,24 @@
     "data": {},
     "text": "Deal 3 damage; if you control a Beast, deal 5 instead."
   },
-  {
-    "id": "spell-explosive-trap",
-    "name": "Explosive Trap",
-    "type": "spell",
-    "cost": 2,
-    "effects": [
-      {
-        "type": "damage",
-        "target": "allEnemies",
-        "amount": 2
-      }
-    ],
-    "keywords": [
-      "Secret",
-      "AoE"
-    ],
-    "data": {},
-    "text": "Secret — When your hero is attacked, deal 2 damage to all enemies."
-  },
+    {
+      "id": "spell-explosive-trap",
+      "name": "Explosive Trap",
+      "type": "spell",
+      "cost": 2,
+      "effects": [
+        {
+          "type": "explosiveTrap",
+          "amount": 2
+        }
+      ],
+      "keywords": [
+        "Secret",
+        "AoE"
+      ],
+      "data": {},
+      "text": "Secret — When your hero takes damage, deal 2 damage to all characters."
+    },
   {
     "id": "spell-hellfire",
     "name": "Hellfire",

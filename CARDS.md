@@ -271,7 +271,7 @@ Conventions
 25) Explosive Trap
 - Type: Ability — Trap (Hunter)
 - Cost: 2; Rarity: Rare
-- Text: Secret — When your hero is attacked, deal 2 damage to all enemies.
+- Text: Secret — When your hero takes damage, deal 2 damage to all characters.
 - Keywords: Secret, AoE
 - Systems: PvP mind games; PvE waves get softened before Taunts.
 - Art: Red‑rune charge glows under leaves, a tripwire twitches.

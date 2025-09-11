@@ -78,6 +78,9 @@ export class EffectSystem {
         case 'damageArmor':
           await this.dealDamage({ target: effect.target, amount: context.player.hero.data.armor }, context);
           break;
+        case 'explosiveTrap':
+          this.explosiveTrap(effect, context);
+          break;
         case 'chooseOne':
           await this.handleChooseOne(effect, context);
           break;
@@ -308,6 +311,22 @@ export class EffectSystem {
     const { game, player } = context;
     game.draw(player, count);
     console.log(`${player.name} drew ${count} card(s).`);
+  }
+
+  explosiveTrap(effect, context) {
+    const { amount = 2 } = effect;
+    const { game, player, card } = context;
+
+    const handler = async ({ target }) => {
+      if (target !== player.hero) return;
+      off();
+      await game.effects.dealDamage(
+        { target: 'allCharacters', amount },
+        { game, player, card }
+      );
+    };
+
+    const off = game.bus.on('damageDealt', handler);
   }
 
   drawOnHeal(effect, context) {

@@ -261,6 +261,16 @@ describe.each(effectCards)('$id executes its effect', (card) => {
         expect(g.player.hero.data.health).toBe(20 + effect.amount);
         break;
       }
+      case 'explosiveTrap': {
+        g.player.battlefield.add(new Card({ name: 'Ally', type: 'ally', data: { attack: 0, health: 3 }, keywords: [] }));
+        g.opponent.battlefield.add(new Card({ name: 'Enemy', type: 'ally', data: { attack: 0, health: 3 }, keywords: [] }));
+        await g.playFromHand(g.player, card.id);
+        await g.effects.dealDamage({ target: 'selfHero', amount: 1 }, { game: g, player: g.player, card: null });
+        await new Promise(r => setTimeout(r, 0));
+        expect(g.player.battlefield.cards[0].data.health).toBe(1);
+        expect(g.opponent.battlefield.cards[0].data.health).toBe(1);
+        break;
+      }
       default:
         throw new Error('Unhandled effect type: ' + effect.type);
     }
