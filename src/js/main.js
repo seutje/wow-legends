@@ -7,6 +7,7 @@ function qs(sel) { return document.querySelector(sel); }
 
 const root = qs('#root');
 const statusEl = qs('#status');
+const mainEl = qs('main');
 
 const game = new Game(root);
 await game.init();
@@ -25,7 +26,7 @@ function makeBtn(label, onClick) {
 
 const controls = document.createElement('div');
 controls.append(
-  makeBtn('Start', () => { game.start(); setStatus('Running'); }),
+  makeBtn('Start', async () => { await game.setupMatch(); game.start(); setStatus('Running'); }),
   makeBtn('Reset', async () => { await game.reset(); setStatus('Reset'); }),
   makeBtn('Dispose', () => { game.dispose(); setStatus('Disposed'); }),
 );
@@ -46,16 +47,50 @@ rerender();
 
 game.setUIRerender(rerender);
 
+function toggleGameVisible(show) {
+  board.style.display = show ? 'block' : 'none';
+  controls.style.display = show ? 'block' : 'none';
+  root.style.display = show ? 'block' : 'none';
+  if (mainEl) mainEl.style.gridTemplateColumns = show ? '3fr 1fr' : '1fr';
+}
+
 // Deck Builder + Options
 const sidebar = document.querySelector('#sidebar') || document.createElement('aside');
 const deckRoot = document.createElement('div');
-const optsRoot = document.createElement('div');
+deckRoot.style.display = 'none';
+const deckBtn = document.createElement('button');
+deckBtn.textContent = 'Deck Builder';
+const useDeckBtn = document.createElement('button');
+useDeckBtn.textContent = 'Use this deck';
+useDeckBtn.disabled = true;
+sidebar.append(deckBtn, useDeckBtn);
 sidebar.appendChild(deckRoot);
+const optsRoot = document.createElement('div');
 sidebar.appendChild(optsRoot);
 if (!sidebar.parentElement) root.appendChild(sidebar);
 
-const deck = [];
-const rerenderDeck = () => renderDeckBuilder(deckRoot, { deck, onChange: rerenderDeck });
-rerenderDeck();
+const deckState = { hero: null, cards: [] };
+function updateUseDeckBtn() {
+  useDeckBtn.disabled = !(deckState.hero && deckState.cards.length === 60);
+}
+const rerenderDeck = () => {
+  renderDeckBuilder(deckRoot, { state: deckState, allCards: game.allCards, onChange: rerenderDeck });
+  updateUseDeckBtn();
+};
+deckBtn.addEventListener('click', () => {
+  const show = deckRoot.style.display === 'none';
+  deckRoot.style.display = show ? 'block' : 'none';
+  toggleGameVisible(!show);
+  if (show) rerenderDeck();
+});
+  useDeckBtn.addEventListener('click', async () => {
+    if (useDeckBtn.disabled) return;
+    deckRoot.style.display = 'none';
+    toggleGameVisible(true);
+    await game.reset({ hero: deckState.hero, cards: deckState.cards });
+    rerender();
+    game.start();
+    setStatus('Running');
+  });
 let logsOn = true;
-renderOptions(optsRoot, { onReset: async () => { deck.length = 0; rerenderDeck(); await game.reset(); rerender(); }, onToggleLogs: () => { logsOn = !logsOn; setStatus(logsOn ? 'Logs ON' : 'Logs OFF'); } });
+renderOptions(optsRoot, { onReset: async () => { deckState.cards.length = 0; deckState.hero = null; rerenderDeck(); await game.reset(); rerender(); }, onToggleLogs: () => { logsOn = !logsOn; setStatus(logsOn ? 'Logs ON' : 'Logs OFF'); } });
