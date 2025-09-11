@@ -263,6 +263,13 @@ export class EffectSystem {
     switch (target) {
       case 'character': {
         const friendly = [player.hero, ...player.battlefield.cards.filter(c => c.type !== 'quest')];
+
+        // If it's the AI's turn, default to healing its own hero
+        if (game.turns.activePlayer && game.turns.activePlayer !== game.player) {
+          actualTargets.push(player.hero);
+          break;
+        }
+
         const enemy = selectTargets([
           opponent.hero,
           ...opponent.battlefield.cards.filter(c => c.type !== 'quest')
