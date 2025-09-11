@@ -670,7 +670,7 @@
     "cost": 2,
     "effects": [
       {
-        "type": "draw",
+        "type": "drawOnHeal",
         "count": 1
       }
     ],
