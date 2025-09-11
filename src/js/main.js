@@ -25,7 +25,7 @@ function makeBtn(label, onClick) {
 
 const controls = document.createElement('div');
 controls.append(
-  makeBtn('Start', async () => { await game.setupMatch(deckState.hero && deckState.cards.length === 60 ? { hero: deckState.hero, cards: deckState.cards } : undefined); game.start(); setStatus('Running'); }),
+  makeBtn('Start', async () => { await game.setupMatch(); game.start(); setStatus('Running'); }),
   makeBtn('Reset', async () => { await game.reset(); setStatus('Reset'); }),
   makeBtn('Dispose', () => { game.dispose(); setStatus('Disposed'); }),
 );
@@ -46,24 +46,49 @@ rerender();
 
 game.setUIRerender(rerender);
 
+function toggleGameVisible(show) {
+  board.style.display = show ? 'block' : 'none';
+  controls.style.display = show ? 'block' : 'none';
+}
+
 // Deck Builder + Options
 const sidebar = document.querySelector('#sidebar') || document.createElement('aside');
 const deckRoot = document.createElement('div');
 deckRoot.style.display = 'none';
 const deckBtn = document.createElement('button');
 deckBtn.textContent = 'Deck Builder';
-sidebar.appendChild(deckBtn);
+const useDeckBtn = document.createElement('button');
+useDeckBtn.textContent = 'Use this deck';
+useDeckBtn.disabled = true;
+sidebar.append(deckBtn, useDeckBtn);
 sidebar.appendChild(deckRoot);
 const optsRoot = document.createElement('div');
 sidebar.appendChild(optsRoot);
 if (!sidebar.parentElement) root.appendChild(sidebar);
 
 const deckState = { hero: null, cards: [] };
-const rerenderDeck = () => renderDeckBuilder(deckRoot, { state: deckState, allCards: game.allCards, onChange: rerenderDeck });
+function updateUseDeckBtn() {
+  useDeckBtn.disabled = !(deckState.hero && deckState.cards.length === 60);
+}
+const rerenderDeck = () => {
+  renderDeckBuilder(deckRoot, { state: deckState, allCards: game.allCards, onChange: rerenderDeck });
+  updateUseDeckBtn();
+};
 deckBtn.addEventListener('click', () => {
   const show = deckRoot.style.display === 'none';
   deckRoot.style.display = show ? 'block' : 'none';
+  toggleGameVisible(!show);
   if (show) rerenderDeck();
+});
+useDeckBtn.addEventListener('click', async () => {
+  if (useDeckBtn.disabled) return;
+  deckRoot.style.display = 'none';
+  toggleGameVisible(true);
+  await game.reset();
+  await game.setupMatch({ hero: deckState.hero, cards: deckState.cards });
+  rerender();
+  game.start();
+  setStatus('Running');
 });
 let logsOn = true;
 renderOptions(optsRoot, { onReset: async () => { deckState.cards.length = 0; deckState.hero = null; rerenderDeck(); await game.reset(); rerender(); }, onToggleLogs: () => { logsOn = !logsOn; setStatus(logsOn ? 'Logs ON' : 'Logs OFF'); } });
