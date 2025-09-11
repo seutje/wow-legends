@@ -81,6 +81,12 @@ export default class Game {
 
     const rng = this.rng;
 
+    // Clear previous zones
+    this.player.hand.cards = [];
+    this.player.battlefield.cards = [];
+    this.opponent.hand.cards = [];
+    this.opponent.battlefield.cards = [];
+
     // Assign player hero and library
     if (playerDeck?.hero && playerDeck.cards?.length === 60) {
       validateCardData(playerDeck.hero);
@@ -403,12 +409,12 @@ export default class Game {
     this.resources.startTurn(this.player);
   }
 
-  async reset() {
+  async reset(playerDeck = null) {
     this.state.frame = 0;
     this.state.startedAt = 0;
     this.player = new Player({ name: 'You' });
     this.opponent = new Player({ name: 'AI' });
-    await this.setupMatch();
+    await this.setupMatch(playerDeck);
   }
 
   dispose() {

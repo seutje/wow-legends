@@ -8,7 +8,6 @@ function setup() {
   const allCards = [hero, ally];
   const game = {
     reset: jest.fn().mockResolvedValue(),
-    setupMatch: jest.fn().mockResolvedValue(),
     start: jest.fn(),
     allCards
   };
@@ -55,8 +54,7 @@ function setup() {
     if (useDeckBtn.disabled) return;
     deckRoot.style.display = 'none';
     toggleGameVisible(true);
-    await game.reset();
-    await game.setupMatch({ hero: deckState.hero, cards: deckState.cards });
+    await game.reset({ hero: deckState.hero, cards: deckState.cards });
     game.start();
   };
   useDeckBtn.addEventListener('click', useDeckHandler);
@@ -64,7 +62,7 @@ function setup() {
 }
 
 test('use deck button enables after building deck and starts game', async () => {
-  const { game, board, deckRoot, deckBtn, useDeckBtn, useDeckHandler, main, root } = setup();
+  const { game, board, deckRoot, deckBtn, useDeckBtn, useDeckHandler, main, root, deckState } = setup();
   deckBtn.dispatchEvent(new window.Event('click'));
   expect(board.style.display).toBe('none');
   expect(root.style.display).toBe('none');
@@ -80,7 +78,6 @@ test('use deck button enables after building deck and starts game', async () => 
   expect(board.style.display).toBe('block');
   expect(root.style.display).toBe('block');
   expect(main.style.gridTemplateColumns).toBe('3fr 1fr');
-  expect(game.reset).toHaveBeenCalled();
-  expect(game.setupMatch).toHaveBeenCalled();
+  expect(game.reset).toHaveBeenCalledWith({ hero: deckState.hero, cards: deckState.cards });
   expect(game.start).toHaveBeenCalled();
 });

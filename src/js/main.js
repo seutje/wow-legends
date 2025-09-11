@@ -83,15 +83,14 @@ deckBtn.addEventListener('click', () => {
   toggleGameVisible(!show);
   if (show) rerenderDeck();
 });
-useDeckBtn.addEventListener('click', async () => {
-  if (useDeckBtn.disabled) return;
-  deckRoot.style.display = 'none';
-  toggleGameVisible(true);
-  await game.reset();
-  await game.setupMatch({ hero: deckState.hero, cards: deckState.cards });
-  rerender();
-  game.start();
-  setStatus('Running');
-});
+  useDeckBtn.addEventListener('click', async () => {
+    if (useDeckBtn.disabled) return;
+    deckRoot.style.display = 'none';
+    toggleGameVisible(true);
+    await game.reset({ hero: deckState.hero, cards: deckState.cards });
+    rerender();
+    game.start();
+    setStatus('Running');
+  });
 let logsOn = true;
 renderOptions(optsRoot, { onReset: async () => { deckState.cards.length = 0; deckState.hero = null; rerenderDeck(); await game.reset(); rerender(); }, onToggleLogs: () => { logsOn = !logsOn; setStatus(logsOn ? 'Logs ON' : 'Logs OFF'); } });
