@@ -778,8 +778,8 @@
     "cost": 4,
     "effects": [
       {
-        "type": "heal",
-        "target": "character",
+        "type": "healAtEndOfTurn",
+        "target": "randomCharacter",
         "amount": 3
       }
     ],

@@ -240,6 +240,15 @@ describe.each(effectCards)('$id executes its effect', (card) => {
         expect(g.player.hand.cards.length).toBe(handBefore + effect.count);
         break;
       }
+      case 'healAtEndOfTurn': {
+        g.rng.pick = arr => arr[0];
+        g.player.hero.data.maxHealth = 30;
+        g.player.hero.data.health = 20;
+        await g.playFromHand(g.player, card.id);
+        g.turns.bus.emit('turn:start', { player: g.opponent });
+        expect(g.player.hero.data.health).toBe(20 + effect.amount);
+        break;
+      }
       default:
         throw new Error('Unhandled effect type: ' + effect.type);
     }

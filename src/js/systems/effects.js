@@ -51,6 +51,9 @@ export class EffectSystem {
         case 'drawOnHeal':
           this.drawOnHeal(effect, context);
           break;
+        case 'healAtEndOfTurn':
+          this.healAtEndOfTurn(effect, context);
+          break;
         case 'playRandomConsumableFromLibrary':
           await this.playRandomConsumableFromLibrary(effect, context);
           break;
@@ -325,6 +328,72 @@ export class EffectSystem {
 
     const remove = () => {
       offHeal();
+      offTurn();
+      offDeath();
+      offReturn();
+    };
+
+    const offDeath = game.bus.on('allyDefeated', ({ card: dead }) => {
+      if (dead === card) remove();
+    });
+
+    const offReturn = game.bus.on('cardReturned', ({ card: returned }) => {
+      if (returned === card) remove();
+    });
+  }
+
+  healAtEndOfTurn(effect, context) {
+    const { amount, target = 'randomCharacter' } = effect;
+    const { game, player, card } = context;
+    const opponent = player === game.player ? game.opponent : game.player;
+
+    const handler = ({ player: turnPlayer }) => {
+      if (turnPlayer === player) return;
+
+      let candidates = [];
+      switch (target) {
+        case 'randomFriendlyCharacter':
+          candidates = [
+            player.hero,
+            ...player.battlefield.cards.filter(c => c.type !== 'quest' && c.type !== 'equipment'),
+          ];
+          break;
+        case 'randomEnemyCharacter':
+          candidates = [
+            opponent.hero,
+            ...opponent.battlefield.cards.filter(c => c.type !== 'quest' && c.type !== 'equipment'),
+          ];
+          break;
+        case 'randomCharacter':
+        default:
+          candidates = [
+            player.hero,
+            ...player.battlefield.cards.filter(c => c.type !== 'quest' && c.type !== 'equipment'),
+            opponent.hero,
+            ...opponent.battlefield.cards.filter(c => c.type !== 'quest' && c.type !== 'equipment'),
+          ];
+      }
+      candidates = candidates.filter(t => (t.data && t.data.health != null) || t.health != null);
+
+      if (!candidates.length) return;
+      const targetChar = game.rng.pick(candidates);
+
+      if (targetChar.data && targetChar.data.health != null) {
+        targetChar.data.health = Math.min(targetChar.data.health + amount, targetChar.data.maxHealth || targetChar.data.health);
+        console.log(`${targetChar.name} healed for ${amount}. Current health: ${targetChar.data.health}`);
+      } else if (targetChar.health != null) {
+        targetChar.health = Math.min(targetChar.health + amount, targetChar.maxHealth || targetChar.health);
+        console.log(`${targetChar.name} healed for ${amount}. Current health: ${targetChar.health}`);
+      }
+
+      const healedPlayer =
+        targetChar === player.hero || player.battlefield.cards.includes(targetChar) ? player : opponent;
+      game.bus.emit('characterHealed', { player: healedPlayer, target: targetChar, amount, source: card });
+    };
+
+    const offTurn = game.turns.bus.on('turn:start', handler);
+
+    const remove = () => {
       offTurn();
       offDeath();
       offReturn();
