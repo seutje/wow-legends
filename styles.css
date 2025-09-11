@@ -178,7 +178,8 @@ ul.zone-list li {
   color: #fff;
 }
 
-.card-tooltip .stat.cost {
+.card-tooltip .stat.cost,
+.card-tooltip .stat.armor {
   top: 4px;
   right: 4px;
   background: #1e90ff;

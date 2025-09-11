@@ -3,6 +3,7 @@ import { shortId } from '../utils/id.js';
 export default class Hero {
   constructor({ id, name = 'Hero', data = {}, attack = 0, health = 30, armor = 0, keywords = [], text = '', effects = [], active = effects, passive = [] } = {}) {
     this.id = id || shortId('hero');
+    this.type = 'hero';
     this.name = name;
     if (data) {
       attack = data.attack ?? attack;
