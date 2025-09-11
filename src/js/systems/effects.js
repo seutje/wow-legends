@@ -47,6 +47,9 @@ export class EffectSystem {
         case 'draw':
           this.drawCard(effect, context);
           break;
+        case 'drawOnHeal':
+          this.drawOnHeal(effect, context);
+          break;
         case 'playRandomConsumableFromLibrary':
           await this.playRandomConsumableFromLibrary(effect, context);
           break;
@@ -251,7 +254,7 @@ export class EffectSystem {
 
   healCharacter(effect, context) {
     const { target, amount } = effect;
-    const { game, player } = context;
+    const { game, player, card } = context;
 
     let actualTargets = [];
     // For now, always target player's hero
@@ -265,6 +268,7 @@ export class EffectSystem {
         t.health = Math.min(t.health + amount, t.maxHealth || t.health);
         console.log(`${t.name} healed for ${amount}. Current health: ${t.health}`);
       }
+      game.bus.emit('characterHealed', { player, target: t, amount, source: card });
     }
   }
 
@@ -273,6 +277,41 @@ export class EffectSystem {
     const { game, player } = context;
     game.draw(player, count);
     console.log(`${player.name} drew ${count} card(s).`);
+  }
+
+  drawOnHeal(effect, context) {
+    const { count = 1 } = effect;
+    const { game, player, card } = context;
+
+    const handler = ({ player: healedPlayer }) => {
+      if (healedPlayer !== player) return;
+      card.data = card.data || {};
+      if (card.data.drawnThisTurn) return;
+      game.draw(player, count);
+      card.data.drawnThisTurn = true;
+    };
+
+    const reset = ({ player: turnPlayer }) => {
+      if (turnPlayer === player && card.data) card.data.drawnThisTurn = false;
+    };
+
+    const offHeal = game.bus.on('characterHealed', handler);
+    const offTurn = game.turns.bus.on('turn:start', reset);
+
+    const remove = () => {
+      offHeal();
+      offTurn();
+      offDeath();
+      offReturn();
+    };
+
+    const offDeath = game.bus.on('allyDefeated', ({ card: dead }) => {
+      if (dead === card) remove();
+    });
+
+    const offReturn = game.bus.on('cardReturned', ({ card: returned }) => {
+      if (returned === card) remove();
+    });
   }
 
   destroyMinion(effect, context) {

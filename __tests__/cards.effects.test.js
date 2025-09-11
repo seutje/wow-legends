@@ -233,6 +233,13 @@ describe.each(effectCards)('$id executes its effect', (card) => {
         expect(demon.data.health).toBe(2);
         break;
       }
+      case 'drawOnHeal': {
+        await g.playFromHand(g.player, card.id);
+        const handBefore = g.player.hand.cards.length;
+        await g.effects.healCharacter({ target: 'hero', amount: 1 }, { game: g, player: g.player, card: null });
+        expect(g.player.hand.cards.length).toBe(handBefore + effect.count);
+        break;
+      }
       default:
         throw new Error('Unhandled effect type: ' + effect.type);
     }
