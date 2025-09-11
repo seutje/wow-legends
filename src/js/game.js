@@ -64,7 +64,7 @@ export default class Game {
     await this.setupMatch();
   }
 
-  async setupMatch() {
+  async setupMatch(playerDeck = null) {
     // Load initial libraries from card data
     if (typeof window === 'undefined') {
       const fs = await import('fs/promises');
@@ -81,33 +81,38 @@ export default class Game {
 
     const rng = this.rng;
 
-    // Assign heroes
-    const playerHeroData = rng.pick(heroes);
-    this.player.hero = new Hero(playerHeroData);
+    // Assign player hero and library
+    if (playerDeck?.hero && playerDeck.cards?.length === 60) {
+      validateCardData(playerDeck.hero);
+      this.player.hero = new Hero(playerDeck.hero);
+      this.player.library.cards = [];
+      for (const cardData of playerDeck.cards) {
+        validateCardData(cardData);
+        this.player.library.add(new Card(cardData));
+      }
+    } else {
+      const playerHeroData = rng.pick(heroes);
+      this.player.hero = new Hero(playerHeroData);
+      const playerLibData = [];
+      for (let i = 0; i < 60; i++) {
+        playerLibData.push(rng.pick(otherCards));
+      }
+      this.player.library.cards = [];
+      for (const cardData of playerLibData) {
+        validateCardData(cardData);
+        this.player.library.add(new Card(cardData));
+      }
+    }
 
+    // Assign opponent hero and library
     let opponentHeroData = rng.pick(heroes);
-    while (opponentHeroData.id === playerHeroData.id) {
+    while (opponentHeroData.id === this.player.hero.id) {
       opponentHeroData = rng.pick(heroes);
     }
     this.opponent.hero = new Hero(opponentHeroData);
-
-    // Create player's library
-    const playerLibData = [];
-    for (let i = 0; i < 60; i++) {
-      playerLibData.push(rng.pick(otherCards));
-    }
-
-    // Create opponent's library
     const opponentLibData = [];
     for (let i = 0; i < 60; i++) {
       opponentLibData.push(rng.pick(otherCards));
-    }
-
-    // Populate libraries
-    this.player.library.cards = [];
-    for (const cardData of playerLibData) {
-      validateCardData(cardData);
-      this.player.library.add(new Card(cardData));
     }
     this.opponent.library.cards = [];
     for (const cardData of opponentLibData) {
