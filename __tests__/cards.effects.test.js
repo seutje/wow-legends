@@ -247,8 +247,11 @@ describe.each(effectCards)('$id executes its effect', (card) => {
       }
       case 'drawOnHeal': {
         await g.playFromHand(g.player, card.id);
+        g.player.hero.data.maxHealth = 30;
+        g.player.hero.data.health = 20;
         const handBefore = g.player.hand.cards.length;
-        await g.effects.healCharacter({ target: 'hero', amount: 1 }, { game: g, player: g.player, card: null });
+        const healAmount = Math.max(1, effect.threshold ?? 0);
+        await g.effects.healCharacter({ target: 'hero', amount: healAmount }, { game: g, player: g.player, card: null });
         expect(g.player.hand.cards.length).toBe(handBefore + effect.count);
         break;
       }

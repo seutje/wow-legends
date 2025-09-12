@@ -934,8 +934,9 @@
     "cost": 4,
     "effects": [
       {
-        "type": "draw",
-        "count": 1
+        "type": "drawOnHeal",
+        "count": 1,
+        "threshold": 5
       }
     ],
     "keywords": [
