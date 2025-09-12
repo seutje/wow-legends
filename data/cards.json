@@ -793,8 +793,8 @@
     "cost": 3,
     "effects": [
       {
-        "type": "rawText",
-        "text": "Enrage — +2 ATK while damaged."
+        "type": "buffOnSurviveDamage",
+        "attack": 2
       }
     ],
     "keywords": [
@@ -804,7 +804,7 @@
       "attack": 3,
       "health": 3
     },
-    "text": "Enrage — +2 ATK while damaged."
+    "text": "Enrage — Whenever this survives damage, gain +2 ATK."
   },
   {
     "id": "ally-scarlet-sorcerer",

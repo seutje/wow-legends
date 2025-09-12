@@ -78,6 +78,9 @@ export class EffectSystem {
         case 'damageArmor':
           await this.dealDamage({ target: effect.target, amount: context.player.hero.data.armor }, context);
           break;
+        case 'buffOnSurviveDamage':
+          this.buffOnSurviveDamage(effect, context);
+          break;
         case 'explosiveTrap':
           this.explosiveTrap(effect, context);
           break;
@@ -622,6 +625,38 @@ export class EffectSystem {
 
     const remove = () => {
       offArmor();
+      offDeath();
+      offReturn();
+    };
+
+    const offDeath = game.bus.on('allyDefeated', ({ card: dead }) => {
+      if (dead === card) remove();
+    });
+
+    const offReturn = game.bus.on('cardReturned', ({ card: returned }) => {
+      if (returned === card) remove();
+    });
+  }
+
+  buffOnSurviveDamage(effect, context) {
+    const { attack = 0, health = 0 } = effect;
+    const { game, card } = context;
+
+    const apply = () => {
+      card.data = card.data || {};
+      if (attack) card.data.attack = (card.data.attack || 0) + attack;
+      if (health) card.data.health = (card.data.health || 0) + health;
+    };
+
+    const handler = ({ target }) => {
+      if (target !== card) return;
+      if (card.data?.health > 0) apply();
+    };
+
+    const offDamage = game.bus.on('damageDealt', handler);
+
+    const remove = () => {
+      offDamage();
       offDeath();
       offReturn();
     };

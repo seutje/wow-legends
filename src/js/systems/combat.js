@@ -88,17 +88,19 @@ export class CombatSystem {
     }
 
     // Apply damage events sequentially
-    for (const { target, amount, source } of events) {
-      let rem = armorApply(target, amount);
-      const hp = getStat(target, 'health', 0);
+    for (const ev of events) {
+      let rem = armorApply(ev.target, ev.amount);
+      ev.amount = rem;
+      const hp = getStat(ev.target, 'health', 0);
       const newHp = Math.max(0, hp - rem);
-      setStat(target, 'health', newHp);
-      console.log(`${target.name} took ${rem} damage from ${source?.name ?? 'an unknown source'}. Remaining health: ${getStat(target, 'health', 0)}`);
-      if (source?.keywords?.includes?.('Freeze') && newHp > 0) freezeTarget(target, 1);
-      if (newHp <= 0) setStat(target, 'dead', true);
+      setStat(ev.target, 'health', newHp);
+      console.log(`${ev.target.name} took ${rem} damage from ${ev.source?.name ?? 'an unknown source'}. Remaining health: ${getStat(ev.target, 'health', 0)}`);
+      if (ev.source?.keywords?.includes?.('Freeze') && newHp > 0) freezeTarget(ev.target, 1);
+      if (newHp <= 0) setStat(ev.target, 'dead', true);
     }
 
     this.clear();
+    return events;
   }
 }
 

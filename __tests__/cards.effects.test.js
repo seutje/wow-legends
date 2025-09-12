@@ -271,6 +271,15 @@ describe.each(effectCards)('$id executes its effect', (card) => {
         expect(g.opponent.battlefield.cards[0].data.health).toBe(1);
         break;
       }
+      case 'buffOnSurviveDamage': {
+        g.player.hand.add(new Card(card));
+        const unit = g.player.hand.cards[0];
+        await g.playFromHand(g.player, unit.id);
+        const before = unit.data.attack;
+        await g.effects.dealDamage({ target: 'allCharacters', amount: 1 }, { game: g, player: g.player, card: null });
+        expect(unit.data.attack).toBe(before + effect.attack);
+        break;
+      }
       default:
         throw new Error('Unhandled effect type: ' + effect.type);
     }
