@@ -9,7 +9,10 @@ export const AI_EQUIPMENT_WEIGHT = 2;
 export const PLAYER_EQUIPMENT_WEIGHT = -2;
 export const AI_GRAVEYARD_WEIGHT = 0.5;
 export const PLAYER_GRAVEYARD_WEIGHT = -0.5;
-export const RESOURCE_WEIGHT = -0.3;
+// Spending resources alone shouldn't improve the score.
+// Positive weight encourages saving resources so actions that
+// don't meaningfully change the game state aren't preferred.
+export const RESOURCE_WEIGHT = 0.3;
 export const TAUNT_WEIGHT = 2;
 export const FREEZE_WEIGHT = -2;
 export const WIN_CONDITION_BONUS = 1000;

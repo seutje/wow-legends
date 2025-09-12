@@ -24,7 +24,11 @@ describe('Game Modes & AI', () => {
     const s = new SkirmishMode();
     s.setup();
     s.turns.turn = 2; // ensure 2 resources for hero power
-    s.opponent.hero = new Hero({ name: 'AI Hero', data: { attack: 1 }, active: [{}] });
+    s.opponent.hero = new Hero({
+      name: 'AI Hero',
+      data: { attack: 1 },
+      active: [{ type: 'damage', amount: 1 }],
+    });
     const ally = new Card({ type: 'ally', name: 'Grunt', cost: 0, data: { attack: 1, health: 1 } });
     s.opponent.hand.add(ally);
     const initialHealth = s.player.hero.data.health;
