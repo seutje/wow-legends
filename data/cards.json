@@ -732,8 +732,10 @@
     "cost": 2,
     "effects": [
       {
-        "type": "rawText",
-        "text": "End of your turn: Give a random ally +1 ATK."
+        "type": "buffAtEndOfTurn",
+        "target": "randomFriendlyAlly",
+        "property": "attack",
+        "amount": 1
       }
     ],
     "keywords": [

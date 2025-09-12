@@ -264,6 +264,16 @@ describe.each(effectCards)('$id executes its effect', (card) => {
         expect(g.player.hero.data.health).toBe(20 + effect.amount);
         break;
       }
+      case 'buffAtEndOfTurn': {
+        g.rng.pick = arr => arr[0];
+        await g.playFromHand(g.player, card.id);
+        const ally = g.player.battlefield.cards.find(c => c.type === 'ally');
+        expect(ally).toBeTruthy();
+        const before = (ally.data?.[effect.property] ?? 0);
+        g.turns.bus.emit('turn:start', { player: g.opponent });
+        expect(ally.data[effect.property]).toBe(before + effect.amount);
+        break;
+      }
       case 'explosiveTrap': {
         g.player.battlefield.add(new Card({ name: 'Ally', type: 'ally', data: { attack: 0, health: 3 }, keywords: [] }));
         g.opponent.battlefield.add(new Card({ name: 'Enemy', type: 'ally', data: { attack: 0, health: 3 }, keywords: [] }));

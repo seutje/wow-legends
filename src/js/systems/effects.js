@@ -51,6 +51,9 @@ export class EffectSystem {
         case 'damage':
           await this.dealDamage(effect, context);
           break;
+        case 'buffAtEndOfTurn':
+          this.buffAtEndOfTurn(effect, context);
+          break;
         case 'summon':
           this.summonUnit(effect, context);
           break;
@@ -470,6 +473,71 @@ export class EffectSystem {
       const healedPlayer =
         targetChar === player.hero || player.battlefield.cards.includes(targetChar) ? player : opponent;
       game.bus.emit('characterHealed', { player: healedPlayer, target: targetChar, amount, source: card });
+    };
+
+    const offTurn = game.turns.bus.on('turn:start', handler);
+
+    const remove = () => {
+      offTurn();
+      offDeath();
+      offReturn();
+    };
+
+    const offDeath = game.bus.on('allyDefeated', ({ card: dead }) => {
+      if (dead === card) remove();
+    });
+
+    const offReturn = game.bus.on('cardReturned', ({ card: returned }) => {
+      if (returned === card) remove();
+    });
+  }
+
+  buffAtEndOfTurn(effect, context) {
+    const { property = 'attack', amount = 1, target = 'randomFriendlyAlly' } = effect;
+    const { game, player, card } = context;
+    const opponent = player === game.player ? game.opponent : game.player;
+
+    const handler = async ({ player: turnPlayer }) => {
+      // Trigger at the start of the opponent's turn (end of controller's turn)
+      if (turnPlayer === player) return;
+
+      let candidates = [];
+      switch (target) {
+        case 'randomFriendlyAlly':
+        case 'randomAlly':
+        default:
+          candidates = [
+            ...player.battlefield.cards.filter(c => c.type !== 'quest' && c.type !== 'equipment'),
+          ];
+          break;
+        case 'randomFriendlyCharacter':
+          candidates = [
+            player.hero,
+            ...player.battlefield.cards.filter(c => c.type !== 'quest' && c.type !== 'equipment'),
+          ];
+          break;
+        case 'randomEnemyCharacter':
+          candidates = [
+            opponent.hero,
+            ...opponent.battlefield.cards.filter(c => c.type !== 'quest' && c.type !== 'equipment'),
+          ];
+          break;
+        case 'randomEnemyAlly':
+          candidates = [
+            ...opponent.battlefield.cards.filter(c => c.type !== 'quest' && c.type !== 'equipment'),
+          ];
+          break;
+      }
+
+      candidates = candidates.filter(isTargetable);
+      if (!candidates.length) return;
+
+      const targetChar = game.rng.pick(candidates);
+      await this.applyBuff(
+        { type: 'buff', target: 'character', property, amount },
+        { game, player, card },
+        targetChar
+      );
     };
 
     const offTurn = game.turns.bus.on('turn:start', handler);
