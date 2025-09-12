@@ -57,7 +57,7 @@ footer {
   padding: 0;
   list-style: none;
   overflow-y: auto;
-  min-height: 200px;
+  max-height: 200px;
 }
 
 ul.zone-list {

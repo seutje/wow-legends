@@ -97,6 +97,7 @@ export class BasicAI {
     const p = structuredClone(player);
     const o = structuredClone(opponent);
     let res = pool;
+    let overloadNext = 0;
 
     if (card) {
       res -= card.cost || 0;
@@ -115,13 +116,25 @@ export class BasicAI {
       } else {
         p.graveyard.cards.push(played);
       }
-      if (played.effects) res = this._applySimpleEffects(played.effects, p, o, res);
+      if (played.effects) {
+        // Track pending overload from played card effects
+        for (const e of played.effects) {
+          if (e.type === 'overload') overloadNext += (e.amount || 1);
+        }
+        res = this._applySimpleEffects(played.effects, p, o, res);
+      }
     }
 
     if (usePower) {
       res -= 2;
       p.hero.powerUsed = true;
-      if (p.hero.active) res = this._applySimpleEffects(p.hero.active, p, o, res);
+      if (p.hero.active) {
+        // Track pending overload from hero power effects
+        for (const e of p.hero.active) {
+          if (e.type === 'overload') overloadNext += (e.amount || 1);
+        }
+        res = this._applySimpleEffects(p.hero.active, p, o, res);
+      }
     }
 
     const combat = new CombatSystem();
@@ -143,7 +156,14 @@ export class BasicAI {
       }
     }
 
-    return evaluateGameState({ player: p, opponent: o, turn: this.resources.turns.turn, resources: res });
+    return evaluateGameState({
+      player: p,
+      opponent: o,
+      turn: this.resources.turns.turn,
+      resources: res,
+      overloadNextPlayer: overloadNext,
+      overloadNextOpponent: 0,
+    });
   }
 
   takeTurn(player, opponent = null) {

@@ -15,6 +15,9 @@ export const PLAYER_GRAVEYARD_WEIGHT = -0.5;
 export const RESOURCE_WEIGHT = 0.3;
 export const TAUNT_WEIGHT = 2;
 export const FREEZE_WEIGHT = -2;
+// Overload is generally bad for the AI (less resources next turn).
+export const AI_OVERLOAD_WEIGHT = -1;
+export const PLAYER_OVERLOAD_WEIGHT = 1;
 export const WIN_CONDITION_BONUS = 1000;
 
 function countKeyword(cards, keyword) {
@@ -26,7 +29,14 @@ function countFrozen(player) {
   return chars.filter(c => (c?.data?.freezeTurns || 0) > 0).length;
 }
 
-export function evaluateGameState({ player, opponent, turn = 1, resources = 0 }) {
+export function evaluateGameState({
+  player,
+  opponent,
+  turn = 1,
+  resources = 0,
+  overloadNextPlayer = 0,
+  overloadNextOpponent = 0,
+}) {
   let score = 0;
 
   const aiHealth = player.hero?.data?.health ?? 0;
@@ -52,6 +62,10 @@ export function evaluateGameState({ player, opponent, turn = 1, resources = 0 })
 
   score += resources * RESOURCE_WEIGHT;
   score += turn * TURN_WEIGHT;
+
+  // Pending overload next turn: bad for AI, good if opponent has it.
+  score += (overloadNextPlayer || 0) * AI_OVERLOAD_WEIGHT;
+  score += (overloadNextOpponent || 0) * PLAYER_OVERLOAD_WEIGHT;
 
   score += countKeyword(player.battlefield?.cards || [], 'Taunt') * TAUNT_WEIGHT;
   score -= countKeyword(opponent.battlefield?.cards || [], 'Taunt') * TAUNT_WEIGHT;

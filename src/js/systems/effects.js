@@ -492,11 +492,12 @@ export class EffectSystem {
   destroyMinion(effect, context) {
     const { target, condition } = effect;
     const { game, player } = context;
+    const opponent = player === game.player ? game.opponent : game.player;
 
-    // For now, destroy a random enemy minion that meets the condition
-    const targetMinions = game.opponent.battlefield.cards
+    // Destroy a random enemy ally that meets the condition (relative to acting player)
+    const targetMinions = opponent.battlefield.cards
       .filter(c => {
-        if (c.type === 'quest') return false;
+        if (c.type !== 'ally') return false;
         if (condition.type === 'attackLessThan') {
           return c.data.attack <= condition.amount;
         }
@@ -506,7 +507,7 @@ export class EffectSystem {
 
     if (targetMinions.length > 0) {
       const minionToDestroy = game.rng.pick(targetMinions);
-      game.opponent.battlefield.moveTo(game.opponent.graveyard, minionToDestroy.id);
+      opponent.battlefield.moveTo(opponent.graveyard, minionToDestroy.id);
       console.log(`Destroyed ${minionToDestroy.name}.`);
     } else {
       console.log('No minion found to destroy.');
@@ -516,15 +517,17 @@ export class EffectSystem {
   returnToHand(effect, context) {
     const { target, costIncrease } = effect;
     const { game, player } = context;
+    const opponent = player === game.player ? game.opponent : game.player;
 
-    // For now, return a random enemy ally to hand
-    const opponents = game.opponent.battlefield.cards
-      .filter(c => c.type !== 'quest')
+    // Return a random enemy ally (opponent relative to acting player)
+    const candidates = opponent.battlefield.cards
+      .filter(c => c.type === 'ally')
       .filter(isTargetable);
-    if (opponents.length > 0) {
-      const allyToReturn = game.rng.pick(opponents);
-      game.opponent.battlefield.moveTo(game.opponent.hand, allyToReturn.id);
-      allyToReturn.cost += costIncrease; // Increase cost
+
+    if (candidates.length > 0) {
+      const allyToReturn = game.rng.pick(candidates);
+      opponent.battlefield.moveTo(opponent.hand, allyToReturn.id);
+      allyToReturn.cost = (allyToReturn.cost || 0) + (costIncrease || 0);
       console.log(`Returned ${allyToReturn.name} to hand. New cost: ${allyToReturn.cost}`);
       game.bus.emit('cardReturned', { player, card: allyToReturn });
     } else {
