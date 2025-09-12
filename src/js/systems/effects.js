@@ -381,19 +381,25 @@ export class EffectSystem {
   }
 
   drawOnHeal(effect, context) {
-    const { count = 1 } = effect;
+    const { count = 1, threshold = 0 } = effect;
     const { game, player, card } = context;
 
-    const handler = ({ player: healedPlayer }) => {
+    const handler = ({ player: healedPlayer, amount }) => {
       if (healedPlayer !== player) return;
       card.data = card.data || {};
+      card.data.healedThisTurn = (card.data.healedThisTurn || 0) + amount;
       if (card.data.drawnThisTurn) return;
-      game.draw(player, count);
-      card.data.drawnThisTurn = true;
+      if (card.data.healedThisTurn >= threshold) {
+        game.draw(player, count);
+        card.data.drawnThisTurn = true;
+      }
     };
 
     const reset = ({ player: turnPlayer }) => {
-      if (turnPlayer === player && card.data) card.data.drawnThisTurn = false;
+      if (turnPlayer === player && card.data) {
+        card.data.drawnThisTurn = false;
+        card.data.healedThisTurn = 0;
+      }
     };
 
     const offHeal = game.bus.on('characterHealed', handler);
