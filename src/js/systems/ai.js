@@ -4,6 +4,38 @@ export class BasicAI {
     this.combat = combatSystem;
   }
 
+  _effectsAreUseless(effects = [], player) {
+    if (!effects.length) return false;
+    let useful = false;
+    for (const e of effects) {
+      switch (e.type) {
+        case 'heal': {
+          const chars = [player.hero, ...player.battlefield.cards];
+          const injured = chars.some(c => {
+            const cur = c.data?.health ?? c.health;
+            const max = c.data?.maxHealth ?? c.maxHealth ?? cur;
+            return cur < max;
+          });
+          if (injured) useful = true;
+          break;
+        }
+        case 'restore': {
+          const pool = this.resources.pool(player);
+          const avail = this.resources.available(player);
+          const used = avail - pool;
+          if (used > 0 && (!e.requiresSpent || used >= e.requiresSpent)) useful = true;
+          break;
+        }
+        case 'overload':
+          break;
+        default:
+          useful = true;
+      }
+      if (useful) break;
+    }
+    return !useful;
+  }
+
   takeTurn(player, opponent = null) {
     // Refresh available resources for the turn
     this.resources.startTurn(player);
@@ -15,6 +47,7 @@ export class BasicAI {
     // Play the cheapest affordable card from hand
     const affordable = player.hand.cards
       .filter(c => this.resources.canPay(player, c.cost || 0))
+      .filter(c => !this._effectsAreUseless(c.effects, player))
       .sort((a, b) => (a.cost || 0) - (b.cost || 0));
     const card = affordable[0];
     if (card) {
@@ -33,7 +66,8 @@ export class BasicAI {
     }
 
     // Use hero power if available and affordable (cost 2)
-    if (player.hero?.active?.length && !player.hero.powerUsed && this.resources.canPay(player, 2)) {
+    if (player.hero?.active?.length && !player.hero.powerUsed && this.resources.canPay(player, 2) &&
+        !this._effectsAreUseless(player.hero.active, player)) {
       this.resources.pay(player, 2);
       player.hero.powerUsed = true;
     }

@@ -281,9 +281,15 @@ export default class Game {
     candidates = candidates?.filter(c => c.type !== 'quest');
     if (!candidates?.length) return null;
 
-    // If it's the AI's turn, auto-select a target without prompting
+    // If it's the AI's turn, favor enemy targets when auto-selecting
     if (this.turns.activePlayer && this.turns.activePlayer !== this.player) {
-      return this.rng.pick(candidates);
+      const active = this.turns.activePlayer;
+      const enemy = active === this.player ? this.opponent : this.player;
+      const enemyTargets = candidates.filter(
+        c => c === enemy.hero || enemy.battlefield.cards.includes(c)
+      );
+      const pool = enemyTargets.length ? enemyTargets : candidates;
+      return this.rng.pick(pool);
     }
 
     if (typeof document === 'undefined') {
