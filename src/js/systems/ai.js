@@ -1,5 +1,6 @@
 import CombatSystem from './combat.js';
 import { evaluateGameState } from './ai-heuristics.js';
+import Card from '../entities/card.js';
 
 export class BasicAI {
   constructor({ resourceSystem, combatSystem } = {}) {
@@ -61,6 +62,22 @@ export class BasicAI {
           const target = chars[0];
           if (target) {
             target.data.health = Math.max(0, (target.data?.health ?? target.health) - amt);
+          }
+          break;
+        }
+        case 'summon': {
+          const { unit, count } = e;
+          for (let i = 0; i < count; i++) {
+            const summoned = new Card({
+              name: unit.name,
+              type: 'ally',
+              data: { attack: unit.attack, health: unit.health },
+              keywords: unit.keywords
+            });
+            if (!summoned.keywords?.includes('Rush')) {
+              summoned.data.attacked = true;
+            }
+            player.battlefield.cards.push(summoned);
           }
           break;
         }
