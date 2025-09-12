@@ -44,6 +44,18 @@ test('AI skips healing hero power when at full health', () => {
   expect(g.resources.pool(g.player)).toBe(g.resources.available(g.player));
 });
 
+test('AI skips hero power with no effect', () => {
+  const g = new Game();
+  const ai = new BasicAI({ resourceSystem: g.resources, combatSystem: g.combat });
+  g.turns.turn = 2;
+  g.player.hero.active = [{ type: 'damage', amount: 0 }];
+  g.player.library.cards = [];
+  g.turns.setActivePlayer(g.player);
+  ai.takeTurn(g.player, g.opponent);
+  expect(g.player.hero.powerUsed).toBe(false);
+  expect(g.resources.pool(g.player)).toBe(g.resources.available(g.player));
+});
+
 test('AI does not target itself with damage spells', async () => {
   const g = new Game();
   g.player.hero.data.maxHealth = 30;
