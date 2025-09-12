@@ -451,6 +451,10 @@ export default class Game {
   async reset(playerDeck = null) {
     this.state.frame = 0;
     this.state.startedAt = 0;
+    this.turns.turn = 1;
+    this.turns.current = 'Start';
+    this.turns.activePlayer = null;
+    this.resources = new ResourceSystem(this.turns);
     this.player = new Player({ name: 'You' });
     this.opponent = new Player({ name: 'AI' });
     await this.setupMatch(playerDeck);
