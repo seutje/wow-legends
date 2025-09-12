@@ -19,7 +19,33 @@ export class EffectSystem {
   }
 
   async execute(cardEffects, context) {
-    for (const effect of cardEffects) {
+    for (let i = 0; i < cardEffects.length; i++) {
+      const effect = cardEffects[i];
+
+      if (effect.type === 'buff' && effect.target === 'character') {
+        const grouped = [effect];
+        let j = i + 1;
+        while (
+          j < cardEffects.length &&
+          cardEffects[j].type === 'buff' &&
+          cardEffects[j].target === 'character'
+        ) {
+          grouped.push(cardEffects[j]);
+          j++;
+        }
+
+        const { player, game } = context;
+        const candidates = [player.hero, ...player.battlefield.cards.filter(c => c.type !== 'quest')];
+        const chosen = await game.promptTarget(candidates);
+        if (chosen) {
+          for (const g of grouped) {
+            await this.applyBuff(g, context, chosen);
+          }
+        }
+        i = j - 1;
+        continue;
+      }
+
       switch (effect.type) {
         case 'damage':
           await this.dealDamage(effect, context);
@@ -538,7 +564,7 @@ export class EffectSystem {
     console.log('Cleaned up temporary effects.');
   }
 
-  async applyBuff(effect, context) {
+  async applyBuff(effect, context, forcedTarget = null) {
     const { target, property, amount, duration } = effect;
     const { player, game } = context;
     const opponent = player === game.player ? game.opponent : game.player;
@@ -554,9 +580,13 @@ export class EffectSystem {
         actualTargets.push(player.hero);
         break;
       case 'character': {
-        const candidates = [player.hero, ...player.battlefield.cards.filter(c => c.type !== 'quest')];
-        const chosen = await game.promptTarget(candidates);
-        if (chosen) actualTargets.push(chosen);
+        if (forcedTarget) {
+          actualTargets.push(forcedTarget);
+        } else {
+          const candidates = [player.hero, ...player.battlefield.cards.filter(c => c.type !== 'quest')];
+          const chosen = await game.promptTarget(candidates);
+          if (chosen) actualTargets.push(chosen);
+        }
         break;
       }
       default:

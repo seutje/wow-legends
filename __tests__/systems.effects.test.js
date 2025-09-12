@@ -123,5 +123,26 @@ describe('EffectSystem', () => {
     expect(player.hero.data.health).toBe(6);
     expect(ally.data.health).toBe(1);
   });
+
+  test('buffing attack and health prompts for one target', async () => {
+    const game = new Game();
+    const player = game.player;
+    const ally = new Card({ type: 'ally', name: 'Ally', data: { attack: 1, health: 1 } });
+    player.battlefield.add(ally);
+
+    const promptSpy = jest.fn(async () => ally);
+    game.promptTarget = promptSpy;
+
+    const effects = [
+      { type: 'buff', target: 'character', property: 'attack', amount: 4 },
+      { type: 'buff', target: 'character', property: 'health', amount: 4 },
+    ];
+
+    await game.effects.execute(effects, { game, player, card: null });
+
+    expect(promptSpy).toHaveBeenCalledTimes(1);
+    expect(ally.data.attack).toBe(5);
+    expect(ally.data.health).toBe(5);
+  });
 });
 
