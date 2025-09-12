@@ -18,3 +18,25 @@ test('AI does not attack with summoning-sick ally', () => {
   expect(g.opponent.hero.data.health).toBe(10);
 });
 
+test('AI does not attack with summoned ally', () => {
+  const g = new Game();
+  const ai = new BasicAI({ resourceSystem: g.resources, combatSystem: g.combat });
+  g.player.hero = new Hero({ name: 'AI', data: { health: 10 } });
+  g.opponent.hero = new Hero({ name: 'Opponent', data: { health: 10 } });
+  const spell = new Card({
+    type: 'spell',
+    name: 'Summon',
+    cost: 0,
+    effects: [
+      { type: 'summon', unit: { name: 'Token', attack: 1, health: 1, keywords: [] }, count: 1 }
+    ]
+  });
+  g.player.hand.add(spell);
+  g.turns.setActivePlayer(g.player);
+  g.turns.startTurn();
+  ai.takeTurn(g.player, g.opponent);
+  const summoned = g.player.battlefield.cards.find(c => c.name === 'Token');
+  expect(summoned.data.attacked).toBe(true);
+  expect(g.opponent.hero.data.health).toBe(10);
+});
+
