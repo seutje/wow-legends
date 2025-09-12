@@ -76,7 +76,12 @@ export function registerDefaults({ resourceSystem } = {}) {
 
   registerKeyword('Silence', { apply: ({ target }) => applySilence(target) });
   registerKeyword('Taunt', {});
-  registerKeyword('Stealth', {});
+  registerKeyword('Stealth', {
+    onDamageDealt({ target }) {
+      if (!target?.keywords?.includes?.('Stealth')) return;
+      target.keywords = target.keywords.filter(k => k !== 'Stealth');
+    }
+  });
 
   registerKeyword('Overload', {
     onPlay({ player, amount }) {
