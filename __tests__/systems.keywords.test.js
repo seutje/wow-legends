@@ -33,6 +33,14 @@ describe('Keywords registry', () => {
     expect(isTargetable(s, { allowStealthTargeting: true })).toBe(true);
   });
 
+  test('stealth is removed when unit takes damage', () => {
+    registerDefaults();
+    const s = new Card({ type: 'ally', name: 'S', data: { attack: 1, health: 2 }, keywords: ['Stealth'] });
+    const stealth = registry.get('Stealth');
+    stealth.onDamageDealt({ target: s, amount: 1, source: null });
+    expect(s.keywords).not.toContain('Stealth');
+  });
+
   test('overload reduces next turn resources', () => {
     const turns = new TurnSystem();
     const rs = new ResourceSystem(turns);

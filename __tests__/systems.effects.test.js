@@ -124,6 +124,18 @@ describe('EffectSystem', () => {
     expect(ally.data.health).toBe(1);
   });
 
+  test('area damage hits stealth allies and removes stealth', async () => {
+    const game = new Game();
+    const stealth = new Card({ type: 'ally', name: 'S', data: { attack: 1, health: 2 }, keywords: ['Stealth'] });
+    game.player.battlefield.add(stealth);
+    await game.effects.dealDamage(
+      { target: 'allEnemies', amount: 1 },
+      { game, player: game.opponent, card: null }
+    );
+    expect(stealth.data.health).toBe(1);
+    expect(stealth.keywords).not.toContain('Stealth');
+  });
+
   test('buffing attack and health prompts for one target', async () => {
     const game = new Game();
     const player = game.player;
