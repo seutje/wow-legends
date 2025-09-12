@@ -22,6 +22,10 @@ export class BasicAI {
       if (card.type === 'ally' || card.type === 'equipment' || card.type === 'quest') {
         player.hand.moveTo(player.battlefield, card.id);
         if (card.type === 'equipment') player.hero.equipment.push(card);
+        if (card.type === 'ally' && !card.keywords?.includes('Rush')) {
+          card.data = card.data || {};
+          card.data.attacked = true;
+        }
       } else {
         player.hand.moveTo(player.graveyard, card.id);
       }
