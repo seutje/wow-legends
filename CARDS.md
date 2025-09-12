@@ -388,7 +388,7 @@ Conventions
 - Type: Ally — Orc (Warrior)
 - Cost: 3; Rarity: Common
 - Stats: 3 ATK / 3 HP
-- Text: Enrage — +2 ATK while damaged.
+- Text: Enrage — Whenever this survives damage, gain +2 ATK.
 - Keywords: Enrage
 - Systems: Whirlwind synergy; PvP pressure tool.
 - Art: Wolf‑riding orc swings an axe, braids whipping.

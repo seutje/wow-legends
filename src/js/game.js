@@ -376,7 +376,11 @@ export default class Game {
     if (!this.combat.declareAttacker(card)) return false;
     this.combat.setDefenderHero(defender.hero);
     if (target) this.combat.assignBlocker(card.id, target);
-    this.combat.resolve();
+    const events = this.combat.resolve();
+    for (const ev of events) {
+      const srcOwner = [player.hero, ...player.battlefield.cards].includes(ev.source) ? player : defender;
+      this.bus.emit('damageDealt', { player: srcOwner, source: ev.source, amount: ev.amount, target: ev.target });
+    }
     await this.cleanupDeaths(player, defender);
     await this.cleanupDeaths(defender, player);
     const actualTarget = target || defender.hero;
@@ -425,7 +429,11 @@ export default class Game {
       }
     }
     this.combat.setDefenderHero(this.player.hero);
-    this.combat.resolve();
+    const events = this.combat.resolve();
+    for (const ev of events) {
+      const srcOwner = [this.opponent.hero, ...this.opponent.battlefield.cards].includes(ev.source) ? this.opponent : this.player;
+      this.bus.emit('damageDealt', { player: srcOwner, source: ev.source, amount: ev.amount, target: ev.target });
+    }
     await this.cleanupDeaths(this.player, this.opponent);
     await this.cleanupDeaths(this.opponent, this.player);
 
