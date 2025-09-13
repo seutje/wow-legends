@@ -271,6 +271,11 @@ export default class Game {
         card.data = card.data || {};
         card.data.attacked = true;
       }
+      // Initialize Divine Shield on allies that have the keyword when entering play
+      if (card.type === 'ally' && card.keywords?.includes('Divine Shield')) {
+        card.data = card.data || {};
+        card.data.divineShield = true;
+      }
     } else if (card.type === 'quest') {
       player.hand.moveTo(player.battlefield, cardId);
       this.quests.addQuest(player, card);

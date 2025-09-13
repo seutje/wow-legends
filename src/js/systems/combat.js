@@ -62,10 +62,13 @@ export class CombatSystem {
         for (const b of blockers) {
           addDmg(b, per, attacker);
           dealt += per;
-          // Lethal: mark to zero health irrespective of current
+          // Lethal: mark to zero health irrespective of current, unless protected by Divine Shield
           if (attacker?.keywords?.includes?.('Lethal')) {
-            setStat(b, 'health', 0);
-            setStat(b, 'dead', true);
+            const hasDivineShield = !!(b?.data?.divineShield);
+            if (!hasDivineShield) {
+              setStat(b, 'health', 0);
+              setStat(b, 'dead', true);
+            }
           }
         }
         // Overflow to hero if flagged
@@ -89,6 +92,15 @@ export class CombatSystem {
 
     // Apply damage events sequentially
     for (const ev of events) {
+      // Divine Shield absorbs one instance of damage (minions only)
+      const shielded = !!(ev.target?.data?.divineShield);
+      if (shielded) {
+        ev.target.data.divineShield = false;
+        ev.amount = 0;
+        // No damage applied; skip armor, logging, freeze, and death marking
+        continue;
+      }
+
       let rem = armorApply(ev.target, ev.amount);
       ev.amount = rem;
       const hp = getStat(ev.target, 'health', 0);

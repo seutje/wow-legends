@@ -233,6 +233,13 @@ export class EffectSystem {
     }
 
     for (const t of actualTargets) {
+      // Divine Shield absorbs one instance of damage (for shielded minions)
+      if (t?.data?.divineShield) {
+        t.data.divineShield = false;
+        // Emit zero-damage event for consistency with combat events
+        game.bus.emit('damageDealt', { player, source: card, amount: 0, target: t });
+        continue;
+      }
       let remaining = dmgAmount;
       if (t.data && typeof t.data.armor === 'number') {
         const use = Math.min(t.data.armor, remaining);
@@ -276,6 +283,9 @@ export class EffectSystem {
         keywords: unit.keywords,
         summonedBy: card
       });
+      if (newUnit.keywords?.includes('Divine Shield')) {
+        newUnit.data.divineShield = true;
+      }
       if (!newUnit.keywords?.includes('Rush')) {
         newUnit.data.attacked = true;
       }
