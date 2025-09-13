@@ -28,7 +28,7 @@ class MCTSNode {
 }
 
 export class MCTS_AI {
-  constructor({ resourceSystem, combatSystem, game = null, iterations = 300, rolloutDepth = 4 } = {}) {
+  constructor({ resourceSystem, combatSystem, game = null, iterations = 500, rolloutDepth = 5 } = {}) {
     this.resources = resourceSystem;
     this.combat = combatSystem;
     this.game = game; // for applying chosen actions correctly
