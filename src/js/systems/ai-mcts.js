@@ -383,19 +383,38 @@ export class MCTS_AI {
       powerAvailable = !!(player.hero?.active?.length) && !player.hero.powerUsed;
     }
 
-    // After actions, perform combat like BasicAI
+    // After actions, perform combat like BasicAI (respect Taunt when selecting targets)
     if (this.combat && opponent) {
       this.combat.clear();
       const attackers = [player.hero, ...player.battlefield.cards]
         .filter(c => (c.type !== 'equipment') && !c.data?.attacked && ((typeof c.totalAttack === 'function' ? c.totalAttack() : c.data?.attack || 0) > 0));
       for (const a of attackers) {
-        if (this.combat.declareAttacker(a)) {
-          if (a.data) a.data.attacked = true;
-          // Stealth is lost when a unit attacks (AI - MCTS path)
-          if (a?.keywords?.includes?.('Stealth')) {
-            a.keywords = a.keywords.filter(k => k !== 'Stealth');
-          }
+        if (!this.combat.declareAttacker(a)) continue;
+
+        if (a.data) a.data.attacked = true;
+        // Stealth is lost when a unit attacks (AI - MCTS path)
+        if (a?.keywords?.includes?.('Stealth')) {
+          a.keywords = a.keywords.filter(k => k !== 'Stealth');
         }
+
+        // Choose a legal defender, honoring Taunt; default to hero if none picked
+        const defenders = [
+          opponent.hero,
+          ...opponent.battlefield.cards.filter(d => d.type !== 'equipment' && d.type !== 'quest')
+        ];
+        const legal = selectTargets(defenders);
+        let block = null;
+        if (legal.length === 1) {
+          const only = legal[0];
+          if (only.id !== opponent.hero.id) block = only;
+        } else if (legal.length > 1) {
+          const choices = legal.filter(t => t.id !== opponent.hero.id);
+          // Prefer RNG from game if available for variety
+          block = this.game?.rng?.pick ? this.game.rng.pick(choices) : (choices[0] || null);
+        }
+        if (block) this.combat.assignBlocker(a.id, block);
+        const target = block || opponent.hero;
+        if (player?.log) player.log.push(`Attacked ${target.name} with ${a.name}`);
       }
       this.combat.setDefenderHero(opponent.hero);
       this.combat.resolve();
