@@ -16,7 +16,8 @@
       "Spell Damage +1 while you control a Water Elemental."
     ],
     "data": {},
-    "text": "Frostbolt — Deal 1 damage; if target survives, Freeze it next turn."
+    "text": "Frostbolt — Deal 1 damage; if target survives, Freeze it next turn.",
+    "prompt": "A powerful female archmage with white hair and glowing blue eyes, wearing ornate blue and silver robes. She is casting a frost spell, with shards of ice and blue energy erupting from her outstretched hand. Her other hand holds a ball of blue energy. The background is a grey, wintery landscape with hints of a battle."
   },
   {
     "id": "hero-thrall-warchief-of-the-horde",
@@ -37,7 +38,8 @@
       "Overload +1 the turn after using Power."
     ],
     "data": {},
-    "text": "Chain Spark — Deal 1 damage to up to three different targets. Overload (1)."
+    "text": "Chain Spark — Deal 1 damage to up to three different targets. Overload (1).",
+    "prompt": "A powerful male warrior with long dark hair and a beard, wearing heavy plate armor. He stands on a rocky outcrop in the middle of a chaotic battle. He is casting a chain lightning spell from his outstretched hand, with blue lightning arcing out to strike multiple targets, including a knight and a small dragon. The sky is dark and stormy, with rain and lightning."
   },
   {
     "id": "hero-varian-wrynn-high-king",
@@ -55,8 +57,11 @@
     "keywords": [
       "Armor — Starts with 2 Armor."
     ],
-    "data": { "armor": 2 },
-    "text": "Heroic Strike — Your hero gains +1 ATK this turn."
+    "data": {
+      "armor": 2
+    },
+    "text": "Heroic Strike — Your hero gains +1 ATK this turn.",
+    "prompt": "A powerful male king and warrior with a beard and a crown, wearing ornate silver and gold plate armor with lion head motifs. He is in a battle stance, shouting, and swinging a glowing magical sword that leaves a blue energy trail. In the background is a large castle under a dramatic sky with a beam of light shining down."
   },
   {
     "id": "hero-valeera-sanguinar-master-assassin",
@@ -83,7 +88,8 @@
       "Combo — The first Ability you play each turn costs (1) less."
     ],
     "data": {},
-    "text": "Dagger Mastery — Equip 1/1 Dagger (Durability 2)."
+    "text": "Dagger Mastery — Equip 1/1 Dagger (Durability 2).",
+    "prompt": "A female elf assassin with long black hair and a golden tiara. She is wearing black and red leather armor with gold trim. She holds a glowing, ornate dagger in one hand. The background is a dark, gothic hall with large archways."
   },
   {
     "id": "hero-tyrande-whisperwind-high-priestess",
@@ -101,7 +107,8 @@
       "draw a card (once per turn)."
     ],
     "data": {},
-    "text": "Mend — Restore 2 HP to a character or remove a debuff."
+    "text": "Mend — Restore 2 HP to a character or remove a debuff.",
+    "prompt": "A female elf high priestess with long, braided silver hair, pointed ears, and glowing green eyes. She wears ornate, dark armor with feather-like pauldrons and a glowing green crescent moon symbol on her chest. She has a horned headpiece. Her hands are outstretched, conjuring swirling green and yellow magical energy. She stands in an enchanted forest at night, with glowing mushrooms and ancient trees with glowing blue markings."
   },
   {
     "id": "hero-uther-the-lightbringer",
@@ -127,7 +134,8 @@
       "Summon a 1/1 Silver Hand Recruit at 10 total mana spent this game."
     ],
     "data": {},
-    "text": "Blessing — Give a friendly character +1/+1 until end of turn; if it attacks, keep the buff."
+    "text": "Blessing — Give a friendly character +1/+1 until end of turn; if it attacks, keep the buff.",
+    "prompt": "A powerful older male paladin with long white hair and a beard, wearing ornate silver and gold plate armor with lion head motifs. A holy light radiates from behind his head. He holds a large, glowing warhammer in one hand and is bestowing a blessing of light with his other hand onto a kneeling knight in similar armor. The knight holds a shield with a hand and cross symbol. The background is a sunset sky with clouds and a distant castle."
   },
   {
     "id": "hero-malfurion-stormrage-archdruid",
@@ -167,7 +175,8 @@
       "Choose One — your Abilities with Choose One gain both if you spent 3+ nature mana this turn."
     ],
     "data": {},
-    "text": "Shapeshift — Choose one: +1 ATK this turn; or gain 2 Armor."
+    "text": "Shapeshift — Choose one: +1 ATK this turn; or gain 2 Armor.",
+    "prompt": "A powerful male night elf archdruid with blue skin, glowing green eyes, and large antlers with glowing yellow symbols. He has a pauldron of leaves and a deer head on his other shoulder. His gauntlet is a wicked-looking claw of wood and magic. He is surrounded by swirling green magical energy with glowing runes. He is walking through a mystical forest with large, ancient trees and shafts of light."
   },
   {
     "id": "hero-rexxar-beastmaster",
@@ -184,7 +193,8 @@
       "Your Beast allies cost (1) less (minimum 1)."
     ],
     "data": {},
-    "text": "Steady Shot — Deal 2 damage to the enemy hero or a minion without Taunt."
+    "text": "Steady Shot — Deal 2 damage to the enemy hero or a minion without Taunt.",
+    "prompt": "A rugged male beastmaster with long dark hair and a beard, wearing leather and fur armor. He is in a dynamic pose, aiming a bow with a glowing magical arrow. He is accompanied by a large bear and two wolves. The setting is a rocky, mountainous landscape with snow-capped peaks and a cloudy sky."
   },
   {
     "id": "hero-gul-dan-dark-conjurer",
@@ -205,7 +215,8 @@
       "Demons you summon have +1 ATK."
     ],
     "data": {},
-    "text": "Life Tap — Draw a card; deal 2 damage to your hero."
+    "text": "Life Tap — Draw a card; deal 2 damage to your hero.",
+    "prompt": "A powerful orc warlock with green skin, glowing green eyes, and tusks. He is wearing dark, menacing armor with skulls and horns. He holds a staff topped with a flaming skull. Green fel energy swirls around him and his chest. He is surrounded by demonic imps with glowing eyes in a dark, spooky forest with gnarled trees and a stormy, purple sky."
   },
   {
     "id": "spell-fireball",
@@ -223,7 +234,8 @@
       "Burn — Excess damage to hero becomes a Damage‑over‑Time 1 per turn for 2 turns."
     ],
     "data": {},
-    "text": "Deal 6 damage to any target. If target is Frozen, deal 8 instead."
+    "text": "Deal 6 damage to any target. If target is Frozen, deal 8 instead.",
+    "prompt": "A massive fireball spell exploding into a warrior in heavy plate armor. The warrior has white hair and a beard and is screaming in pain as his armor shatters. He is holding a large, spiked mace. The background is a rocky, cavernous environment."
   },
   {
     "id": "spell-water-elemental",
@@ -231,23 +243,26 @@
     "type": "spell",
     "cost": 4,
     "effects": [
-        {
-          "type": "summon",
-          "unit": {
-            "name": "Water Elemental",
-            "attack": 3,
-            "health": 6,
-            "keywords": ["Freeze"]
-          },
-          "count": 1
-        }
-      ],
-      "keywords": [
-        "Freeze",
-        "Elemental"
-      ],
+      {
+        "type": "summon",
+        "unit": {
+          "name": "Water Elemental",
+          "attack": 3,
+          "health": 6,
+          "keywords": [
+            "Freeze"
+          ]
+        },
+        "count": 1
+      }
+    ],
+    "keywords": [
+      "Freeze",
+      "Elemental"
+    ],
     "data": {},
-    "text": "Summon a 3/6 Water Elemental with “Freeze any target it damages.”"
+    "text": "Summon a 3/6 Water Elemental with “Freeze any target it damages.”",
+    "prompt": "A massive water elemental made of swirling blue water and ice. It has glowing blue eyes and a glowing core in its chest. It is rising from a stormy sea, with large waves crashing around it. One of its hands is forming a ball of ice and water. The sky is dark and stormy with rain and lightning."
   },
   {
     "id": "spell-shield-slam",
@@ -264,7 +279,8 @@
       "Armor scaling"
     ],
     "data": {},
-    "text": "Deal damage equal to your Armor to a minion."
+    "text": "Deal damage equal to your Armor to a minion.",
+    "prompt": "A heavily armored warrior with a red-plumed helmet and a lion-crested shield is slamming his shield into a shadowy, monstrous creature. The impact creates a burst of blue magical energy. The creature is being torn apart and is caught in a swirling vortex on the ground. The background is a mountainous landscape with a stormy sky and lightning."
   },
   {
     "id": "spell-whirlwind",
@@ -283,7 +299,8 @@
       "Enrage"
     ],
     "data": {},
-    "text": "Deal 1 damage to all characters. If any friendly character took damage this turn, Enrage them (+1 ATK)."
+    "text": "Deal 1 damage to all characters. If any friendly character took damage this turn, Enrage them (+1 ATK).",
+    "prompt": "A chaotic battle scene with a massive whirlwind of blue and green energy at its center. Lightning arcs from the whirlwind, which is sucking up debris. In the foreground, a warrior in plate armor, a rogue, and a mage are running from the whirlwind. In the background, soldiers with banners are fighting. The sky is dark and stormy, and it is raining."
   },
   {
     "id": "spell-eviscerate",
@@ -303,7 +320,8 @@
       "Combo"
     ],
     "data": {},
-    "text": "Deal 2 damage. Combo: Deal 4 instead."
+    "text": "Deal 2 damage. Combo: Deal 4 instead.",
+    "prompt": "A large, muscular demon with red, glowing eyes, horns, and dark, stitched-up skin is smashing the ground with its claws. The impact creates an explosion of rock and green and purple fel energy. In the background, a swirling vortex of blue energy and lightning is forming in the sky above a ruined gothic city."
   },
   {
     "id": "spell-sap",
@@ -321,7 +339,8 @@
       "Tempo"
     ],
     "data": {},
-    "text": "Return an enemy ally to its owner’s hand; it costs (1) more next time."
+    "text": "Return an enemy ally to its owner’s hand; it costs (1) more next time.",
+    "prompt": "In a dark and spooky swamp, a hooded figure is casting a spell on an orc warrior. The spell is a stream of green, viscous slime that is covering and incapacitating the orc. The orc is wearing heavy plate armor and is struggling against the slime. In the background are gnarled, mossy trees with glowing eyes in their hollows."
   },
   {
     "id": "spell-power-word-shield",
@@ -339,7 +358,8 @@
       "Draw"
     ],
     "data": {},
-    "text": "Give a character +0/+3 until end of turn; if it survives damage, draw a card."
+    "text": "Give a character +0/+3 until end of turn; if it survives damage, draw a card.",
+    "prompt": "A handsome male warrior in ornate plate armor with a lion-crested pauldron and a red cape. He is holding a large shield with a glowing sun emblem and a sword. A magical shield of swirling blue and white energy surrounds him, with a ring of glowing golden runes. The background is a rocky, misty landscape with a bright light source from above."
   },
   {
     "id": "spell-shadow-word-pain",
@@ -360,7 +380,8 @@
       "Removal"
     ],
     "data": {},
-    "text": "Destroy a minion with 3 or less ATK."
+    "text": "Destroy a minion with 3 or less ATK.",
+    "prompt": "A terrifying, large shadow monster with glowing green eyes and a gaping maw is attacking a small, horned humanoid figure. The monster is made of swirling black and purple shadows and has long, sharp claws. The smaller figure is being lifted off the ground and enveloped by shadowy tendrils. The setting is a dark, spooky forest with gnarled trees and floating rocks."
   },
   {
     "id": "spell-consecration",
@@ -379,7 +400,8 @@
       "Recruit synergy"
     ],
     "data": {},
-    "text": "Deal 2 damage to all enemies. If you have a Silver Hand Recruit, deal 3 instead."
+    "text": "Deal 2 damage to all enemies. If you have a Silver Hand Recruit, deal 3 instead.",
+    "prompt": "Inside a grand cathedral with high ceilings, stone pillars, and stained glass windows, a paladin in full plate armor with a shield is watching as a group of ghoulish, monstrous humanoids are being destroyed by a burst of holy light. The light is emanating from the center of a glowing, circular rune on the floor. The ghouls are recoiling and disintegrating from the holy energy."
   },
   {
     "id": "spell-blessing-of-kings",
@@ -404,7 +426,8 @@
       "Buff"
     ],
     "data": {},
-    "text": "Give a friendly character +4/+4 until it dies."
+    "text": "Give a friendly character +4/+4 until it dies.",
+    "prompt": "A powerful king with a long white beard and a crown, wearing ornate plate armor and a flowing red cape. He is standing in a grand hall with large pillars and stained glass windows. He is casting a spell, with balls of golden fire in his hands and a swirling ring of golden energy and magical runes around him."
   },
   {
     "id": "spell-lightning-bolt",
@@ -426,7 +449,8 @@
       "Overload"
     ],
     "data": {},
-    "text": "Deal 3 damage. Overload (1)."
+    "text": "Deal 3 damage. Overload (1).",
+    "prompt": "A massive bolt of lightning is striking a mountain peak, causing it to explode in a shower of rocks. The lightning originates from a swirling vortex of storm clouds. The sky is dark and dramatic, with multiple forks of lightning."
   },
   {
     "id": "spell-feral-spirit",
@@ -455,7 +479,8 @@
       "Overload"
     ],
     "data": {},
-    "text": "Summon two 2/3 Spirit Wolves with Taunt. Overload (2)."
+    "text": "Summon two 2/3 Spirit Wolves with Taunt. Overload (2).",
+    "prompt": "Three spectral wolves made of blue and white energy are being summoned from a swirling portal of blue and purple light. One wolf is howling at the crescent moon in the night sky. The other two are in aggressive stances. The ground is rocky and barren, and there are mountains in the background."
   },
   {
     "id": "spell-starfire",
@@ -473,7 +498,8 @@
       "Choose One synergy"
     ],
     "data": {},
-    "text": "Deal 5 damage. Draw a card. If you chose both options on a card this turn, this costs (2) less."
+    "text": "Deal 5 damage. Draw a card. If you chose both options on a card this turn, this costs (2) less.",
+    "prompt": "A mystical scene set in outer space. A robed figure is standing on a swirling nebula, reaching up to a glowing blue star. From the star, energy flows to a giant, fiery phoenix made of golden and orange flames. The phoenix is surrounded by stars and constellations. A comet is streaking across the sky."
   },
   {
     "id": "spell-savage-roar",
@@ -493,7 +519,8 @@
       "Burst"
     ],
     "data": {},
-    "text": "Give your hero and allies +2 ATK this turn."
+    "text": "Give your hero and allies +2 ATK this turn.",
+    "prompt": "A monstrous, roaring creature with glowing blue eyes and sharp teeth is emerging from a swirling vortex of blue energy. The creature has its arms outstretched and is screaming. Below, a battle is raging on a desolate plain, with soldiers and strange, bladed objects scattered across the landscape."
   },
   {
     "id": "spell-kill-command",
@@ -512,26 +539,28 @@
       "Beast synergy"
     ],
     "data": {},
-    "text": "Deal 3 damage; if you control a Beast, deal 5 instead."
+    "text": "Deal 3 damage; if you control a Beast, deal 5 instead.",
+    "prompt": "A glowing red, runic symbol is floating in the center of a dark and stormy landscape. The rune is pulsing with red energy and has thorny, root-like structures growing from it. In the background, a giant, shadowy beast with glowing red eyes and sharp teeth is roaring. Red lightning arcs across the sky."
   },
-    {
-      "id": "spell-explosive-trap",
-      "name": "Explosive Trap",
-      "type": "spell",
-      "cost": 2,
-      "effects": [
-        {
-          "type": "explosiveTrap",
-          "amount": 2
-        }
-      ],
-      "keywords": [
-        "Secret",
-        "AoE"
-      ],
-      "data": {},
-      "text": "Secret — When your hero takes damage, deal 2 damage to all characters."
-    },
+  {
+    "id": "spell-explosive-trap",
+    "name": "Explosive Trap",
+    "type": "spell",
+    "cost": 2,
+    "effects": [
+      {
+        "type": "explosiveTrap",
+        "amount": 2
+      }
+    ],
+    "keywords": [
+      "Secret",
+      "AoE"
+    ],
+    "data": {},
+    "text": "Secret — When your hero takes damage, deal 2 damage to all characters.",
+    "prompt": "A large, metal bear trap with sharp teeth is sitting on the ground in a dark and spooky forest. The trap is glowing with red-hot energy and emitting smoke and sparks. The forest is filled with gnarled, ancient trees and has a misty, mysterious atmosphere."
+  },
   {
     "id": "spell-hellfire",
     "name": "Hellfire",
@@ -549,7 +578,8 @@
       "Self‑damage"
     ],
     "data": {},
-    "text": "Deal 3 damage to ALL characters."
+    "text": "Deal 3 damage to ALL characters.",
+    "prompt": "A hellish landscape with a gothic castle being consumed by a massive fire. Rivers of lava flow around the castle, and the sky is filled with smoke and fire. In the foreground, large, curved, demonic-looking rock formations with lava flowing through them frame the scene."
   },
   {
     "id": "spell-summon-infernal",
@@ -573,7 +603,8 @@
       "AoE"
     ],
     "data": {},
-    "text": "Summon a 6/6 Infernal that deals 1 damage to all other characters."
+    "text": "Summon a 6/6 Infernal that deals 1 damage to all other characters.",
+    "prompt": "A giant, muscular demon made of fire and rock is being summoned from a swirling portal of fire. The demon has large horns, glowing red eyes, and sharp claws. Floating rocks and lightning surround the portal. In the foreground, several humanoid figures are cowering in fear in a desolate landscape with cracked, glowing ground and dead trees."
   },
   {
     "id": "ally-water-elemental-guardian",
@@ -589,7 +620,8 @@
       "attack": 3,
       "health": 6
     },
-    "text": "Freeze any target this damages."
+    "text": "Freeze any target this damages.",
+    "prompt": "A massive, armored elemental made of sharp, blue ice. It has glowing blue eyes and a glowing core in its chest. It stands in a churning, icy sea in a snowy, mountainous landscape. A ring of water and ice shards is swirling around it. A large moon is in the sky behind it."
   },
   {
     "id": "ally-silver-hand-lieutenant",
@@ -609,7 +641,8 @@
       "attack": 2,
       "health": 3
     },
-    "text": "Your Recruits have +1 ATK."
+    "text": "Your Recruits have +1 ATK.",
+    "prompt": "A handsome male knight with a beard, wearing shining plate armor with gold trim and a red cape. His armor bears the symbol of a silver hand. He is standing proudly on a cliff, resting his hand on the pommel of a large greatsword. Below him, an army of knights in similar armor stands at attention, holding shields and spears. The background is a green, hilly landscape with mountains in the distance, under a dramatic, cloudy sky with rays of light."
   },
   {
     "id": "ally-orgrimmar-grunt",
@@ -624,7 +657,8 @@
       "attack": 2,
       "health": 2
     },
-    "text": "Taunt."
+    "text": "Taunt.",
+    "prompt": "A large, muscular orc warrior with green skin, tusks, and a beard. He is wearing heavy, spiked armor with fur trim and skull decorations. He is holding a large, ornate axe and has one hand outstretched. He is standing on a rocky outcrop with a dark, foreboding castle in the background under a cloudy sky."
   },
   {
     "id": "ally-jungle-stalker",
@@ -640,7 +674,8 @@
       "attack": 5,
       "health": 3
     },
-    "text": "Stealth (loses Stealth when it attacks)."
+    "text": "Stealth (loses Stealth when it attacks).",
+    "prompt": "A large, muscular jungle cat with striped and spotted fur is stalking through a dense, misty jungle. It has glowing green eyes and is in a low, predatory stance. The jungle is filled with gnarled trees, vines, and lush foliage, with shafts of light breaking through the canopy."
   },
   {
     "id": "ally-northshire-acolyte",
@@ -660,7 +695,8 @@
       "attack": 1,
       "health": 3
     },
-    "text": "Whenever a character is healed, draw a card (once per turn)."
+    "text": "Whenever a character is healed, draw a card (once per turn).",
+    "prompt": "A female priestess in a white and gold hooded robe stands on a stone balcony overlooking a beautiful valley. A golden halo glows behind her head. She holds a ball of golden fire in one hand. The valley is filled with a winding river, misty forests with autumn-colored trees, and is surrounded by mountains. The sun is setting, casting golden rays of light."
   },
   {
     "id": "ally-imp-swarm-caller",
@@ -687,7 +723,8 @@
       "attack": 3,
       "health": 2
     },
-    "text": "Deathrattle — Summon two 1/1 Imps."
+    "text": "Deathrattle — Summon two 1/1 Imps.",
+    "prompt": "A menacing warlock in a dark, hooded robe and spiked armor is surrounded by a massive swarm of demonic imps. The imps have horns, glowing green eyes, and some have bat-like wings. The scene is chaotic and dark, with a swirling, cloudy background and embers floating in the air."
   },
   {
     "id": "ally-darnassian-huntress",
@@ -708,7 +745,8 @@
       "attack": 2,
       "health": 4
     },
-    "text": "Battlecry — Give a Beast +1/+1 and Rush this turn."
+    "text": "Battlecry — Give a Beast +1/+1 and Rush this turn.",
+    "prompt": "A female elf huntress with long, braided silver hair and a wooden circlet is standing in an enchanted forest. She is wearing leather armor with green and gold details and a cape with pink roses. She holds a bow in one hand and a ball of golden magical energy in the other. Behind her is a large, spectral lynx with antlers and glowing blue eyes. The forest is filled with gnarled, mossy trees, glowing blue mushrooms, and other magical flora."
   },
   {
     "id": "ally-stormforged-totemic",
@@ -731,7 +769,8 @@
       "attack": 0,
       "health": 3
     },
-    "text": "End of your turn: Give a random ally +1 ATK."
+    "text": "End of your turn: Give a random ally +1 ATK.",
+    "prompt": "A massive, dark stone totem carved with a demonic face and wings is being struck by lightning from a stormy sky. The totem has glowing blue cracks all over it and is firing a beam of golden energy from its mouth at a group of warriors below. The warriors are in a desolate landscape with gnarled, dead trees."
   },
   {
     "id": "ally-gnomish-tinkerer",
@@ -750,7 +789,8 @@
       "attack": 2,
       "health": 1
     },
-    "text": "Battlecry — Play a random Consumable from your deck."
+    "text": "Battlecry — Play a random Consumable from your deck.",
+    "prompt": "A cheerful gnome tinkerer with a large mustache, a beard braided with gears, and goggles on his head. He is in a cluttered workshop filled with strange gadgets, tools, and potions. He is holding up two small, glowing mechanical devices. He is wearing a leather apron with many tools and has a magnifying glass attached to his shoulder pauldron."
   },
   {
     "id": "ally-argent-healer",
@@ -771,7 +811,8 @@
       "attack": 3,
       "health": 4
     },
-    "text": "Restore 3 HP to a character at end of your turn."
+    "text": "Restore 3 HP to a character at end of your turn.",
+    "prompt": "A beautiful female healer in a white and gold hooded robe stands in a lush, green forest next to a small stream. A silver halo glows behind her head. She holds a glowing blue and white orb of healing energy in one hand and has her other hand outstretched. In the background, there are large, ancient trees with shafts of light filtering through them, and a beautiful white city is visible in the distance."
   },
   {
     "id": "ally-warsong-raider",
@@ -791,7 +832,8 @@
       "attack": 3,
       "health": 3
     },
-    "text": "Enrage — Whenever this survives damage, gain +2 ATK."
+    "text": "Enrage — Whenever this survives damage, gain +2 ATK.",
+    "prompt": "A large, muscular warrior in heavy, spiked plate armor stands in the middle of a brutal battlefield. He is covered in blood and has glowing red eyes, giving him an enraged look. He holds a massive, double-bladed axe. The battlefield is littered with broken weapons and burning debris, and a battle rages in the background under a dark, smoky sky."
   },
   {
     "id": "ally-scarlet-sorcerer",
@@ -807,7 +849,8 @@
       "health": 3,
       "spellDamage": 1
     },
-    "text": "Spell Damage +1."
+    "text": "Spell Damage +1.",
+    "prompt": "A powerful female sorceress with long red hair, glowing red eyes, and demonic horns. She is wearing ornate red and gold robes and armor. She is floating in the air, holding balls of red fire in her hands. She is surrounded by fire elementals and demonic creatures, some of which are trapped in magical circles with glowing red runes. In the background is a dark, gothic castle under a stormy sky with lightning."
   },
   {
     "id": "ally-stone-bark-treant",
@@ -830,7 +873,8 @@
       "attack": 4,
       "health": 6
     },
-    "text": "Taunt. Whenever your hero gains Armor, gain +0/+2."
+    "text": "Taunt. Whenever your hero gains Armor, gain +0/+2.",
+    "prompt": "A massive, ancient treant made of gnarled wood and stone. It has glowing yellow eyes and is covered in moss and glowing green veins. It is in a menacing pose in a dark, misty swamp with gnarled trees and roots all around."
   },
   {
     "id": "ally-defias-footpad",
@@ -860,7 +904,8 @@
       "attack": 1,
       "health": 1
     },
-    "text": "Combo — Summon another 1/1 Footpad."
+    "text": "Combo — Summon another 1/1 Footpad.",
+    "prompt": "Two menacing rogues in a dark, rainy alleyway. They are wearing black and red outfits with hoods and ragged capes. They have a red symbol on their armor. The rogue in the foreground is in a dynamic leaping pose, holding a dagger in each hand and has a sinister grin. The other rogue is running in the background. The alley is paved with cobblestones and lined with old, timber-framed buildings."
   },
   {
     "id": "equipment-ashkandi-greatsword-of-the-brotherhood",
@@ -878,7 +923,8 @@
       "Loot"
     ],
     "data": {},
-    "text": "While equipped, your Taunt allies have +1 ATK."
+    "text": "While equipped, your Taunt allies have +1 ATK.",
+    "prompt": "A massive, ornate greatsword is stuck in the ground of a desolate, fiery landscape. The sword has a dragon's head on the pommel and glowing red runes on the blade. The ground is cracked and glowing with embers. In the background, a dark castle sits on a hill under a stormy sky with rays of light breaking through the clouds."
   },
   {
     "id": "equipment-core-hound-tooth",
@@ -902,7 +948,8 @@
       "Combo"
     ],
     "data": {},
-    "text": "Combo Abilities deal +1 damage while equipped."
+    "text": "Combo Abilities deal +1 damage while equipped.",
+    "prompt": "A large, menacing-looking tooth from a giant beast is floating in a hellish, volcanic landscape. The tooth is cracked and has glowing red energy emanating from it. The landscape is filled with rivers of lava, sharp volcanic rocks, and a fiery, swirling sky. A close-up view shows the detailed texture of the tooth."
   },
   {
     "id": "equipment-benediction",
@@ -921,7 +968,8 @@
       "Sustain"
     ],
     "data": {},
-    "text": "When you restore 5+ HP in a turn, draw a card."
+    "text": "When you restore 5+ HP in a turn, draw a card.",
+    "prompt": "A beautiful, ornate sword is stuck in a mossy rock in an enchanted forest. The sword has a winged guard with blue gems and is glowing with golden light. Golden, magical roots are growing from the rock and wrapping around the sword. The forest is lush and green, with large, ancient trees and shafts of light. In the background are misty mountains and a crescent moon in the sky."
   },
   {
     "id": "equipment-stormshield-bulwark",
@@ -939,7 +987,8 @@
       "Shield"
     ],
     "data": {},
-    "text": "After you take damage, gain +1 Armor (once per turn)."
+    "text": "After you take damage, gain +1 Armor (once per turn).",
+    "prompt": "A large, ornate wooden and metal shield is standing in a rocky, desolate landscape. The shield has a glowing blue orb in the center that is crackling with lightning. The sky is dark and stormy, with lightning striking the mountains in the background. A lone, gnarled tree is bent by the wind."
   },
   {
     "id": "equipment-wildheart-spaulders",
@@ -957,7 +1006,8 @@
       "Choose One synergy"
     ],
     "data": {},
-    "text": "Your Choose One Abilities cost (1) less this turn after you gain Armor."
+    "text": "Your Choose One Abilities cost (1) less this turn after you gain Armor.",
+    "prompt": "A set of ornate spaulders (shoulder armor) made of leather, metal, and wood. The chest piece has a large, silver wolf's head with glowing green eyes. The shoulders are made of gnarled wood with moss and glowing blue mushrooms growing on them. The background is a dark, misty forest."
   },
   {
     "id": "equipment-arcanist-s-signet",
@@ -976,7 +1026,8 @@
       "Spell Damage"
     ],
     "data": {},
-    "text": "Your next Spell each turn has Spell Damage +1."
+    "text": "Your next Spell each turn has Spell Damage +1.",
+    "prompt": "A beautiful, ornate silver signet ring is resting on a wooden table. The ring has a large, circular face with a glowing blue and purple galaxy-like gem in the center. The gem is surrounded by intricate silver scrollwork and a star-like symbol. The band of the ring is engraved with moons and stars. The background is dark and magical, with glowing particles in the air."
   },
   {
     "id": "equipment-demonheart-grimoire",
@@ -996,7 +1047,8 @@
       "Summon buff"
     ],
     "data": {},
-    "text": "Demons you summon gain +1/+1."
+    "text": "Demons you summon gain +1/+1.",
+    "prompt": "A dark, demonic grimoire rests on a stone pedestal in a dark, gothic chamber. The book has a red, glowing demonic sigil on the cover and is bound in leather and metal with demonic faces. Red smoke and black, shadowy tentacles are emanating from the book. In the background, large, shadowy demons with glowing red eyes are lurking in the darkness."
   },
   {
     "id": "equipment-masterwork-longbow",
@@ -1014,7 +1066,8 @@
       "Trap synergy"
     ],
     "data": {},
-    "text": "Your Traps trigger for +1 damage."
+    "text": "Your Traps trigger for +1 damage.",
+    "prompt": "An ornate, masterwork longbow is resting against a mossy stone wall in a dark, misty forest. The bow is made of dark wood with silver inlay and has a glowing blue gem on the tip. Several traps, including a bear trap and tripwires with glowing magical triggers, are scattered on the ground around the bow. The forest is filled with large, ancient trees and has a mysterious, magical atmosphere."
   },
   {
     "id": "quest-purge-the-scourge",
@@ -1022,11 +1075,23 @@
     "type": "quest",
     "cost": 1,
     "effects": [],
-    "requirement": { "event": "allyDefeated", "filter": { "keyword": "Undead" }, "count": 3 },
-    "reward": [ { "type": "draw", "count": 2 } ],
+    "requirement": {
+      "event": "allyDefeated",
+      "filter": {
+        "keyword": "Undead"
+      },
+      "count": 3
+    },
+    "reward": [
+      {
+        "type": "draw",
+        "count": 2
+      }
+    ],
     "keywords": [],
     "data": {},
-    "text": "Objective: Defeat 3 Undead allies. Reward: Draw 2 cards."
+    "text": "Objective: Defeat 3 Undead allies. Reward: Draw 2 cards.",
+    "prompt": "A knight in full plate armor with a glowing green sword stands in a desolate, misty graveyard. He is surrounded by a horde of undead creatures, including skeletons with glowing green eyes, zombies, and a ghostly wraith. The ground is littered with bones and broken weapons. In the background are jagged, rocky spires and dead trees."
   },
   {
     "id": "quest-trial-of-the-elements",
@@ -1034,11 +1099,23 @@
     "type": "quest",
     "cost": 1,
     "effects": [],
-    "requirement": { "event": "cardPlayed", "filter": { "keyword": "Elemental" }, "count": 3 },
-    "reward": [ { "type": "draw", "count": 1 } ],
+    "requirement": {
+      "event": "cardPlayed",
+      "filter": {
+        "keyword": "Elemental"
+      },
+      "count": 3
+    },
+    "reward": [
+      {
+        "type": "draw",
+        "count": 1
+      }
+    ],
     "keywords": [],
     "data": {},
-    "text": "Objective: Play 3 Elemental cards. Reward: Draw a card."
+    "text": "Objective: Play 3 Elemental cards. Reward: Draw a card.",
+    "prompt": "A shaman in ornate armor with glowing blue runes stands on a cliff overlooking a powerful elemental landscape. He holds a staff with a glowing blue crystal. The landscape is divided into four elemental quadrants. On the left, a stormy sea with lightning. In the center, a large waterfall with water elementals and air elementals. On the right, a volcano erupts with rivers of lava, and earth elementals are emerging from the ground."
   },
   {
     "id": "quest-bounty-the-defias-kingpin",
@@ -1046,11 +1123,27 @@
     "type": "quest",
     "cost": 1,
     "effects": [],
-    "requirement": { "event": "cardReturned", "filter": { "type": "ally" }, "count": 2 },
-    "reward": [ { "type": "equip", "item": { "name": "Kingpin's Cutlass", "attack": 2, "durability": 2 } } ],
+    "requirement": {
+      "event": "cardReturned",
+      "filter": {
+        "type": "ally"
+      },
+      "count": 2
+    },
+    "reward": [
+      {
+        "type": "equip",
+        "item": {
+          "name": "Kingpin's Cutlass",
+          "attack": 2,
+          "durability": 2
+        }
+      }
+    ],
     "keywords": [],
     "data": {},
-    "text": "Objective: Return 2 enemy allies to hand. Reward: Equip Kingpin's Cutlass (2/2)."
+    "text": "Objective: Return 2 enemy allies to hand. Reward: Equip Kingpin's Cutlass (2/2).",
+    "prompt": "A powerful warrior in ornate, red and black plate armor with a menacing helmet and skull motifs is in a battle stance. He is holding a large, curved scimitar. He is using a magical ability that is pushing back a pirate and an orc, who are both being thrown backwards by a blast of white energy. The scene is set in a cobblestone street in a dark city, with a crowd of people and soldiers in the background."
   },
   {
     "id": "quest-hunt-the-great-kodo",
@@ -1058,11 +1151,32 @@
     "type": "quest",
     "cost": 1,
     "effects": [],
-    "requirement": { "event": "damageDealt", "filter": { "keyword": "Beast" }, "amount": 10 },
-    "reward": [ { "type": "summon", "unit": { "name": "Kodo Companion", "attack": 3, "health": 3, "keywords": ["Rush", "Beast"] }, "count": 1 } ],
+    "requirement": {
+      "event": "damageDealt",
+      "filter": {
+        "keyword": "Beast"
+      },
+      "amount": 10
+    },
+    "reward": [
+      {
+        "type": "summon",
+        "unit": {
+          "name": "Kodo Companion",
+          "attack": 3,
+          "health": 3,
+          "keywords": [
+            "Rush",
+            "Beast"
+          ]
+        },
+        "count": 1
+      }
+    ],
     "keywords": [],
     "data": {},
-    "text": "Objective: Deal 10 damage with Beasts. Reward: Summon a 3/3 Kodo with Rush."
+    "text": "Objective: Deal 10 damage with Beasts. Reward: Summon a 3/3 Kodo with Rush.",
+    "prompt": "A massive, white-furred kodo beast with huge tusks is charging through a snowy, mountainous landscape. The kodo is wearing a leather harness. A group of hunters on horseback are surrounding and attacking the kodo with bows and arrows. The scene is action-packed, with snow flying and a dramatic, cloudy sky."
   },
   {
     "id": "quest-forge-the-relic",
@@ -1070,11 +1184,23 @@
     "type": "quest",
     "cost": 1,
     "effects": [],
-    "requirement": { "event": "cardPlayed", "filter": { "type": "equipment" }, "count": 3 },
-    "reward": [ { "type": "draw", "count": 1 } ],
+    "requirement": {
+      "event": "cardPlayed",
+      "filter": {
+        "type": "equipment"
+      },
+      "count": 3
+    },
+    "reward": [
+      {
+        "type": "draw",
+        "count": 1
+      }
+    ],
     "keywords": [],
     "data": {},
-    "text": "Objective: Play 3 Equipment cards. Reward: Draw a card."
+    "text": "Objective: Play 3 Equipment cards. Reward: Draw a card.",
+    "prompt": "A dwarven blacksmith with a long, braided beard is forging a glowing, magical sword on an anvil. He is in a dark, stone forge with a large furnace in the background. The forge is filled with tools, weapons, and armor. The blacksmith is holding a hammer and is surrounded by sparks and smoke."
   },
   {
     "id": "quest-call-to-arms",
@@ -1082,15 +1208,37 @@
     "type": "quest",
     "cost": 1,
     "effects": [],
-    "requirement": { "event": "turnEnd", "filter": { "keyword": "Taunt" }, "count": 3 },
+    "requirement": {
+      "event": "turnEnd",
+      "filter": {
+        "keyword": "Taunt"
+      },
+      "count": 3
+    },
     "reward": [
-      { "type": "buff", "target": "allies", "property": "attack", "amount": 1, "duration": "thisTurn" },
-      { "type": "buff", "target": "allies", "property": "health", "amount": 1, "duration": "thisTurn" },
-      { "type": "draw", "count": 1 }
+      {
+        "type": "buff",
+        "target": "allies",
+        "property": "attack",
+        "amount": 1,
+        "duration": "thisTurn"
+      },
+      {
+        "type": "buff",
+        "target": "allies",
+        "property": "health",
+        "amount": 1,
+        "duration": "thisTurn"
+      },
+      {
+        "type": "draw",
+        "count": 1
+      }
     ],
     "keywords": [],
     "data": {},
-    "text": "Objective: Control 3 units with Taunt for a turn. Reward: All allies gain +1/+1 this turn; draw a card."
+    "text": "Objective: Control 3 units with Taunt for a turn. Reward: All allies gain +1/+1 this turn; draw a card.",
+    "prompt": "A massive army of diverse fantasy races stands on a cliff's edge, ready for battle. In the foreground, a female elf archer takes aim, a dwarf warrior with a glowing axe stands ready, and a large minotaur warrior holds a shield. In the background, knights on horseback and foot soldiers with banners stand under a dramatic, cloudy sky with rays of light."
   },
   {
     "id": "consumable-healing-potion",
@@ -1108,7 +1256,8 @@
       "Heal"
     ],
     "data": {},
-    "text": "Restore 5 HP to a character."
+    "text": "Restore 5 HP to a character.",
+    "prompt": "A beautiful, ornate glass potion bottle filled with a swirling, glowing red liquid. The bottle has a crystal stopper and is decorated with silver filigree. It is sitting on a book in a lush, green forest with large, ancient trees and shafts of light."
   },
   {
     "id": "consumable-mana-potion",
@@ -1131,7 +1280,8 @@
       "Overload"
     ],
     "data": {},
-    "text": "Refresh up to 2 spent resources this turn. Overload (1) next turn."
+    "text": "Refresh up to 2 spent resources this turn. Overload (1) next turn.",
+    "prompt": "A cluttered alchemist's laboratory with a large, round-bottomed flask of glowing blue liquid in the center. The flask is steaming and has a magical blue ring of energy swirling around it. The table is covered with other potions, beakers, scrolls, and alchemical equipment. The room is lit by candles and the glow of the potions, and there are shelves of books and ingredients in the background."
   },
   {
     "id": "consumable-scroll-of-fortitude",
@@ -1149,7 +1299,8 @@
       "Cantrip"
     ],
     "data": {},
-    "text": "Give your allies +0/+2 this turn. Draw a card."
+    "text": "Give your allies +0/+2 this turn. Draw a card.",
+    "prompt": "A large, magical scroll is unrolled and glowing with golden light. The scroll is covered in glowing runes and is floating in the center of a group of warriors and mages. The warriors are in full plate armor with glowing shields, and the mages are in robes and holding staffs with glowing crystals. The scene is set in a rocky, mountainous landscape at dusk."
   },
   {
     "id": "consumable-savory-deviate-delight",
@@ -1176,7 +1327,8 @@
       "Burst"
     ],
     "data": {},
-    "text": "Transform a random ally into a 3/3 Pirate with Charge until end of turn."
+    "text": "Transform a random ally into a 3/3 Pirate with Charge until end of turn.",
+    "prompt": "A whimsical scene where a large, delicious-looking cake with caramel drizzle and heart-shaped cookies is magically transforming people. A gnome is being pulled into the cake, while a rogue is being transformed into a pirate with a hook hand and a cutlass. A magical swirl of blue and gold energy is rising from the cake. The background is a dark, magical void."
   },
   {
     "id": "consumable-elixir-of-firepower",
@@ -1193,6 +1345,7 @@
       "Spell Damage"
     ],
     "data": {},
-    "text": "Your Spells deal +1 damage this turn."
+    "text": "Your Spells deal +1 damage this turn.",
+    "prompt": "A large, armored hand holds a glowing red potion bottle. The potion is filled with a fiery, bubbling liquid and has a dark, ornate metal casing with glowing orange gems. The bottle is topped with a cork and dark crystals. The background is a desolate, volcanic landscape with rivers of lava, jagged rocks, and a smoky sky with a setting sun."
   }
 ]
