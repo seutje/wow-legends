@@ -29,7 +29,7 @@ main {
 /* Board layout inside #root */
 #root .board {
   display: grid;
-  grid-template-columns: 140px 1fr 260px;
+  grid-template-columns: 240px 470px 240px;
   grid-auto-rows: min-content;
   gap: 12px 16px;
   grid-template-areas:
