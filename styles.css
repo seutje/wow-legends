@@ -33,18 +33,42 @@ footer {
   border-top: 1px solid #203040;
 }
 
-.row {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 8px;
-}
-
 .zone {
   background: #10171f;
   padding: 8px;
   border: 1px solid #203040;
   border-radius: 4px;
 }
+
+#root {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+#root .board {
+  display: grid;
+  grid-template-columns: 120px 1fr 240px;
+  grid-template-rows: 120px 220px 220px 160px;
+  gap: 8px;
+}
+
+.card-zone {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.board .enemy-hand { grid-column: 2; grid-row: 1; }
+.board .enemy-battlefield { grid-column: 2; grid-row: 2; }
+.board .player-battlefield { grid-column: 2; grid-row: 3; }
+.board .player-hand { grid-column: 2; grid-row: 4; }
+.board .enemy-deck { grid-column: 1; grid-row: 1; }
+.board .enemy-hero { grid-column: 1; grid-row: 2; }
+.board .player-hero { grid-column: 1; grid-row: 3; }
+.board .player-deck { grid-column: 1; grid-row: 4; }
+.board .enemy-log { grid-column: 3; grid-row: 1 / span 2; }
+.board .player-log { grid-column: 3; grid-row: 3 / span 2; }
 
 .log-pane {
   display: flex;

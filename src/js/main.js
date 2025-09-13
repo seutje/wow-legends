@@ -40,15 +40,12 @@ function setStatus(msg) {
 setStatus('Initialized');
 
 // Render a minimal board for demo
-const board = document.createElement('div');
-root.appendChild(board);
-const rerender = () => renderPlay(board, game, { onUpdate: rerender });
+const rerender = () => renderPlay(root, game, { onUpdate: rerender });
 rerender();
 
 game.setUIRerender(rerender);
 
 function toggleGameVisible(show) {
-  board.style.display = show ? 'block' : 'none';
   controls.style.display = show ? 'block' : 'none';
   root.style.display = show ? 'block' : 'none';
   if (mainEl) mainEl.style.gridTemplateColumns = show ? '3fr 1fr' : '1fr';
