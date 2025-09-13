@@ -15,23 +15,7 @@ await game.init();
 // Expose for quick dev console hooks
 window.game = game;
 
-// Basic UI controls
-function makeBtn(label, onClick) {
-  const b = document.createElement('button');
-  b.textContent = label;
-  b.addEventListener('click', onClick);
-  b.style.marginRight = '8px';
-  return b;
-}
-
-const controls = document.createElement('div');
-controls.append(
-  makeBtn('Start', async () => { await game.setupMatch(); game.start(); setStatus('Running'); }),
-  makeBtn('Reset', async () => { await game.reset(); setStatus('Reset'); }),
-  makeBtn('Dispose', () => { game.dispose(); setStatus('Disposed'); }),
-);
-
-qs('header')?.appendChild(controls);
+// Removed manual Start/Reset/Dispose controls; gameplay reacts via DOM events
 
 function setStatus(msg) {
   if (statusEl) statusEl.textContent = msg;
@@ -49,7 +33,6 @@ game.setUIRerender(rerender);
 
 function toggleGameVisible(show) {
   board.style.display = show ? 'block' : 'none';
-  controls.style.display = show ? 'block' : 'none';
   root.style.display = show ? 'block' : 'none';
   if (mainEl) mainEl.style.gridTemplateColumns = show ? '3fr 1fr' : '1fr';
 }
@@ -89,8 +72,7 @@ deckBtn.addEventListener('click', () => {
     toggleGameVisible(true);
     await game.reset({ hero: deckState.hero, cards: deckState.cards });
     rerender();
-    game.start();
-    setStatus('Running');
+    // No RAF loop; state updates via DOM events
   });
 let logsOn = true;
 renderOptions(optsRoot, { onReset: async () => { deckState.cards.length = 0; deckState.hero = null; rerenderDeck(); await game.reset(); rerender(); }, onToggleLogs: () => { logsOn = !logsOn; setStatus(logsOn ? 'Logs ON' : 'Logs OFF'); } });

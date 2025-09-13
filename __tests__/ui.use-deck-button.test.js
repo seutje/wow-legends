@@ -8,7 +8,6 @@ function setup() {
   const allCards = [hero, ally];
   const game = {
     reset: jest.fn().mockResolvedValue(),
-    start: jest.fn(),
     allCards
   };
   const main = document.createElement('main');
@@ -55,7 +54,6 @@ function setup() {
     deckRoot.style.display = 'none';
     toggleGameVisible(true);
     await game.reset({ hero: deckState.hero, cards: deckState.cards });
-    game.start();
   };
   useDeckBtn.addEventListener('click', useDeckHandler);
   return { game, board, controls, deckRoot, deckBtn, useDeckBtn, deckState, useDeckHandler, main, root };
@@ -79,5 +77,4 @@ test('use deck button enables after building deck and starts game', async () => 
   expect(root.style.display).toBe('block');
   expect(main.style.gridTemplateColumns).toBe('3fr 1fr');
   expect(game.reset).toHaveBeenCalledWith({ hero: deckState.hero, cards: deckState.cards });
-  expect(game.start).toHaveBeenCalled();
 });

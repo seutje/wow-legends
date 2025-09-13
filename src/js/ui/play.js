@@ -1,4 +1,4 @@
-import { t } from '../i18n/strings.js';
+// No HUD title import needed
 
 function el(tag, attrs = {}, ...children) {
   const e = document.createElement(tag);
@@ -161,17 +161,12 @@ function syncLogPane(pane, entries = []) {
 export function renderPlay(container, game, { onUpdate } = {}) {
   const p = game.player; const e = game.opponent;
 
-  let header = container.querySelector('.hud');
   let controls = container.querySelector('.controls');
   let board = container.querySelector('.board');
 
-  const initialMount = !header || !controls || !board;
+  const initialMount = !controls || !board;
   if (initialMount) {
     container.innerHTML = '';
-    header = el('div', { class: 'hud' },
-      el('strong', {}, t('app_title')), ' — ',
-      ''
-    );
     controls = el('div', { class: 'controls' },
       el('button', { onclick: () => { onUpdate?.(); } }, 'Refresh'),
       el('button', { class: 'btn-hero-power', onclick: async () => { await game.useHeroPower(p); onUpdate?.(); } }, 'Hero Power'),
@@ -199,11 +194,8 @@ export function renderPlay(container, game, { onUpdate } = {}) {
     const pHand = zoneCards('Player Hand', p.hand.cards, { clickCard: async (c)=>{ if (!await game.playFromHand(p, c.id)) { /* ignore */ } onUpdate?.(); } }); pHand.classList.add('p-hand');
 
     board.append(aiHero, aiMana, aiHand, aiField, aiLog, pHero, pMana, pField, pHand, pLog);
-    container.append(header, controls, board);
+    container.append(controls, board);
   }
-
-  // Update header text
-  header.lastChild.nodeValue = `Your HP ${p.hero.data.health} (Armor ${p.hero.data.armor}) | Enemy HP ${e.hero.data.health} (Armor ${e.hero.data.armor}) | Pool ${game.resources.pool(p)} / ${game.resources.available(p)}`;
 
   // Update controls disabled states
   const heroPowerBtn = controls.querySelector('.btn-hero-power');

@@ -39,7 +39,6 @@ Combat Basics
 UI Reference
 - Player section: Battlefield, Hand, Resources zones.
 - Enemy section: Battlefield, hand count, Resources.
-- HUD: Shows both heroes’ HP and your current pool/available resources.
 
 Troubleshooting
 - Nothing happens on changes: ensure `npm run dev` is running and do not delete or ignore `live-reload.json`.

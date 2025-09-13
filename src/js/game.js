@@ -74,7 +74,8 @@ export default class Game {
 
   async init() {
     if (this.rootEl && !this.rootEl.dataset.bound) {
-      this.rootEl.innerHTML = '<p>Game initialized. Press Start.</p>';
+      // No start button; avoid showing an initialization prompt
+      this.rootEl.innerHTML = '';
       this.rootEl.dataset.bound = '1';
     }
     await this.setupMatch();
@@ -189,18 +190,7 @@ export default class Game {
   }
 
   start() {
-    if (this.running) return;
-    this.running = true;
-    this.state.startedAt = performance.now();
-    this._lastTs = performance.now();
-    const loop = (ts) => {
-      if (!this.running) return;
-      const dt = (ts - this._lastTs) / 1000;
-      this._lastTs = ts;
-      try { this.update(dt); } catch (e) { console.error(e); }
-      this._raf = requestAnimationFrame(loop);
-    };
-    this._raf = requestAnimationFrame(loop);
+    // RAF loop removed; gameplay is event-driven via DOM/UI actions
   }
 
   update(dt) {
@@ -473,7 +463,6 @@ export default class Game {
 
   dispose() {
     this.running = false;
-    if (this._raf) cancelAnimationFrame(this._raf);
     this._raf = 0;
     if (this.rootEl) this.rootEl.textContent = 'Disposed.';
   }
