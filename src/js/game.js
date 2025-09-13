@@ -410,6 +410,10 @@ export default class Game {
     const actualTarget = target || defender.hero;
     player.log.push(`Attacked ${actualTarget.name} with ${card.name}`);
     card.data.attacked = true;
+    // Stealth is lost when a unit attacks
+    if (card?.keywords?.includes?.('Stealth')) {
+      card.keywords = card.keywords.filter(k => k !== 'Stealth');
+    }
     return true;
   }
 
@@ -451,6 +455,10 @@ export default class Game {
         const declared = this.combat.declareAttacker(c);
         if (!declared) continue;
         if (c.data) c.data.attacked = true;
+        // Stealth is lost when a unit attacks (AI - easy difficulty path)
+        if (c?.keywords?.includes?.('Stealth')) {
+          c.keywords = c.keywords.filter(k => k !== 'Stealth');
+        }
         const defenders = [
           this.player.hero,
           ...this.player.battlefield.cards.filter(d => d.type !== 'equipment' && d.type !== 'quest')

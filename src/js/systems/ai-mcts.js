@@ -389,7 +389,13 @@ export class MCTS_AI {
       const attackers = [player.hero, ...player.battlefield.cards]
         .filter(c => (c.type !== 'equipment') && !c.data?.attacked && ((typeof c.totalAttack === 'function' ? c.totalAttack() : c.data?.attack || 0) > 0));
       for (const a of attackers) {
-        if (this.combat.declareAttacker(a)) { if (a.data) a.data.attacked = true; }
+        if (this.combat.declareAttacker(a)) {
+          if (a.data) a.data.attacked = true;
+          // Stealth is lost when a unit attacks (AI - MCTS path)
+          if (a?.keywords?.includes?.('Stealth')) {
+            a.keywords = a.keywords.filter(k => k !== 'Stealth');
+          }
+        }
       }
       this.combat.setDefenderHero(opponent.hero);
       this.combat.resolve();
