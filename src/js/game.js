@@ -444,7 +444,15 @@ export default class Game {
         game: this,
         ...(diff === 'hard' ? { iterations: 5000, rolloutDepth: 10 } : {})
       });
-      await ai.takeTurn(this.opponent, this.player);
+      // Mark AI as thinking to allow UI to disable controls
+      if (this.state) this.state.aiThinking = true;
+      this.bus.emit('ai:thinking', { thinking: true });
+      try {
+        await ai.takeTurn(this.opponent, this.player);
+      } finally {
+        if (this.state) this.state.aiThinking = false;
+        this.bus.emit('ai:thinking', { thinking: false });
+      }
     } else {
       // Easy difficulty: previous simple heuristic flow
       const affordable = this.opponent.hand.cards

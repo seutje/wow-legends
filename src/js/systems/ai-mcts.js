@@ -34,6 +34,8 @@ export class MCTS_AI {
     this.game = game; // for applying chosen actions correctly
     this.iterations = iterations;
     this.rolloutDepth = rolloutDepth;
+    // Prefer offloading search to a Web Worker when available (browser only)
+    this._canUseWorker = (typeof window !== 'undefined') && (typeof Worker !== 'undefined');
   }
 
   // Heuristic: skip actions that have no effect for common types
@@ -327,6 +329,46 @@ export class MCTS_AI {
     return best?.action || { end: true };
   }
 
+  // Offload search to a web worker when running in browser on hard difficulty.
+  async _searchAsync(rootState) {
+    const useWorker = this._canUseWorker && this.game?.state?.difficulty === 'hard';
+    if (!useWorker) return this._search(rootState);
+
+    // Resolve relative to this module so it works in the dev server
+    const workerUrl = new URL('../workers/mcts.worker.js', import.meta.url);
+    return new Promise((resolve) => {
+      let settled = false;
+      try {
+        const w = new Worker(workerUrl, { type: 'module' });
+        w.onmessage = (ev) => {
+          if (settled) return;
+          settled = true;
+          try { w.terminate(); } catch {}
+          const { ok, action } = ev.data || {};
+          if (ok && action) return resolve(action);
+          // Fallback to local search on failure
+          resolve(this._search(rootState));
+        };
+        w.onerror = () => {
+          if (settled) return;
+          settled = true;
+          try { w.terminate(); } catch {}
+          resolve(this._search(rootState));
+        };
+        w.postMessage({
+          cmd: 'search',
+          rootState,
+          iterations: this.iterations,
+          rolloutDepth: this.rolloutDepth,
+          turn: this.resources?.turns?.turn || 1,
+        });
+      } catch (_) {
+        // If Worker construction fails, fallback synchronously
+        resolve(this._search(rootState));
+      }
+    });
+  }
+
   async takeTurn(player, opponent = null) {
     // Start turn: mirror BasicAI semantics
     this.resources.startTurn(player);
@@ -346,7 +388,7 @@ export class MCTS_AI {
         overloadNextPlayer: 0,
         overloadNextOpponent: 0,
       };
-      const action = this._search(rootState);
+      const action = await this._searchAsync(rootState);
       if (!action || action.end) break;
       // Apply chosen action to real game state
       if (action.card) {

@@ -188,9 +188,21 @@ export function renderPlay(container, game, { onUpdate, onOpenDeckBuilder } = {}
     }, ...diffOptions.map(opt => el('option', { value: opt, selected: (game.state?.difficulty || 'easy') === opt }, opt.charAt(0).toUpperCase() + opt.slice(1))));
 
     controls = el('div', { class: 'controls' },
-      el('button', { onclick: () => { onOpenDeckBuilder?.(); } }, 'Deck Builder'),
+      el('button', { class: 'btn-deck-builder', onclick: () => { onOpenDeckBuilder?.(); } }, 'Deck Builder'),
       el('button', { class: 'btn-hero-power', onclick: async () => { await game.useHeroPower(p); onUpdate?.(); } }, 'Hero Power'),
-      el('button', { class: 'btn-end-turn', onclick: async () => { await game.endTurn(); onUpdate?.(); } }, 'End Turn'),
+      el('button', { class: 'btn-end-turn', onclick: async (ev) => {
+        const btn = ev?.currentTarget;
+        if (btn) btn.disabled = true;
+        if (game?.state) game.state.aiThinking = true;
+        onUpdate?.();
+        try {
+          await game.endTurn();
+        } finally {
+          if (game?.state) game.state.aiThinking = false;
+          if (btn) btn.disabled = false;
+          onUpdate?.();
+        }
+      } }, 'End Turn'),
       el('label', { class: 'lbl-difficulty' }, 'Difficulty: ', diffSelect)
     );
     board = el('div', { class: 'board' });
@@ -224,7 +236,13 @@ export function renderPlay(container, game, { onUpdate, onOpenDeckBuilder } = {}
 
   // Update controls disabled states
   const heroPowerBtn = controls.querySelector('.btn-hero-power');
-  if (heroPowerBtn) heroPowerBtn.disabled = !!(p.hero.powerUsed || game.resources.pool(p) < 2 || p.hero.data.freezeTurns > 0);
+  if (heroPowerBtn) heroPowerBtn.disabled = !!(game.state?.aiThinking || p.hero.powerUsed || game.resources.pool(p) < 2 || p.hero.data.freezeTurns > 0);
+  const endTurnBtn = controls.querySelector('.btn-end-turn');
+  if (endTurnBtn) endTurnBtn.disabled = !!(game.state?.aiThinking);
+  const deckBtn = controls.querySelector('.btn-deck-builder');
+  if (deckBtn) deckBtn.disabled = !!(game.state?.aiThinking);
+  const sel = controls.querySelector('select.select-difficulty');
+  if (sel) sel.disabled = !!(game.state?.aiThinking);
 
   // Update mana displays
   const [aiManaEl] = board.getElementsByClassName('ai-mana');
