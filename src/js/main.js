@@ -1,6 +1,7 @@
 import Game from './game.js';
 import { renderDeckBuilder } from './ui/deckbuilder.js';
 import { renderOptions } from './ui/options.js';
+import { fillDeckRandomly } from './utils/deckbuilder.js';
 import { renderPlay } from './ui/play.js';
 
 function qs(sel) { return document.querySelector(sel); }
@@ -46,7 +47,9 @@ deckBtn.textContent = 'Deck Builder';
 const useDeckBtn = document.createElement('button');
 useDeckBtn.textContent = 'Use this deck';
 useDeckBtn.disabled = true;
-sidebar.append(deckBtn, useDeckBtn);
+const fillRandomBtn = document.createElement('button');
+fillRandomBtn.textContent = 'Fill Random';
+sidebar.append(deckBtn, useDeckBtn, fillRandomBtn);
 sidebar.appendChild(deckRoot);
 const optsRoot = document.createElement('div');
 sidebar.appendChild(optsRoot);
@@ -65,6 +68,10 @@ deckBtn.addEventListener('click', () => {
   deckRoot.style.display = show ? 'block' : 'none';
   toggleGameVisible(!show);
   if (show) rerenderDeck();
+});
+fillRandomBtn.addEventListener('click', () => {
+  fillDeckRandomly(deckState, game.allCards, game.rng);
+  rerenderDeck();
 });
   useDeckBtn.addEventListener('click', async () => {
     if (useDeckBtn.disabled) return;
