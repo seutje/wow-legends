@@ -436,9 +436,14 @@ export default class Game {
 
     const diff = this.state?.difficulty || 'easy';
     if (diff === 'medium' || diff === 'hard') {
-      // Use MCTS for medium/hard (placeholder for ML on hard)
+      // Use MCTS for medium/hard; hard uses deeper search
       const { default: MCTS_AI } = await import('./systems/ai-mcts.js');
-      const ai = new MCTS_AI({ resourceSystem: this.resources, combatSystem: this.combat, game: this });
+      const ai = new MCTS_AI({
+        resourceSystem: this.resources,
+        combatSystem: this.combat,
+        game: this,
+        ...(diff === 'hard' ? { iterations: 5000, rolloutDepth: 10 } : {})
+      });
       await ai.takeTurn(this.opponent, this.player);
     } else {
       // Easy difficulty: previous simple heuristic flow
