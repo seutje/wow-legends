@@ -158,7 +158,7 @@ function syncLogPane(pane, entries = []) {
   if (wasAtBottom) ul.scrollTop = ul.scrollHeight;
 }
 
-export function renderPlay(container, game, { onUpdate } = {}) {
+export function renderPlay(container, game, { onUpdate, onOpenDeckBuilder } = {}) {
   const p = game.player; const e = game.opponent;
 
   let controls = container.querySelector('.controls');
@@ -168,7 +168,7 @@ export function renderPlay(container, game, { onUpdate } = {}) {
   if (initialMount) {
     container.innerHTML = '';
     controls = el('div', { class: 'controls' },
-      el('button', { onclick: () => { onUpdate?.(); } }, 'Refresh'),
+      el('button', { onclick: () => { onOpenDeckBuilder?.(); } }, 'Deck Builder'),
       el('button', { class: 'btn-hero-power', onclick: async () => { await game.useHeroPower(p); onUpdate?.(); } }, 'Hero Power'),
       el('button', { class: 'btn-end-turn', onclick: async () => { await game.endTurn(); onUpdate?.(); } }, 'End Turn')
     );

@@ -22,8 +22,13 @@ main {
   flex: 1;
   padding: 12px;
   display: grid;
-  grid-template-columns: 3fr 1fr;
+  grid-template-columns: 1fr;
   gap: 12px;
+}
+
+/* Hide sidebar by default; shown when deck builder is active */
+#sidebar {
+  display: none;
 }
 
 /* Board layout inside #root */

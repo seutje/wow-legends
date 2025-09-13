@@ -27,7 +27,8 @@ setStatus('Initialized');
 // Render a minimal board for demo
 const board = document.createElement('div');
 root.appendChild(board);
-const rerender = () => renderPlay(board, game, { onUpdate: rerender });
+const rerender = () => renderPlay(board, game, { onUpdate: rerender, onOpenDeckBuilder: openDeckBuilder });
+
 rerender();
 
 game.setUIRerender(rerender);
@@ -35,25 +36,25 @@ game.setUIRerender(rerender);
 function toggleGameVisible(show) {
   board.style.display = show ? 'block' : 'none';
   root.style.display = show ? 'block' : 'none';
-  if (mainEl) mainEl.style.gridTemplateColumns = show ? '3fr 1fr' : '1fr';
+  if (mainEl) mainEl.style.gridTemplateColumns = '1fr';
 }
 
 // Deck Builder + Options
 const sidebar = document.querySelector('#sidebar') || document.createElement('aside');
 const deckRoot = document.createElement('div');
 deckRoot.style.display = 'none';
-const deckBtn = document.createElement('button');
-deckBtn.textContent = 'Deck Builder';
 const useDeckBtn = document.createElement('button');
 useDeckBtn.textContent = 'Use this deck';
 useDeckBtn.disabled = true;
 const fillRandomBtn = document.createElement('button');
 fillRandomBtn.textContent = 'Fill Random';
-sidebar.append(deckBtn, useDeckBtn, fillRandomBtn);
+sidebar.append(useDeckBtn, fillRandomBtn);
 sidebar.appendChild(deckRoot);
 const optsRoot = document.createElement('div');
 sidebar.appendChild(optsRoot);
 if (!sidebar.parentElement) root.appendChild(sidebar);
+// Hide aside by default; only visible while deck builder is open
+sidebar.style.display = 'none';
 
 const deckState = { hero: null, cards: [] };
 function updateUseDeckBtn() {
@@ -63,12 +64,13 @@ const rerenderDeck = () => {
   renderDeckBuilder(deckRoot, { state: deckState, allCards: game.allCards, onChange: rerenderDeck });
   updateUseDeckBtn();
 };
-deckBtn.addEventListener('click', () => {
-  const show = deckRoot.style.display === 'none';
-  deckRoot.style.display = show ? 'block' : 'none';
-  toggleGameVisible(!show);
-  if (show) rerenderDeck();
-});
+function openDeckBuilder() {
+  // Show deck builder in sidebar and hide the game board
+  deckRoot.style.display = 'block';
+  sidebar.style.display = 'block';
+  toggleGameVisible(false);
+  rerenderDeck();
+}
 fillRandomBtn.addEventListener('click', () => {
   fillDeckRandomly(deckState, game.allCards, game.rng);
   rerenderDeck();
@@ -76,6 +78,7 @@ fillRandomBtn.addEventListener('click', () => {
   useDeckBtn.addEventListener('click', async () => {
     if (useDeckBtn.disabled) return;
     deckRoot.style.display = 'none';
+    sidebar.style.display = 'none';
     toggleGameVisible(true);
     await game.reset({ hero: deckState.hero, cards: deckState.cards });
     rerender();
