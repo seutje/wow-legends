@@ -55,9 +55,13 @@ function buildCardEl(card) {
 
 function zoneCards(title, cards, { clickCard } = {}) {
   const wrap = el('div', { class: 'cards' });
+  const counts = new Map();
   for (const c of cards) {
+    const n = (counts.get(c.id) || 0) + 1; counts.set(c.id, n);
+    const key = `${c.id}#${n}`;
     const cardEl = buildCardEl(c);
     cardEl.dataset.cardId = c.id;
+    cardEl.dataset.key = key;
     if (clickCard) cardEl.addEventListener('click', async () => { await clickCard(c); });
     wrap.append(cardEl);
   }
@@ -112,21 +116,27 @@ function updateCardEl(cardEl, card) {
 function syncCardsSection(sectionEl, cards, { clickCard } = {}) {
   if (!sectionEl) return;
   const list = sectionEl.querySelector('.cards') || sectionEl;
-  const byId = new Map(Array.from(list.children).map(node => [node.dataset.cardId, node]));
-  // Rebuild order with minimal moves
+  const byKey = new Map(Array.from(list.children).map(node => [node.dataset.key, node]));
+  const seen = new Set();
+  // Rebuild order with minimal moves; disambiguate duplicates by occurrence index
+  const counts = new Map();
   let lastNode = null;
   for (const c of cards) {
-    let node = byId.get(c.id);
+    const n = (counts.get(c.id) || 0) + 1; counts.set(c.id, n);
+    const key = `${c.id}#${n}`;
+    seen.add(key);
+    let node = byKey.get(key);
     if (!node) {
       node = buildCardEl(c);
       node.dataset.cardId = c.id;
+      node.dataset.key = key;
       if (clickCard && !node.dataset.clickAttached) {
         node.addEventListener('click', async () => { await clickCard(c); });
         node.dataset.clickAttached = '1';
       }
     } else {
       updateCardEl(node, c);
-      byId.delete(c.id);
+      byKey.delete(key);
     }
     if (lastNode) {
       if (node.previousSibling !== lastNode) list.insertBefore(node, lastNode.nextSibling);
@@ -136,7 +146,7 @@ function syncCardsSection(sectionEl, cards, { clickCard } = {}) {
     lastNode = node;
   }
   // Remove any remaining nodes (cards no longer present)
-  for (const [, node] of byId) node.remove();
+  for (const [k, node] of byKey) { if (!seen.has(k)) node.remove(); }
 }
 
 function syncLogPane(pane, entries = []) {
