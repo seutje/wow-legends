@@ -85,12 +85,30 @@ export default class Game {
     // Load initial libraries from card data
     if (typeof window === 'undefined') {
       const fs = await import('fs/promises');
-      const path = new URL('../../data/cards.json', import.meta.url);
-      const txt = await fs.readFile(path, 'utf8');
-      this.allCards = JSON.parse(txt);
+      const path1 = new URL('../../data/cards.json', import.meta.url);
+      const txt1 = await fs.readFile(path1, 'utf8');
+      const baseCards = JSON.parse(txt1);
+      let extraCards = [];
+      try {
+        const path2 = new URL('../../data/cards-2.json', import.meta.url);
+        const txt2 = await fs.readFile(path2, 'utf8');
+        extraCards = JSON.parse(txt2);
+      } catch (err) {
+        // cards-2.json is optional in some environments; ignore if missing
+      }
+      this.allCards = [...baseCards, ...extraCards];
     } else {
-      const res = await fetch(new URL('../../data/cards.json', import.meta.url));
-      this.allCards = await res.json();
+      const [res1, res2] = await Promise.all([
+        fetch(new URL('../../data/cards.json', import.meta.url)),
+        // cards-2.json may not exist in some builds; fetch and ignore errors
+        fetch(new URL('../../data/cards-2.json', import.meta.url)).catch(() => null)
+      ]);
+      const baseCards = await res1.json();
+      let extraCards = [];
+      if (res2 && res2.ok) {
+        try { extraCards = await res2.json(); } catch {}
+      }
+      this.allCards = [...baseCards, ...extraCards];
     }
 
     const heroes = this.allCards.filter(c => c.type === 'hero');
