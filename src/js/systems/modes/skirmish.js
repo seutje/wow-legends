@@ -3,13 +3,16 @@ import TurnSystem from '../../systems/turns.js';
 import ResourceSystem from '../../systems/resources.js';
 import CombatSystem from '../../systems/combat.js';
 import BasicAI from '../../systems/ai.js';
+import MCTS_AI from '../../systems/ai-mcts.js';
 
 export class SkirmishMode {
-  constructor({ seed = 1 } = {}) {
+  constructor({ seed = 1, aiType = 'basic' } = {}) {
     this.turns = new TurnSystem();
     this.resources = new ResourceSystem(this.turns);
     this.combat = new CombatSystem();
-    this.ai = new BasicAI({ resourceSystem: this.resources, combatSystem: this.combat });
+    this.ai = aiType === 'mcts'
+      ? new MCTS_AI({ resourceSystem: this.resources, combatSystem: this.combat })
+      : new BasicAI({ resourceSystem: this.resources, combatSystem: this.combat });
     this.player = new Player({ name: 'Player' });
     this.opponent = new Player({ name: 'AI' });
   }
@@ -33,4 +36,3 @@ export class SkirmishMode {
 }
 
 export default SkirmishMode;
-

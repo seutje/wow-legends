@@ -177,8 +177,19 @@ export function renderPlay(container, game, { onUpdate, onOpenDeckBuilder } = {}
   const initialMount = !controls || !board;
   if (initialMount) {
     container.innerHTML = '';
+    const diffOptions = ['easy', 'medium', 'hard'];
+    const diffSelect = el('select', {
+      class: 'select-difficulty',
+      onchange: (e) => {
+        const v = e.target.value;
+        if (game.state) game.state.difficulty = v;
+        onUpdate?.();
+      }
+    }, ...diffOptions.map(opt => el('option', { value: opt, selected: (game.state?.difficulty || 'easy') === opt }, opt.charAt(0).toUpperCase() + opt.slice(1))));
+
     controls = el('div', { class: 'controls' },
       el('button', { onclick: () => { onOpenDeckBuilder?.(); } }, 'Deck Builder'),
+      el('label', { class: 'lbl-difficulty' }, 'Difficulty: ', diffSelect),
       el('button', { class: 'btn-hero-power', onclick: async () => { await game.useHeroPower(p); onUpdate?.(); } }, 'Hero Power'),
       el('button', { class: 'btn-end-turn', onclick: async () => { await game.endTurn(); onUpdate?.(); } }, 'End Turn')
     );
@@ -205,6 +216,10 @@ export function renderPlay(container, game, { onUpdate, onOpenDeckBuilder } = {}
 
     board.append(aiHero, aiMana, aiHand, aiField, aiLog, pHero, pMana, pField, pHand, pLog);
     container.append(controls, board);
+  } else {
+    // Keep difficulty UI in sync when not remounting
+    const sel = controls.querySelector('select.select-difficulty');
+    if (sel && game.state) sel.value = game.state.difficulty || 'easy';
   }
 
   // Update controls disabled states

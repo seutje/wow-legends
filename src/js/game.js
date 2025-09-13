@@ -26,7 +26,12 @@ export default class Game {
     this.resources = new ResourceSystem(this.turns);
     this.combat = new CombatSystem();
     this.effects = new EffectSystem(this);
-    this.rng = new RNG();
+    // Use deterministic RNG in tests/node to stabilize content selection
+    if (typeof window === 'undefined') {
+      this.rng = new RNG(0xC0FFEE);
+    } else {
+      this.rng = new RNG();
+    }
     this.bus = new EventBus();
     this.quests = new QuestSystem(this);
 
@@ -65,7 +70,7 @@ export default class Game {
     this.player = new Player({ name: 'You' });
     this.opponent = new Player({ name: 'AI' });
 
-    this.state = { frame: 0, startedAt: 0 };
+    this.state = { frame: 0, startedAt: 0, difficulty: 'easy' };
   }
 
   setUIRerender(fn) {
@@ -424,42 +429,54 @@ export default class Game {
     this.turns.setActivePlayer(this.opponent);
     this.turns.startTurn();
     this.resources.startTurn(this.opponent);
-    const affordable = this.opponent.hand.cards.filter(c => this.canPlay(this.opponent, c)).sort((a,b)=> (a.cost||0)-(b.cost||0));
-    if (affordable[0]) await this.playFromHand(this.opponent, affordable[0].id);
-    const attackers = this.opponent.battlefield.cards.filter(c => {
-      if (!(c.type === 'ally' || c.type === 'equipment')) return false;
-      const atk = typeof c.totalAttack === 'function' ? c.totalAttack() : (c.data?.attack || 0);
-      return atk > 0 && !c.data?.attacked;
-    });
-    for (const c of attackers) {
-      const declared = this.combat.declareAttacker(c);
-      if (!declared) continue;
-      if (c.data) c.data.attacked = true;
-      const defenders = [
-        this.player.hero,
-        ...this.player.battlefield.cards.filter(d => d.type !== 'equipment' && d.type !== 'quest')
-      ];
-      const legal = selectTargets(defenders);
-      let block = null;
-      if (legal.length === 1) {
-        const only = legal[0];
-        if (only.id !== this.player.hero.id) block = only;
-      } else if (legal.length > 1) {
-        const choices = legal.filter(t => t.id !== this.player.hero.id);
-        block = this.rng.pick(choices);
+
+    const diff = this.state?.difficulty || 'easy';
+    if (diff === 'medium' || diff === 'hard') {
+      // Use MCTS for medium/hard (placeholder for ML on hard)
+      const { default: MCTS_AI } = await import('./systems/ai-mcts.js');
+      const ai = new MCTS_AI({ resourceSystem: this.resources, combatSystem: this.combat, game: this });
+      await ai.takeTurn(this.opponent, this.player);
+    } else {
+      // Easy difficulty: previous simple heuristic flow
+      const affordable = this.opponent.hand.cards
+        .filter(c => this.canPlay(this.opponent, c))
+        .sort((a,b)=> (a.cost||0)-(b.cost||0));
+      if (affordable[0]) await this.playFromHand(this.opponent, affordable[0].id);
+      const attackers = this.opponent.battlefield.cards.filter(c => {
+        if (!(c.type === 'ally' || c.type === 'equipment')) return false;
+        const atk = typeof c.totalAttack === 'function' ? c.totalAttack() : (c.data?.attack || 0);
+        return atk > 0 && !c.data?.attacked;
+      });
+      for (const c of attackers) {
+        const declared = this.combat.declareAttacker(c);
+        if (!declared) continue;
+        if (c.data) c.data.attacked = true;
+        const defenders = [
+          this.player.hero,
+          ...this.player.battlefield.cards.filter(d => d.type !== 'equipment' && d.type !== 'quest')
+        ];
+        const legal = selectTargets(defenders);
+        let block = null;
+        if (legal.length === 1) {
+          const only = legal[0];
+          if (only.id !== this.player.hero.id) block = only;
+        } else if (legal.length > 1) {
+          const choices = legal.filter(t => t.id !== this.player.hero.id);
+          block = this.rng.pick(choices);
+        }
+        const target = block || this.player.hero;
+        if (block) this.combat.assignBlocker(c.id, block);
+        this.opponent.log.push(`Attacked ${target.name} with ${c.name}`);
       }
-      const target = block || this.player.hero;
-      if (block) this.combat.assignBlocker(c.id, block);
-      this.opponent.log.push(`Attacked ${target.name} with ${c.name}`);
+      this.combat.setDefenderHero(this.player.hero);
+      const events = this.combat.resolve();
+      for (const ev of events) {
+        const srcOwner = [this.opponent.hero, ...this.opponent.battlefield.cards].includes(ev.source) ? this.opponent : this.player;
+        this.bus.emit('damageDealt', { player: srcOwner, source: ev.source, amount: ev.amount, target: ev.target });
+      }
+      await this.cleanupDeaths(this.player, this.opponent);
+      await this.cleanupDeaths(this.opponent, this.player);
     }
-    this.combat.setDefenderHero(this.player.hero);
-    const events = this.combat.resolve();
-    for (const ev of events) {
-      const srcOwner = [this.opponent.hero, ...this.opponent.battlefield.cards].includes(ev.source) ? this.opponent : this.player;
-      this.bus.emit('damageDealt', { player: srcOwner, source: ev.source, amount: ev.amount, target: ev.target });
-    }
-    await this.cleanupDeaths(this.player, this.opponent);
-    await this.cleanupDeaths(this.opponent, this.player);
 
     // End AI's turn and start player's turn
     while(this.turns.current !== 'End') {
