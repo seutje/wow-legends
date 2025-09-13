@@ -489,6 +489,11 @@
     "cost": 5,
     "effects": [
       {
+        "type": "damage",
+        "target": "any",
+        "amount": 5
+      },
+      {
         "type": "draw",
         "count": 1
       }
