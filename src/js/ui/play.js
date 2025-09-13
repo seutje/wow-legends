@@ -14,20 +14,54 @@ function el(tag, attrs = {}, ...children) {
   return e;
 }
 
-function zoneList(title, cards, { clickCard, game, showTooltip, hideTooltip } = {}) {
-  const ul = el('ul', { class: 'zone-list' });
-  for (const c of cards) {
-    const cost = c.cost != null ? ` (${c.cost})` : '';
-    const li = el('li', { dataset: { cardId: c.id } }, `${c.name}${cost}`);
-    if (clickCard) li.addEventListener('click', async () => { await clickCard(c); });
+// Build a static card element that uses the same visual as tooltips
+function buildCardEl(card) {
+  const tooltipCard = card.summonedBy || card;
+  const wrap = el('div', { class: 'card-tooltip' });
 
-    // Add mouseenter and mouseleave listeners to prevent duplicate tooltips
-    li.addEventListener('mouseenter', (e) => showTooltip(c, e, game));
-    li.addEventListener('mouseleave', () => hideTooltip());
+  const art = new Image();
+  art.className = 'card-art';
+  art.alt = tooltipCard.name;
+  art.onload = () => {};
+  art.onerror = () => { art.remove(); };
 
-    ul.append(li);
+  const frame = new Image();
+  frame.className = 'card-frame';
+  frame.src = 'src/assets/frame.png';
+
+  const infoChildren = [
+    el('div', { class: 'card-type' }, tooltipCard.type),
+    el('h4', {}, tooltipCard.name),
+    el('p', { class: 'card-text' }, tooltipCard.text)
+  ];
+  if (tooltipCard.keywords?.length) {
+    infoChildren.push(el('p', { class: 'card-keywords' }, tooltipCard.keywords.join(', ')));
   }
-  return el('section', {}, el('h3', {}, title), ul);
+  const info = el('div', { class: 'card-info' }, ...infoChildren);
+  wrap.append(art, frame, info);
+
+  if (tooltipCard.type === 'hero' && tooltipCard.data?.armor != null) {
+    const armorEl = el('div', { class: 'stat armor' }, tooltipCard.data.armor);
+    wrap.append(armorEl);
+  } else if (tooltipCard.cost != null) {
+    wrap.append(el('div', { class: 'stat cost' }, tooltipCard.cost));
+  }
+  if (card.data?.attack != null) wrap.append(el('div', { class: 'stat attack' }, card.data.attack));
+  if (card.data?.health != null) wrap.append(el('div', { class: 'stat health' }, card.data.health));
+
+  art.src = `src/assets/art/${tooltipCard.id}-art.png`;
+  return wrap;
+}
+
+function zoneCards(title, cards, { clickCard } = {}) {
+  const wrap = el('div', { class: 'cards' });
+  for (const c of cards) {
+    const cardEl = buildCardEl(c);
+    cardEl.dataset.cardId = c.id;
+    if (clickCard) cardEl.addEventListener('click', async () => { await clickCard(c); });
+    wrap.append(cardEl);
+  }
+  return el('section', { class: 'zone' }, el('h3', {}, title), wrap);
 }
 
 function logPane(title, entries = []) {
@@ -42,87 +76,6 @@ export function renderPlay(container, game, { onUpdate } = {}) {
   const p = game.player; const e = game.opponent;
   container.innerHTML = '';
 
-  let tooltipEl = null; // To store the tooltip element
-  let armorInterval = null; // Interval for updating hero armor in tooltip
-
-  function showTooltip(card, event, game) {
-    if (tooltipEl) hideTooltip(); // Hide any existing tooltip
-    const tooltipCard = card.summonedBy || card;
-
-    tooltipEl = el('div', { class: 'card-tooltip' });
-    const currentTooltip = tooltipEl;
-    currentTooltip.style.position = 'absolute';
-    currentTooltip.style.zIndex = '1000';
-    currentTooltip.style.maxWidth = `${window.innerWidth - 20}px`;
-    currentTooltip.style.maxHeight = `${window.innerHeight - 20}px`;
-    container.append(currentTooltip);
-
-    function position() {
-      currentTooltip.style.left = `${event.clientX + 10}px`;
-      currentTooltip.style.top = `${event.clientY + 10}px`;
-      const rect = currentTooltip.getBoundingClientRect();
-      if (rect.right > window.innerWidth) {
-        currentTooltip.style.left = `${window.innerWidth - rect.width - 10}px`;
-      }
-      if (rect.bottom > window.innerHeight) {
-        currentTooltip.style.top = `${window.innerHeight - rect.height - 10}px`;
-      }
-    }
-
-    const art = new Image();
-    art.className = 'card-art';
-    art.alt = tooltipCard.name;
-
-    const frame = new Image();
-    frame.className = 'card-frame';
-    frame.src = 'src/assets/frame.png';
-
-    const infoChildren = [
-      el('div', { class: 'card-type' }, tooltipCard.type),
-      el('h4', {}, tooltipCard.name),
-      el('p', { class: 'card-text' }, tooltipCard.text)
-    ];
-    if (tooltipCard.keywords?.length) {
-      infoChildren.push(el('p', { class: 'card-keywords' }, tooltipCard.keywords.join(', ')));
-    }
-    const info = el('div', { class: 'card-info' }, ...infoChildren);
-
-    currentTooltip.append(art, frame, info);
-
-    if (tooltipCard.type === 'hero' && tooltipCard.data?.armor != null) {
-      const armorEl = el('div', { class: 'stat armor' }, tooltipCard.data.armor);
-      currentTooltip.append(armorEl);
-      let lastArmor = tooltipCard.data.armor;
-      armorInterval = setInterval(() => {
-        if (!tooltipEl) { clearInterval(armorInterval); armorInterval = null; return; }
-        if (tooltipCard.data.armor !== lastArmor) {
-          lastArmor = tooltipCard.data.armor;
-          armorEl.textContent = tooltipCard.data.armor;
-        }
-      }, 100);
-    } else if (tooltipCard.cost != null) {
-      currentTooltip.append(el('div', { class: 'stat cost' }, tooltipCard.cost));
-    }
-    if (card.data?.attack != null) currentTooltip.append(el('div', { class: 'stat attack' }, card.data.attack));
-    if (card.data?.health != null) currentTooltip.append(el('div', { class: 'stat health' }, card.data.health));
-
-    art.onload = () => { if (tooltipEl === currentTooltip) position(); };
-    art.onerror = () => { if (tooltipEl === currentTooltip) { art.remove(); position(); } };
-
-    art.src = `src/assets/art/${tooltipCard.id}-art.png`;
-    position();
-  }
-
-  function hideTooltip() {
-    if (tooltipEl && tooltipEl.parentNode) {
-      tooltipEl.parentNode.removeChild(tooltipEl);
-      tooltipEl = null;
-    }
-    if (armorInterval) {
-      clearInterval(armorInterval);
-      armorInterval = null;
-    }
-  }
 
   const header = el('div', { class: 'hud' },
     el('strong', {}, t('app_title')), ' — ',
@@ -135,18 +88,26 @@ export function renderPlay(container, game, { onUpdate } = {}) {
     el('button', { onclick: async () => { await game.endTurn(); onUpdate?.(); } }, 'End Turn')
   );
 
-  const playerRow = el('div', { class: 'row player' },
-    logPane('Player Log', p.log),
-    el('div', { class: 'zone' }, zoneList('Player Battlefield', [p.hero, ...p.battlefield.cards], { clickCard: async (c)=>{ await game.attack(p, c.id); onUpdate?.(); }, game: game, showTooltip: showTooltip, hideTooltip: hideTooltip })),
-    el('div', { class: 'zone' }, zoneList('Player Hand', p.hand.cards, { clickCard: async (c)=>{ if (!await game.playFromHand(p, c.id)) { /* ignore */ } onUpdate?.(); }, game: game, showTooltip: showTooltip, hideTooltip: hideTooltip }))
-  );
-  const enemyRow = el('div', { class: 'row enemy' },
-    logPane('Enemy Log', e.log),
-    el('div', { class: 'zone' }, zoneList('Enemy Battlefield', [e.hero, ...e.battlefield.cards], { game: game, showTooltip: showTooltip, hideTooltip: hideTooltip })),
-    el('div', { class: 'zone' }, el('h3', {}, 'Enemy Hand'), el('p', {}, `${e.hand.size()} cards`))
-  );
+  const board = el('div', { class: 'board' });
 
-  container.append(header, controls, enemyRow, playerRow);
+  // AI side
+  const aiHero = el('div', { class: 'slot ai-hero' }, el('h3', {}, 'AI hero'), buildCardEl(e.hero));
+  const aiMana = el('div', { class: 'slot ai-mana' }, el('h3', {}, 'Mana'), el('div', {}, `${game.resources.pool(e)} / ${game.resources.available(e)}`));
+  const aiLog = logPane('Enemy Log', e.log); aiLog.classList.add('ai-log');
+  const aiHand = el('div', { class: 'zone ai-hand' }, el('h3', {}, 'Enemy Hand'), el('p', {}, `${e.hand.size()} cards`));
+  const aiField = zoneCards('Enemy Battlefield', e.battlefield.cards, {}); aiField.classList.add('ai-field');
+
+  // Player side
+  const pHero = el('div', { class: 'slot p-hero' }, el('h3', {}, 'Player hero'), buildCardEl(p.hero));
+  pHero.querySelector('.card-tooltip')?.addEventListener('click', async () => { await game.attack(p, p.hero.id); onUpdate?.(); });
+  const pMana = el('div', { class: 'slot p-mana' }, el('h3', {}, 'Mana'), el('div', {}, `${game.resources.pool(p)} / ${game.resources.available(p)}`));
+  const pLog = logPane('Player Log', p.log); pLog.classList.add('p-log');
+  const pField = zoneCards('Player Battlefield', p.battlefield.cards, { clickCard: async (c)=>{ await game.attack(p, c.id); onUpdate?.(); } }); pField.classList.add('p-field');
+  const pHand = zoneCards('Player Hand', p.hand.cards, { clickCard: async (c)=>{ if (!await game.playFromHand(p, c.id)) { /* ignore */ } onUpdate?.(); } }); pHand.classList.add('p-hand');
+
+  board.append(aiHero, aiMana, aiHand, aiField, aiLog, pHero, pMana, pField, pHand, pLog);
+
+  container.append(header, controls, board);
 
   const pDead = p.hero.data.health <= 0;
   const eDead = e.hero.data.health <= 0;
@@ -161,4 +122,3 @@ export function renderPlay(container, game, { onUpdate } = {}) {
     container.append(dialog);
   }
 }
-

@@ -18,9 +18,9 @@ describe('UI Play', () => {
 
     renderPlay(container, game);
 
-    const playerLog = container.querySelector('.row.player .log-pane');
+    const playerLog = container.querySelector('.p-log.log-pane');
     expect(playerLog.textContent).toContain('Played Card');
-    const enemyLog = container.querySelector('.row.enemy .log-pane');
+    const enemyLog = container.querySelector('.ai-log.log-pane');
     expect(enemyLog.textContent).toContain('Played Other');
   });
 
@@ -40,22 +40,18 @@ describe('UI Play', () => {
     renderPlay(container, game);
     await new Promise(r => setTimeout(r, 0));
 
-    const pane = container.querySelector('.row.player .log-pane');
+    const pane = container.querySelector('.p-log.log-pane');
     const list = pane.querySelector('ul');
     expect(pane.classList.contains('zone')).toBe(true);
     expect(list.scrollTop + list.clientHeight).toBe(list.scrollHeight);
   });
-
-  test('shows card tooltip with art, name, and text when art is available', () => {
+  test('player hand renders visible cards with art and stats', () => {
     const OriginalImage = global.Image;
     global.Image = class {
       constructor() {
         const img = document.createElement('img');
         Object.defineProperty(img, 'src', {
-          set(v) {
-            img.setAttribute('src', v);
-            img.onload?.();
-          },
+          set(v) { img.setAttribute('src', v); img.onload?.(); },
           get() { return img.getAttribute('src'); }
         });
         return img;
@@ -83,83 +79,28 @@ describe('UI Play', () => {
     };
 
     renderPlay(container, game);
-
-    const li = container.querySelector(`[data-card-id="${card.id}"]`);
-    li.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true, clientX: 0, clientY: 0 }));
-
-    const tooltip = container.querySelector('.card-tooltip');
-    const tooltipImg = tooltip.querySelector('.card-art');
-    expect(tooltipImg).toBeTruthy();
-    expect(tooltipImg.getAttribute('src')).toBe(`src/assets/art/${card.id}-art.png`);
-    expect(tooltip.textContent).toContain(card.name);
-    expect(tooltip.textContent).toContain(card.text);
-    expect(tooltip.querySelector('.stat.cost').textContent).toBe(String(card.cost));
-    expect(tooltip.querySelector('.stat.attack').textContent).toBe(String(card.data.attack));
-    expect(tooltip.querySelector('.stat.health').textContent).toBe(String(card.data.health));
-    expect(tooltip.querySelector('.card-type').textContent).toBe(card.type);
-    expect(tooltip.querySelector('.card-keywords').textContent).toBe(card.keywords.join(', '));
+    const tip = container.querySelector('.p-hand .card-tooltip');
+    expect(tip).toBeTruthy();
+    const img = tip.querySelector('.card-art');
+    expect(img.getAttribute('src')).toBe(`src/assets/art/${card.id}-art.png`);
+    expect(tip.textContent).toContain(card.name);
+    expect(tip.textContent).toContain(card.text);
+    expect(tip.querySelector('.stat.cost').textContent).toBe(String(card.cost));
+    expect(tip.querySelector('.stat.attack').textContent).toBe(String(card.data.attack));
+    expect(tip.querySelector('.stat.health').textContent).toBe(String(card.data.health));
+    expect(tip.querySelector('.card-type').textContent).toBe(card.type);
+    expect(tip.querySelector('.card-keywords').textContent).toBe(card.keywords.join(', '));
 
     global.Image = OriginalImage;
   });
 
-  test('hero tooltip shows armor and updates when armor changes', () => {
-    jest.useFakeTimers();
+  test('summoned allies show summoning card art but actual stats', () => {
     const OriginalImage = global.Image;
     global.Image = class {
       constructor() {
         const img = document.createElement('img');
         Object.defineProperty(img, 'src', {
-          set(v) {
-            img.setAttribute('src', v);
-            img.onload?.();
-          },
-          get() { return img.getAttribute('src'); }
-        });
-        return img;
-      }
-    };
-
-    const container = document.createElement('div');
-    const playerHero = new Hero({ name: 'Player Hero', data: { health: 25, armor: 5 } });
-    const enemyHero = new Hero({ name: 'Enemy Hero', data: { health: 20, armor: 0 } });
-
-    const game = {
-      player: { hero: playerHero, battlefield: { cards: [] }, hand: { cards: [], size: () => 0 } },
-      opponent: { hero: enemyHero, battlefield: { cards: [] }, hand: { cards: [], size: () => 0 } },
-      resources: { pool: () => 0, available: () => 0 },
-      draw: jest.fn(), attack: jest.fn(), endTurn: jest.fn(), playFromHand: () => true,
-    };
-
-    renderPlay(container, game);
-
-    const li = container.querySelector(`[data-card-id="${playerHero.id}"]`);
-    li.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true, clientX: 0, clientY: 0 }));
-
-    const armorEl = container.querySelector('.card-tooltip .stat.armor');
-    expect(armorEl).toBeTruthy();
-    expect(armorEl.textContent).toBe('5');
-
-    playerHero.data.armor = 8;
-    jest.advanceTimersByTime(200);
-    expect(armorEl.textContent).toBe('8');
-
-    li.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
-    jest.runOnlyPendingTimers();
-
-    global.Image = OriginalImage;
-    jest.useRealTimers();
-  });
-
-  test('summoned allies show summoning card in tooltip', () => {
-    const OriginalImage = global.Image;
-    global.Image = class {
-      constructor() {
-        const img = document.createElement('img');
-        Object.defineProperty(img, 'src', {
-          set(v) {
-            img.setAttribute('src', v);
-            img.onload?.();
-          },
+          set(v) { img.setAttribute('src', v); img.onload?.(); },
           get() { return img.getAttribute('src'); }
         });
         return img;
@@ -180,32 +121,25 @@ describe('UI Play', () => {
     };
 
     renderPlay(container, game);
-
-    const li = container.querySelector(`[data-card-id="${summoned.id}"]`);
-    li.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true, clientX: 0, clientY: 0 }));
-
-    const tooltip = container.querySelector('.card-tooltip');
-    const tooltipImg = tooltip.querySelector('.card-art');
-    expect(tooltipImg).toBeTruthy();
-    expect(tooltipImg.getAttribute('src')).toBe(`src/assets/art/${summoner.id}-art.png`);
-    expect(tooltip.textContent).toContain(summoner.name);
-    expect(tooltip.textContent).toContain(summoner.text);
-    expect(tooltip.querySelector('.stat.attack').textContent).toBe('6');
-    expect(tooltip.querySelector('.stat.health').textContent).toBe('6');
+    const tip = container.querySelector('.p-field .card-tooltip');
+    const img = tip.querySelector('.card-art');
+    expect(img).toBeTruthy();
+    expect(img.getAttribute('src')).toBe(`src/assets/art/${summoner.id}-art.png`);
+    expect(tip.textContent).toContain(summoner.name);
+    expect(tip.textContent).toContain(summoner.text);
+    expect(tip.querySelector('.stat.attack').textContent).toBe('6');
+    expect(tip.querySelector('.stat.health').textContent).toBe('6');
 
     global.Image = OriginalImage;
   });
 
-  test('falls back to text tooltip when art is missing', () => {
+  test('falls back to text when art is missing for visible cards', () => {
     const OriginalImage = global.Image;
     global.Image = class {
       constructor() {
         const img = document.createElement('img');
         Object.defineProperty(img, 'src', {
-          set(v) {
-            img.setAttribute('src', v);
-            img.onerror?.();
-          },
+          set(v) { img.setAttribute('src', v); img.onerror?.(); },
           get() { return img.getAttribute('src'); }
         });
         return img;
@@ -225,156 +159,15 @@ describe('UI Play', () => {
     };
 
     renderPlay(container, game);
-
-    const li = container.querySelector(`[data-card-id="${card.id}"]`);
-    li.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true, clientX: 0, clientY: 0 }));
-
-    const tooltip = container.querySelector('.card-tooltip');
-    expect(tooltip.textContent).toContain(card.name);
-    expect(tooltip.textContent).toContain(card.text);
-    expect(tooltip.querySelector('.card-art')).toBeNull();
+    const tip = container.querySelector('.p-hand .card-tooltip');
+    expect(tip.textContent).toContain(card.name);
+    expect(tip.textContent).toContain(card.text);
+    expect(tip.querySelector('.card-art')).toBeNull();
 
     global.Image = OriginalImage;
   });
 
-  test('card tooltip fits within the viewport', () => {
-    const OriginalImage = global.Image;
-    global.Image = class {
-      constructor() {
-        const img = document.createElement('img');
-        Object.defineProperty(img, 'src', {
-          set(v) {
-            img.setAttribute('src', v);
-            img.onload?.();
-          },
-          get() { return img.getAttribute('src'); }
-        });
-        return img;
-      }
-    };
-
-    const prevW = window.innerWidth;
-    const prevH = window.innerHeight;
-    Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: 300 });
-    Object.defineProperty(window, 'innerHeight', { configurable: true, writable: true, value: 200 });
-
-    const container = document.createElement('div');
-    const card = { id: 'hero-jaina-proudmoore-archmage', name: 'Jaina', text: 'Archmage', type: 'hero' };
-    const playerHero = new Hero({ name: 'Player Hero', data: { health: 25 } });
-    const enemyHero = new Hero({ name: 'Enemy Hero', data: { health: 20 } });
-
-    const game = {
-      player: { hero: playerHero, battlefield: { cards: [] }, hand: { cards: [card], size: () => 1 } },
-      opponent: { hero: enemyHero, battlefield: { cards: [] }, hand: { cards: [], size: () => 0 } },
-      resources: { pool: () => 0, available: () => 0 },
-      draw: jest.fn(), attack: jest.fn(), endTurn: jest.fn(), playFromHand: () => true,
-    };
-
-    renderPlay(container, game);
-
-    const li = container.querySelector(`[data-card-id="${card.id}"]`);
-    li.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true, clientX: 290, clientY: 190 }));
-
-    const tooltip = container.querySelector('.card-tooltip');
-    const img = tooltip.querySelector('.card-art');
-    expect(tooltip.style.maxWidth).toBe(`${window.innerWidth - 20}px`);
-    expect(tooltip.style.maxHeight).toBe(`${window.innerHeight - 20}px`);
-    expect(img).toBeTruthy();
-
-    global.Image = OriginalImage;
-    Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: prevW });
-    Object.defineProperty(window, 'innerHeight', { configurable: true, writable: true, value: prevH });
-  });
-
-  test('shows only one tooltip at a time when hovering multiple cards', () => {
-    const OriginalImage = global.Image;
-    global.Image = class {
-      constructor() {
-        const img = document.createElement('img');
-        Object.defineProperty(img, 'src', {
-          set(v) {
-            img.setAttribute('src', v);
-            img.onload?.();
-          },
-          get() { return img.getAttribute('src'); }
-        });
-        return img;
-      }
-    };
-
-    const container = document.createElement('div');
-    const card1 = { id: 'hero-jaina-proudmoore-archmage', name: 'Jaina', text: 'Archmage', type: 'hero' };
-    const card2 = { id: 'hero-thrall-warchief-of-the-horde', name: 'Thrall', text: 'Warchief', type: 'hero' };
-    const playerHero = new Hero({ name: 'Player Hero', data: { health: 25 } });
-    const enemyHero = new Hero({ name: 'Enemy Hero', data: { health: 20 } });
-
-    const game = {
-      player: { hero: playerHero, battlefield: { cards: [] }, hand: { cards: [card1, card2], size: () => 2 } },
-      opponent: { hero: enemyHero, battlefield: { cards: [] }, hand: { cards: [], size: () => 0 } },
-      resources: { pool: () => 0, available: () => 0 },
-      draw: jest.fn(), attack: jest.fn(), endTurn: jest.fn(), playFromHand: () => true,
-    };
-
-    renderPlay(container, game);
-
-    const li1 = container.querySelector(`[data-card-id="${card1.id}"]`);
-    li1.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true, clientX: 0, clientY: 0 }));
-    const li2 = container.querySelector(`[data-card-id="${card2.id}"]`);
-    li2.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true, clientX: 0, clientY: 0 }));
-
-    const tooltips = container.querySelectorAll('.card-tooltip');
-    expect(tooltips).toHaveLength(1);
-    const tooltip = tooltips[0];
-    const tooltipImg = tooltip.querySelector('.card-art');
-    expect(tooltipImg.getAttribute('src')).toBe(`src/assets/art/${card2.id}-art.png`);
-    expect(tooltip.textContent).toContain(card2.name);
-
-    global.Image = OriginalImage;
-  });
-
-  test('does not error if tooltip is removed before image loads', () => {
-    jest.useFakeTimers();
-    const OriginalImage = global.Image;
-    global.Image = class {
-      constructor() {
-        const img = document.createElement('img');
-        Object.defineProperty(img, 'src', {
-          set(v) {
-            img.setAttribute('src', v);
-            setTimeout(() => img.onload?.(), 0);
-          },
-          get() { return img.getAttribute('src'); }
-        });
-        return img;
-      }
-    };
-
-    const container = document.createElement('div');
-    const card = { id: 'hero-jaina-proudmoore-archmage', name: 'Jaina', text: 'Archmage', type: 'hero' };
-    const playerHero = new Hero({ name: 'Player Hero', data: { health: 25 } });
-    const enemyHero = new Hero({ name: 'Enemy Hero', data: { health: 20 } });
-
-    const game = {
-      player: { hero: playerHero, battlefield: { cards: [] }, hand: { cards: [card], size: () => 1 } },
-      opponent: { hero: enemyHero, battlefield: { cards: [] }, hand: { cards: [], size: () => 0 } },
-      resources: { pool: () => 0, available: () => 0 },
-      draw: jest.fn(), attack: jest.fn(), endTurn: jest.fn(), playFromHand: () => true,
-    };
-
-    renderPlay(container, game);
-
-    const li = container.querySelector(`[data-card-id="${card.id}"]`);
-    li.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true, clientX: 0, clientY: 0 }));
-    li.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
-
-    expect(() => { jest.runAllTimers(); }).not.toThrow();
-    expect(container.querySelector('.card-tooltip')).toBeNull();
-
-    global.Image = OriginalImage;
-    jest.useRealTimers();
-  });
-
-  test('includes hero in battlefield zone list', () => {
+  test('has a separate hero slot (not in battlefield list)', () => {
     const container = document.createElement('div');
     const playerHero = new Hero({ name: 'Player Hero', data: { health: 25 } });
     const enemyHero = new Hero({ name: 'Enemy Hero', data: { health: 20 } });
@@ -388,8 +181,8 @@ describe('UI Play', () => {
 
     renderPlay(container, game);
 
-    const battlefieldList = container.querySelector('.row.player .zone-list');
-    expect(battlefieldList.textContent).toContain('Player Hero');
+    const heroEl = container.querySelector('.p-hero .card-tooltip');
+    expect(heroEl.textContent).toContain('Player Hero');
   });
 
   test('shows win dialog and restarts game', async () => {
@@ -427,4 +220,3 @@ describe('UI Play', () => {
     expect(dialog.textContent).toContain('You lose!');
   });
 });
-

@@ -26,6 +26,50 @@ main {
   gap: 12px;
 }
 
+/* Board layout inside #root */
+#root .board {
+  display: grid;
+  grid-template-columns: 140px 1fr 260px;
+  grid-auto-rows: min-content;
+  gap: 12px 16px;
+  grid-template-areas:
+    'ai-hero  ai-hand  ai-log'
+    'ai-mana  ai-field ai-log'
+    'p-mana   p-field  p-log'
+    'p-hero   p-hand   p-log';
+}
+
+/* Assign grid areas */
+.ai-hero { grid-area: ai-hero; }
+.ai-mana { grid-area: ai-mana; }
+.ai-hand { grid-area: ai-hand; }
+.ai-field { grid-area: ai-field; }
+.ai-log { grid-area: ai-log; }
+.p-hero { grid-area: p-hero; }
+.p-mana { grid-area: p-mana; }
+.p-hand { grid-area: p-hand; }
+.p-field { grid-area: p-field; }
+.p-log { grid-area: p-log; }
+
+.board .zone,
+.board .slot {
+  background: #10171f;
+  padding: 8px;
+  border: 1px solid #203040;
+  border-radius: 4px;
+}
+
+.board h3 { margin: 4px 0 8px; }
+
+/* Card containers */
+.cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.cards .card-tooltip { cursor: pointer; }
+
 footer {
   padding: 8px 12px;
   font-size: 12px;
