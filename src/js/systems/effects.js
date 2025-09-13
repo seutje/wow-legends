@@ -845,10 +845,44 @@ export class EffectSystem {
   }
 
   async handleChooseOne(effect, context) {
-    const { game } = context;
-    const optionTexts = effect.options?.map(o => o.text) || [];
+    const { game, player } = context;
+    const options = effect.options || [];
+
+    // If it's the AI's turn, auto-pick a sensible option without prompting the player.
+    const isAITurn = !!game.turns.activePlayer && game.turns.activePlayer !== game.player;
+    if (isAITurn) {
+      // Simple heuristic: prefer healing if any friendly is injured; otherwise prefer damage; else first option.
+      const isHealOption = (opt) => Array.isArray(opt?.effects) && opt.effects.some(e => e.type === 'heal');
+      const isDamageOption = (opt) => Array.isArray(opt?.effects) && opt.effects.some(e => e.type === 'damage');
+
+      // Check if any friendly character is injured
+      const chars = [player.hero, ...player.battlefield.cards];
+      const friendlyInjured = chars.some(c => {
+        const cur = c?.data?.health ?? c?.health;
+        const max = c?.data?.maxHealth ?? c?.maxHealth ?? cur;
+        return typeof cur === 'number' && cur < max;
+      });
+
+      let chosen = null;
+      if (friendlyInjured) {
+        chosen = options.find(isHealOption) || null;
+      }
+      if (!chosen) {
+        chosen = options.find(isDamageOption) || null;
+      }
+      if (!chosen) {
+        chosen = options[0] || null;
+      }
+      if (chosen?.effects) {
+        await this.execute(chosen.effects, context);
+      }
+      return;
+    }
+
+    // Player's turn: show prompt UI and execute the selected option.
+    const optionTexts = options.map(o => o.text) || [];
     const idx = await game.promptOption(optionTexts);
-    const chosen = effect.options?.[idx] || effect.options?.[0];
+    const chosen = options[idx] || options[0];
     if (chosen?.effects) {
       await this.execute(chosen.effects, context);
     }
