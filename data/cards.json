@@ -580,12 +580,7 @@
     "name": "Water Elemental Guardian",
     "type": "ally",
     "cost": 4,
-    "effects": [
-      {
-        "type": "rawText",
-        "text": "Freeze any target this damages."
-      }
-    ],
+    "effects": [],
     "keywords": [
       "Freeze",
       "Elemental"
@@ -621,12 +616,7 @@
     "name": "Orgrimmar Grunt",
     "type": "ally",
     "cost": 2,
-    "effects": [
-      {
-        "type": "rawText",
-        "text": "Taunt."
-      }
-    ],
+    "effects": [],
     "keywords": [
       "Taunt"
     ],
@@ -641,12 +631,7 @@
     "name": "Jungle Stalker",
     "type": "ally",
     "cost": 4,
-    "effects": [
-      {
-        "type": "rawText",
-        "text": "Stealth (loses Stealth when it attacks)."
-      }
-    ],
+    "effects": [],
     "keywords": [
       "Stealth",
       "Beast"
@@ -813,12 +798,7 @@
     "name": "Scarlet Sorcerer",
     "type": "ally",
     "cost": 3,
-    "effects": [
-      {
-        "type": "rawText",
-        "text": "Spell Damage +1."
-      }
-    ],
+    "effects": [],
     "keywords": [
       "Aura"
     ],
@@ -857,12 +837,7 @@
     "name": "Defias Footpad",
     "type": "ally",
     "cost": 1,
-    "effects": [
-      {
-        "type": "rawText",
-        "text": "Combo — Summon another 1/1 Footpad."
-      }
-    ],
+    "effects": [],
     "combo": [
       {
         "type": "summon",
