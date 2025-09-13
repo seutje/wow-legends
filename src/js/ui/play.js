@@ -189,9 +189,9 @@ export function renderPlay(container, game, { onUpdate, onOpenDeckBuilder } = {}
 
     controls = el('div', { class: 'controls' },
       el('button', { onclick: () => { onOpenDeckBuilder?.(); } }, 'Deck Builder'),
-      el('label', { class: 'lbl-difficulty' }, 'Difficulty: ', diffSelect),
       el('button', { class: 'btn-hero-power', onclick: async () => { await game.useHeroPower(p); onUpdate?.(); } }, 'Hero Power'),
-      el('button', { class: 'btn-end-turn', onclick: async () => { await game.endTurn(); onUpdate?.(); } }, 'End Turn')
+      el('button', { class: 'btn-end-turn', onclick: async () => { await game.endTurn(); onUpdate?.(); } }, 'End Turn'),
+      el('label', { class: 'lbl-difficulty' }, 'Difficulty: ', diffSelect)
     );
     board = el('div', { class: 'board' });
 
