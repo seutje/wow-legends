@@ -359,11 +359,14 @@ export class EffectSystem {
     }
 
     for (const t of actualTargets) {
-      if (t.data && t.data.health != null) {
-        t.data.health = Math.min(t.data.health + amount, t.data.maxHealth || t.data.health);
+      // Determine max health with sensible fallbacks (heroes default to 30)
+      const cur = t?.data?.health ?? t?.health;
+      const max = (t?.data?.maxHealth ?? t?.maxHealth ?? (t?.type === 'hero' ? 30 : cur));
+      if (t?.data && t.data.health != null) {
+        t.data.health = Math.min(cur + amount, max);
         console.log(`${t.name} healed for ${amount}. Current health: ${t.data.health}`);
-      } else if (t.health != null) {
-        t.health = Math.min(t.health + amount, t.maxHealth || t.health);
+      } else if (t?.health != null) {
+        t.health = Math.min(cur + amount, max);
         console.log(`${t.name} healed for ${amount}. Current health: ${t.health}`);
       }
       game.bus.emit('characterHealed', { player, target: t, amount, source: card });
@@ -472,11 +475,14 @@ export class EffectSystem {
       if (!candidates.length) return;
       const targetChar = game.rng.pick(candidates);
 
-      if (targetChar.data && targetChar.data.health != null) {
-        targetChar.data.health = Math.min(targetChar.data.health + amount, targetChar.data.maxHealth || targetChar.data.health);
+      // Determine max health with sensible fallbacks (heroes default to 30)
+      const cur = targetChar?.data?.health ?? targetChar?.health;
+      const max = (targetChar?.data?.maxHealth ?? targetChar?.maxHealth ?? (targetChar?.type === 'hero' ? 30 : cur));
+      if (targetChar?.data && targetChar.data.health != null) {
+        targetChar.data.health = Math.min(cur + amount, max);
         console.log(`${targetChar.name} healed for ${amount}. Current health: ${targetChar.data.health}`);
-      } else if (targetChar.health != null) {
-        targetChar.health = Math.min(targetChar.health + amount, targetChar.maxHealth || targetChar.health);
+      } else if (targetChar?.health != null) {
+        targetChar.health = Math.min(cur + amount, max);
         console.log(`${targetChar.name} healed for ${amount}. Current health: ${targetChar.health}`);
       }
 
