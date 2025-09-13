@@ -48,7 +48,9 @@ useDeckBtn.textContent = 'Use this deck';
 useDeckBtn.disabled = true;
 const fillRandomBtn = document.createElement('button');
 fillRandomBtn.textContent = 'Fill Random';
-sidebar.append(useDeckBtn, fillRandomBtn);
+const clearDeckBtn = document.createElement('button');
+clearDeckBtn.textContent = 'Clear Deck';
+sidebar.append(useDeckBtn, fillRandomBtn, clearDeckBtn);
 sidebar.appendChild(deckRoot);
 const optsRoot = document.createElement('div');
 sidebar.appendChild(optsRoot);
@@ -73,6 +75,10 @@ function openDeckBuilder() {
 }
 fillRandomBtn.addEventListener('click', () => {
   fillDeckRandomly(deckState, game.allCards, game.rng);
+  rerenderDeck();
+});
+clearDeckBtn.addEventListener('click', () => {
+  deckState.cards.length = 0;
   rerenderDeck();
 });
   useDeckBtn.addEventListener('click', async () => {
