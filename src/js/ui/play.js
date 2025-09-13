@@ -72,53 +72,182 @@ function logPane(title, entries = []) {
   return pane;
 }
 
+function updateCardEl(cardEl, card) {
+  if (!cardEl) return;
+  const tooltipCard = card.summonedBy || card;
+  // Update images if needed
+  const art = cardEl.querySelector('img.card-art');
+  if (art) {
+    const desiredSrc = `src/assets/art/${tooltipCard.id}-art.png`;
+    if (art.getAttribute('src') !== desiredSrc) art.src = desiredSrc;
+    art.alt = tooltipCard.name;
+  }
+  // Frame is static
+
+  // Update info fields
+  const typeEl = cardEl.querySelector('.card-type');
+  if (typeEl) typeEl.textContent = tooltipCard.type;
+  const nameEl = cardEl.querySelector('h4');
+  if (nameEl) nameEl.textContent = tooltipCard.name;
+  const textEl = cardEl.querySelector('.card-text');
+  if (textEl) textEl.textContent = tooltipCard.text ?? '';
+  const kwEl = cardEl.querySelector('.card-keywords');
+  if (kwEl) kwEl.textContent = (tooltipCard.keywords?.length ? tooltipCard.keywords.join(', ') : '');
+  // Cost / armor may differ by type
+  const costEl = cardEl.querySelector('.stat.cost');
+  const armorEl = cardEl.querySelector('.stat.armor');
+  if (tooltipCard.type === 'hero') {
+    if (costEl) costEl.remove();
+    if (armorEl) armorEl.textContent = String(tooltipCard.data?.armor ?? '');
+  } else {
+    if (armorEl) armorEl.remove();
+    if (costEl && tooltipCard.cost != null) costEl.textContent = String(tooltipCard.cost);
+  }
+  const atkEl = cardEl.querySelector('.stat.attack');
+  if (atkEl && card.data?.attack != null) atkEl.textContent = String(card.data.attack);
+  const hpEl = cardEl.querySelector('.stat.health');
+  if (hpEl && card.data?.health != null) hpEl.textContent = String(card.data.health);
+}
+
+function syncCardsSection(sectionEl, cards, { clickCard } = {}) {
+  if (!sectionEl) return;
+  const list = sectionEl.querySelector('.cards') || sectionEl;
+  const byId = new Map(Array.from(list.children).map(node => [node.dataset.cardId, node]));
+  // Rebuild order with minimal moves
+  let lastNode = null;
+  for (const c of cards) {
+    let node = byId.get(c.id);
+    if (!node) {
+      node = buildCardEl(c);
+      node.dataset.cardId = c.id;
+      if (clickCard && !node.dataset.clickAttached) {
+        node.addEventListener('click', async () => { await clickCard(c); });
+        node.dataset.clickAttached = '1';
+      }
+    } else {
+      updateCardEl(node, c);
+      byId.delete(c.id);
+    }
+    if (lastNode) {
+      if (node.previousSibling !== lastNode) list.insertBefore(node, lastNode.nextSibling);
+    } else if (node !== list.firstChild) {
+      list.insertBefore(node, list.firstChild);
+    }
+    lastNode = node;
+  }
+  // Remove any remaining nodes (cards no longer present)
+  for (const [, node] of byId) node.remove();
+}
+
+function syncLogPane(pane, entries = []) {
+  if (!pane) return;
+  const ul = pane.querySelector('ul');
+  if (!ul) return;
+  const wasAtBottom = (ul.scrollTop + ul.clientHeight) >= (ul.scrollHeight - 4);
+  const items = Array.from(ul.children);
+  // Append any new entries; if list shrank, rebuild simply
+  if (entries.length < items.length) {
+    ul.innerHTML = '';
+    for (const e of entries) ul.append(el('li', {}, e));
+  } else {
+    for (let i = 0; i < entries.length; i++) {
+      if (i < items.length) items[i].textContent = entries[i];
+      else ul.append(el('li', {}, entries[i]));
+    }
+  }
+  if (wasAtBottom) ul.scrollTop = ul.scrollHeight;
+}
+
 export function renderPlay(container, game, { onUpdate } = {}) {
   const p = game.player; const e = game.opponent;
-  container.innerHTML = '';
 
+  let header = container.querySelector('.hud');
+  let controls = container.querySelector('.controls');
+  let board = container.querySelector('.board');
 
-  const header = el('div', { class: 'hud' },
-    el('strong', {}, t('app_title')), ' — ',
-    `Your HP ${p.hero.data.health} (Armor ${p.hero.data.armor}) | Enemy HP ${e.hero.data.health} (Armor ${e.hero.data.armor}) | Pool ${game.resources.pool(p)} / ${game.resources.available(p)}`
-  );
+  const initialMount = !header || !controls || !board;
+  if (initialMount) {
+    container.innerHTML = '';
+    header = el('div', { class: 'hud' },
+      el('strong', {}, t('app_title')), ' — ',
+      ''
+    );
+    controls = el('div', { class: 'controls' },
+      el('button', { onclick: () => { onUpdate?.(); } }, 'Refresh'),
+      el('button', { class: 'btn-hero-power', onclick: async () => { await game.useHeroPower(p); onUpdate?.(); } }, 'Hero Power'),
+      el('button', { class: 'btn-end-turn', onclick: async () => { await game.endTurn(); onUpdate?.(); } }, 'End Turn')
+    );
+    board = el('div', { class: 'board' });
 
-  const controls = el('div', { class: 'controls' },
-    el('button', { onclick: () => { onUpdate?.(); } }, 'Refresh'),
-    el('button', { onclick: async () => { await game.useHeroPower(p); onUpdate?.(); }, disabled: p.hero.powerUsed || game.resources.pool(p) < 2 || p.hero.data.freezeTurns > 0 }, 'Hero Power'),
-    el('button', { onclick: async () => { await game.endTurn(); onUpdate?.(); } }, 'End Turn')
-  );
+    // AI side
+    const aiHero = el('div', { class: 'slot ai-hero' }, el('h3', {}, 'AI hero'), buildCardEl(e.hero));
+    const aiMana = el('div', { class: 'slot ai-mana' }, el('h3', {}, 'Mana'), el('div', { class: 'mana' }, `${game.resources.pool(e)} / ${game.resources.available(e)}`));
+    const aiLog = logPane('Enemy Log', e.log); aiLog.classList.add('ai-log');
+    const aiHand = el('div', { class: 'zone ai-hand' }, el('h3', {}, 'Enemy Hand'), el('p', { class: 'count' }, `${e.hand.size()} cards`));
+    const aiField = zoneCards('Enemy Battlefield', e.battlefield.cards, {}); aiField.classList.add('ai-field');
 
-  const board = el('div', { class: 'board' });
+    // Player side
+    const pHero = el('div', { class: 'slot p-hero' }, el('h3', {}, 'Player hero'), buildCardEl(p.hero));
+    const heroEl = pHero.querySelector('.card-tooltip');
+    if (heroEl && !heroEl.dataset.clickAttached) {
+      heroEl.addEventListener('click', async () => { await game.attack(p, p.hero.id); onUpdate?.(); });
+      heroEl.dataset.clickAttached = '1';
+    }
+    const pMana = el('div', { class: 'slot p-mana' }, el('h3', {}, 'Mana'), el('div', { class: 'mana' }, `${game.resources.pool(p)} / ${game.resources.available(p)}`));
+    const pLog = logPane('Player Log', p.log); pLog.classList.add('p-log');
+    const pField = zoneCards('Player Battlefield', p.battlefield.cards, { clickCard: async (c)=>{ await game.attack(p, c.id); onUpdate?.(); } }); pField.classList.add('p-field');
+    const pHand = zoneCards('Player Hand', p.hand.cards, { clickCard: async (c)=>{ if (!await game.playFromHand(p, c.id)) { /* ignore */ } onUpdate?.(); } }); pHand.classList.add('p-hand');
 
-  // AI side
-  const aiHero = el('div', { class: 'slot ai-hero' }, el('h3', {}, 'AI hero'), buildCardEl(e.hero));
-  const aiMana = el('div', { class: 'slot ai-mana' }, el('h3', {}, 'Mana'), el('div', {}, `${game.resources.pool(e)} / ${game.resources.available(e)}`));
-  const aiLog = logPane('Enemy Log', e.log); aiLog.classList.add('ai-log');
-  const aiHand = el('div', { class: 'zone ai-hand' }, el('h3', {}, 'Enemy Hand'), el('p', {}, `${e.hand.size()} cards`));
-  const aiField = zoneCards('Enemy Battlefield', e.battlefield.cards, {}); aiField.classList.add('ai-field');
+    board.append(aiHero, aiMana, aiHand, aiField, aiLog, pHero, pMana, pField, pHand, pLog);
+    container.append(header, controls, board);
+  }
 
-  // Player side
-  const pHero = el('div', { class: 'slot p-hero' }, el('h3', {}, 'Player hero'), buildCardEl(p.hero));
-  pHero.querySelector('.card-tooltip')?.addEventListener('click', async () => { await game.attack(p, p.hero.id); onUpdate?.(); });
-  const pMana = el('div', { class: 'slot p-mana' }, el('h3', {}, 'Mana'), el('div', {}, `${game.resources.pool(p)} / ${game.resources.available(p)}`));
-  const pLog = logPane('Player Log', p.log); pLog.classList.add('p-log');
-  const pField = zoneCards('Player Battlefield', p.battlefield.cards, { clickCard: async (c)=>{ await game.attack(p, c.id); onUpdate?.(); } }); pField.classList.add('p-field');
-  const pHand = zoneCards('Player Hand', p.hand.cards, { clickCard: async (c)=>{ if (!await game.playFromHand(p, c.id)) { /* ignore */ } onUpdate?.(); } }); pHand.classList.add('p-hand');
+  // Update header text
+  header.lastChild.nodeValue = `Your HP ${p.hero.data.health} (Armor ${p.hero.data.armor}) | Enemy HP ${e.hero.data.health} (Armor ${e.hero.data.armor}) | Pool ${game.resources.pool(p)} / ${game.resources.available(p)}`;
 
-  board.append(aiHero, aiMana, aiHand, aiField, aiLog, pHero, pMana, pField, pHand, pLog);
+  // Update controls disabled states
+  const heroPowerBtn = controls.querySelector('.btn-hero-power');
+  if (heroPowerBtn) heroPowerBtn.disabled = !!(p.hero.powerUsed || game.resources.pool(p) < 2 || p.hero.data.freezeTurns > 0);
 
-  container.append(header, controls, board);
+  // Update mana displays
+  const [aiManaEl] = board.getElementsByClassName('ai-mana');
+  aiManaEl?.querySelector('.mana')?.replaceChildren(`${game.resources.pool(e)} / ${game.resources.available(e)}`);
+  const [pManaEl] = board.getElementsByClassName('p-mana');
+  pManaEl?.querySelector('.mana')?.replaceChildren(`${game.resources.pool(p)} / ${game.resources.available(p)}`);
 
+  // Update hero cards
+  updateCardEl(board.querySelector('.ai-hero .card-tooltip'), e.hero);
+  updateCardEl(board.querySelector('.p-hero .card-tooltip'), p.hero);
+
+  // Update zones
+  syncCardsSection(board.querySelector('.ai-field'), e.battlefield.cards, {});
+  syncCardsSection(board.querySelector('.p-field'), p.battlefield.cards, { clickCard: async (c)=>{ await game.attack(p, c.id); onUpdate?.(); } });
+  syncCardsSection(board.querySelector('.p-hand'), p.hand.cards, { clickCard: async (c)=>{ if (!await game.playFromHand(p, c.id)) { /* ignore */ } onUpdate?.(); } });
+  const aiHand = board.querySelector('.ai-hand .count');
+  if (aiHand) aiHand.textContent = `${e.hand.size()} cards`;
+
+  // Logs
+  syncLogPane(board.querySelector('.ai-log'), e.log);
+  syncLogPane(board.querySelector('.p-log'), p.log);
+
+  // Game over dialog
   const pDead = p.hero.data.health <= 0;
   const eDead = e.hero.data.health <= 0;
+  let dialog = container.querySelector('.game-over');
   if (pDead || eDead) {
     const msg = pDead ? 'You lose!' : 'You win!';
-    const dialog = el('div', { class: 'game-over' },
-      el('div', {},
-        el('p', {}, msg),
-        el('button', { onclick: async () => { await game.reset(); onUpdate?.(); } }, 'Restart')
-      )
-    );
-    container.append(dialog);
+    if (!dialog) {
+      dialog = el('div', { class: 'game-over' },
+        el('div', {},
+          el('p', {}, msg),
+          el('button', { onclick: async () => { await game.reset(); onUpdate?.(); } }, 'Restart')
+        )
+      );
+      container.append(dialog);
+    } else {
+      dialog.querySelector('p').textContent = msg;
+    }
+  } else if (dialog) {
+    dialog.remove();
   }
 }
