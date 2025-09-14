@@ -17,6 +17,10 @@ export class CardEntity {
     this.cost = props.cost ?? 0;
     this.keywords = props.keywords ? Array.from(props.keywords) : [];
     this.data = props.data ? { ...props.data } : {};
+    // Ensure allies and other characters have a stable maxHealth baseline
+    if (typeof this.data.health === 'number' && this.data.maxHealth == null) {
+      this.data.maxHealth = this.data.health;
+    }
     this.text = props.text || '';
     this.effects = props.effects || [];
     this.combo = props.combo || [];
@@ -27,4 +31,3 @@ export class CardEntity {
 }
 
 export default CardEntity;
-

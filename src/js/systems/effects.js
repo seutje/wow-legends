@@ -304,6 +304,13 @@ export class EffectSystem {
       unit.data = unit.data || {};
       unit.data.attack = (unit.data.attack || 0) + attack;
       unit.data.health = (unit.data.health || 0) + health;
+      if (typeof health === 'number' && health !== 0) {
+        const prior = (unit.data.health || 0) - health;
+        const baseMax = (typeof unit.data.maxHealth === 'number') ? unit.data.maxHealth : prior;
+        unit.data.maxHealth = baseMax + health;
+        // Clamp current health to new max if health buff was negative
+        if (health < 0) unit.data.health = Math.max(0, Math.min(unit.data.health, unit.data.maxHealth));
+      }
     };
 
     const onPlay = ({ player: evtPlayer, card: played }) => {
@@ -638,6 +645,7 @@ export class EffectSystem {
       allyToTransform.name = into.name;
       allyToTransform.data.attack = into.attack;
       allyToTransform.data.health = into.health;
+      allyToTransform.data.maxHealth = into.health;
       allyToTransform.keywords = into.keywords;
 
       if (duration === 'endOfTurn') {
@@ -646,6 +654,11 @@ export class EffectSystem {
             allyToTransform.name = originalName; // Revert name
             allyToTransform.data.attack = originalData.attack;
             allyToTransform.data.health = originalData.health;
+            if (typeof originalData.maxHealth === 'number') {
+              allyToTransform.data.maxHealth = originalData.maxHealth;
+            } else {
+              allyToTransform.data.maxHealth = originalData.health;
+            }
             allyToTransform.keywords = originalKeywords;
           }
         };
@@ -724,8 +737,21 @@ export class EffectSystem {
               if (t.data && t.data.attack != null) t.data.attack -= amount;
               else if (t.attack != null) t.attack -= amount; // For hero
             } else if (property === 'health') {
-              if (t.data && t.data.health != null) t.data.health -= amount;
-              else if (t.health != null) t.health -= amount; // For hero
+              if (t.data && t.data.health != null) {
+                t.data.health -= amount;
+                if (typeof t.data.maxHealth === 'number') {
+                  t.data.maxHealth -= amount;
+                  if (t.data.maxHealth < 0) t.data.maxHealth = 0;
+                  t.data.health = Math.max(0, Math.min(t.data.health, t.data.maxHealth));
+                }
+              } else if (t.health != null) {
+                t.health -= amount; // For hero/non-card
+                if (typeof t.maxHealth === 'number') {
+                  t.maxHealth -= amount;
+                  if (t.maxHealth < 0) t.maxHealth = 0;
+                  t.health = Math.max(0, Math.min(t.health, t.maxHealth));
+                }
+              }
             } else if (property === 'armor') {
               if (t.data && t.data.armor != null) t.data.armor -= amount;
               else if (t.armor != null) t.armor -= amount; // For hero
@@ -739,8 +765,23 @@ export class EffectSystem {
         if (t.data && t.data.attack != null) t.data.attack += amount;
         else if (t.attack != null) t.attack += amount; // For hero
       } else if (property === 'health') {
-        if (t.data && t.data.health != null) t.data.health += amount;
-        else if (t.health != null) t.health += amount; // For hero
+        if (t.data && t.data.health != null) {
+          t.data.health += amount;
+          if (typeof amount === 'number' && amount !== 0) {
+            const prior = (t.data.health ?? 0) - amount;
+            const baseMax = (typeof t.data.maxHealth === 'number') ? t.data.maxHealth : prior;
+            t.data.maxHealth = baseMax + amount;
+            if (amount < 0) t.data.health = Math.max(0, Math.min(t.data.health, t.data.maxHealth));
+          }
+        } else if (t.health != null) {
+          t.health += amount; // For hero/non-card
+          if (typeof amount === 'number' && amount !== 0) {
+            const prior = (t.health ?? 0) - amount;
+            const baseMax = (typeof t.maxHealth === 'number') ? t.maxHealth : prior;
+            t.maxHealth = baseMax + amount;
+            if (amount < 0) t.health = Math.max(0, Math.min(t.health, t.maxHealth));
+          }
+        }
       } else if (property === 'armor') {
         if (t.data && t.data.armor != null) t.data.armor += amount;
         else if (t.armor != null) t.armor += amount; // For hero
@@ -765,7 +806,13 @@ export class EffectSystem {
     const apply = () => {
       card.data = card.data || {};
       if (attack) card.data.attack = (card.data.attack || 0) + attack;
-      if (health) card.data.health = (card.data.health || 0) + health;
+      if (health) {
+        card.data.health = (card.data.health || 0) + health;
+        const prior = (card.data.health || 0) - health;
+        const baseMax = (typeof card.data.maxHealth === 'number') ? card.data.maxHealth : prior;
+        card.data.maxHealth = baseMax + health;
+        if (health < 0) card.data.health = Math.max(0, Math.min(card.data.health, card.data.maxHealth));
+      }
     };
 
     const handler = ({ player: armorPlayer }) => {
@@ -797,7 +844,13 @@ export class EffectSystem {
     const apply = () => {
       card.data = card.data || {};
       if (attack) card.data.attack = (card.data.attack || 0) + attack;
-      if (health) card.data.health = (card.data.health || 0) + health;
+      if (health) {
+        card.data.health = (card.data.health || 0) + health;
+        const prior = (card.data.health || 0) - health;
+        const baseMax = (typeof card.data.maxHealth === 'number') ? card.data.maxHealth : prior;
+        card.data.maxHealth = baseMax + health;
+        if (health < 0) card.data.health = Math.max(0, Math.min(card.data.health, card.data.maxHealth));
+      }
     };
 
     const handler = ({ target }) => {
