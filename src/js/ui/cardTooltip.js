@@ -17,7 +17,18 @@ export function cardTooltip(card) {
   const art = new Image();
   art.className = 'card-art';
   art.alt = card.name;
-  art.src = `src/assets/art/${card.id}-art.png`;
+  {
+    let triedOptim = false;
+    art.onerror = () => {
+      if (!triedOptim) {
+        triedOptim = true;
+        art.src = `src/assets/art/${card.id}-art.png`;
+      } else {
+        art.remove();
+      }
+    };
+    art.src = `src/assets/optim/${card.id}-art.png`;
+  }
   const frame = new Image();
   frame.className = 'card-frame';
   frame.src = 'src/assets/frame.png';

@@ -58,6 +58,7 @@ Developer Notes
 - Simulation CLI: `npm run simulate` (quick AI turns). Balance sampling: `node tools/balance.mjs`.
 - Content pipeline: `node tools/cards-ingest.mjs` parses `CARDS.md` to `data/cards.json` (best effort).
 - Live reload policy: `live-reload.json` must be committed; never add to `.gitignore`.
+- Asset optimization: `npm run optim` compresses PNGs in `src/assets/art/*.png` (lossless deflate via sharp) and writes optimized copies to `src/assets/optim/` with the same filenames.
 
 Nightmare AI
 - Uses a small MLP (two hidden layers of 64) to score Q(s,a).

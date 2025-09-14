@@ -23,7 +23,17 @@ function buildCardEl(card) {
   art.className = 'card-art';
   art.alt = tooltipCard.name;
   art.onload = () => {};
-  art.onerror = () => { art.remove(); };
+  {
+    let triedOptim = false;
+    art.onerror = () => {
+      if (!triedOptim) {
+        triedOptim = true;
+        art.src = `src/assets/art/${tooltipCard.id}-art.png`;
+      } else {
+        art.remove();
+      }
+    };
+  }
 
   const frame = new Image();
   frame.className = 'card-frame';
@@ -49,7 +59,7 @@ function buildCardEl(card) {
   if (card.data?.attack != null) wrap.append(el('div', { class: 'stat attack' }, card.data.attack));
   if (card.data?.health != null) wrap.append(el('div', { class: 'stat health' }, card.data.health));
 
-  art.src = `src/assets/art/${tooltipCard.id}-art.png`;
+  art.src = `src/assets/optim/${tooltipCard.id}-art.png`;
   return wrap;
 }
 
@@ -82,7 +92,17 @@ function updateCardEl(cardEl, card) {
   // Update images if needed
   const art = cardEl.querySelector('img.card-art');
   if (art) {
-    const desiredSrc = `src/assets/art/${tooltipCard.id}-art.png`;
+    const desiredSrc = `src/assets/optim/${tooltipCard.id}-art.png`;
+    // Rebind onerror to ensure fallback uses current id
+    let triedOptim = false;
+    art.onerror = () => {
+      if (!triedOptim) {
+        triedOptim = true;
+        art.src = `src/assets/art/${tooltipCard.id}-art.png`;
+      } else {
+        art.remove();
+      }
+    };
     if (art.getAttribute('src') !== desiredSrc) art.src = desiredSrc;
     art.alt = tooltipCard.name;
   }

@@ -82,7 +82,7 @@ describe('UI Play', () => {
     const tip = container.querySelector('.p-hand .card-tooltip');
     expect(tip).toBeTruthy();
     const img = tip.querySelector('.card-art');
-    expect(img.getAttribute('src')).toBe(`src/assets/art/${card.id}-art.png`);
+    expect(img.getAttribute('src')).toBe(`src/assets/optim/${card.id}-art.png`);
     expect(tip.textContent).toContain(card.name);
     expect(tip.textContent).toContain(card.text);
     expect(tip.querySelector('.stat.cost').textContent).toBe(String(card.cost));
@@ -124,7 +124,7 @@ describe('UI Play', () => {
     const tip = container.querySelector('.p-field .card-tooltip');
     const img = tip.querySelector('.card-art');
     expect(img).toBeTruthy();
-    expect(img.getAttribute('src')).toBe(`src/assets/art/${summoner.id}-art.png`);
+    expect(img.getAttribute('src')).toBe(`src/assets/optim/${summoner.id}-art.png`);
     expect(tip.textContent).toContain(summoner.name);
     expect(tip.textContent).toContain(summoner.text);
     expect(tip.querySelector('.stat.attack').textContent).toBe('6');
