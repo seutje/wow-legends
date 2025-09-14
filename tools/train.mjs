@@ -1,6 +1,6 @@
 // Train the neural network AI with simple evolutionary RL.
-// - Loads best model from data/model.json if present
-// - Runs population of 100 for 10 generations
+// - Loads best model from data/model.json if present (unless reset)
+// - Runs population and generations provided via CLI args
 // - Evaluates vs a baseline MCTS opponent with capped steps
 // - Saves best to data/model.json
 
@@ -18,6 +18,8 @@ import MLP from '../src/js/systems/nn.js';
 import NeuralAI, { setActiveModel } from '../src/js/systems/ai-nn.js';
 import MCTS_AI from '../src/js/systems/ai-mcts.js';
 import { setDebugLogging, getOriginalConsole } from '../src/js/utils/logger.js';
+import { parseTrainArgs } from './train.args.mjs';
+import { RNG } from '../src/js/utils/rng.js';
 
 // Restrict console output during training to progress reports only
 const __originalLog = getOriginalConsole().log;
@@ -51,16 +53,20 @@ function cloneAndMutate(base, sigma = 0.1) {
   return m;
 }
 
-async function evalCandidate(model, { games = 1, maxRounds = 20, opponentMode = 'mcts' } = {}) {
+async function evalCandidate(model, { games = 5, maxRounds = 20, opponentMode = 'mcts' } = {}) {
   let total = 0;
   for (let g = 0; g < games; g++) {
     const game = new Game(null);
+    // Randomize RNG seed per evaluation to diversify decks/hands
+    const seed = (Math.floor(Math.random() * 0xFFFFFFFF)) >>> 0;
+    game.rng = new RNG(seed);
     await game.setupMatch();
     setActiveModel(model); // ensure endTurn or direct AI uses this model
 
     // Opponent is the nightmare AI (we control it directly), player uses MCTS baseline
     const aiOpp = new NeuralAI({ game, resourceSystem: game.resources, combatSystem: game.combat, model });
-    const playerAI = new MCTS_AI({ resourceSystem: game.resources, combatSystem: game.combat, game, iterations: 400, rolloutDepth: 6 });
+    // Use "hard" difficulty MCTS settings
+    const playerAI = new MCTS_AI({ resourceSystem: game.resources, combatSystem: game.combat, game, iterations: 5000, rolloutDepth: 10 });
 
     // Ensure start is player's turn (Game.setupMatch sets player start)
     let rounds = 0;
@@ -141,14 +147,13 @@ async function evalPopulationParallel(population, { games = 1, maxRounds = 16, c
 }
 
 async function main() {
-  const base = await loadBestOrRandom();
-  const POP = 100;
-  const GENS = 10;
+  const { pop: POP, gens: GENS, reset } = parseTrainArgs();
+  const base = reset ? new MLP([38,64,64,1]) : await loadBestOrRandom();
   const KEEP = Math.max(5, Math.floor(POP * 0.1));
   let best = base.clone();
   let bestScore = -Infinity;
 
-  progress(`[${now()}] Starting training: pop=${POP}, gens=${GENS}`);
+  progress(`[${now()}] Starting training: pop=${POP}, gens=${GENS}, reset=${Boolean(reset)}`);
 
   for (let gen = 0; gen < GENS; gen++) {
     const population = [];
@@ -158,7 +163,7 @@ async function main() {
       population.push(cloneAndMutate(best, sigma));
     }
     // Evaluate in parallel using worker threads
-    const scores = await evalPopulationParallel(population, { games: 1, maxRounds: 16 });
+    const scores = await evalPopulationParallel(population, { games: 5, maxRounds: 16 });
     scores.sort((a,b)=> b.score - a.score);
     const top = scores.slice(0, KEEP);
     const genBest = population[top[0].idx];

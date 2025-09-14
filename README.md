@@ -54,7 +54,7 @@ Developer Notes
   - Game orchestrator: `src/js/game.js`
   - Browser entry: `src/js/main.js`
 - Tests: `__tests__/*`, run with `npm test` or `npm run test:coverage`.
-- Train Nightmare AI: `npm run train` — evolutionary RL trains a neural model and saves to `data/model.json`.
+- Train Nightmare AI: `npm run train -- <population> <generations> <reset>` — evolutionary RL saves best model to `data/model.json`. Example: `npm run train -- 200 15 true`.
 - Simulation CLI: `npm run simulate` (quick AI turns). Balance sampling: `node tools/balance.mjs`.
 - Content pipeline: `node tools/cards-ingest.mjs` parses `CARDS.md` to `data/cards.json` (best effort).
 - Live reload policy: `live-reload.json` must be committed; never add to `.gitignore`.

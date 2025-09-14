@@ -6,19 +6,24 @@ import MLP from '../src/js/systems/nn.js';
 import NeuralAI, { setActiveModel } from '../src/js/systems/ai-nn.js';
 import MCTS_AI from '../src/js/systems/ai-mcts.js';
 import { setDebugLogging } from '../src/js/utils/logger.js';
+import { RNG } from '../src/js/utils/rng.js';
 
 // Disable debug logging inside the worker as well
 setDebugLogging(false);
 
-async function evalCandidate(model, { games = 1, maxRounds = 20 } = {}) {
+async function evalCandidate(model, { games = 5, maxRounds = 20 } = {}) {
   let total = 0;
   for (let g = 0; g < games; g++) {
     const game = new Game(null);
+    // Randomize RNG seed per evaluation to diversify matchups
+    const seed = (Math.floor(Math.random() * 0xFFFFFFFF)) >>> 0;
+    game.rng = new RNG(seed);
     await game.setupMatch();
     setActiveModel(model);
 
     const aiOpp = new NeuralAI({ game, resourceSystem: game.resources, combatSystem: game.combat, model });
-    const playerAI = new MCTS_AI({ resourceSystem: game.resources, combatSystem: game.combat, game, iterations: 400, rolloutDepth: 6 });
+    // Use "hard" difficulty MCTS settings
+    const playerAI = new MCTS_AI({ resourceSystem: game.resources, combatSystem: game.combat, game, iterations: 5000, rolloutDepth: 10 });
 
     let rounds = 0;
     while (rounds < maxRounds && game.player.hero.data.health > 0 && game.opponent.hero.data.health > 0) {
