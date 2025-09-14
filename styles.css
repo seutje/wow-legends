@@ -38,10 +38,10 @@ main {
   grid-auto-rows: min-content;
   gap: 12px 16px;
   grid-template-areas:
-    'ai-hero  ai-hand  ai-log'
-    'ai-mana  ai-field ai-log'
-    'p-mana   p-field  p-log'
-    'p-hero   p-hand   p-log';
+    'ai-mana  ai-hand  ai-log'
+    'ai-hero  ai-field ai-log'
+    'p-hero   p-field  p-log'
+    'p-mana   p-hand   p-log';
 }
 
 /* Assign grid areas */
