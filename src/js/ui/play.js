@@ -200,7 +200,7 @@ export function renderPlay(container, game, { onUpdate, onOpenDeckBuilder } = {}
 
     controls = el('div', { class: 'controls' },
       el('button', { class: 'btn-deck-builder', onclick: () => { onOpenDeckBuilder?.(); } }, 'Deck Builder'),
-      el('button', { class: 'btn-hero-power', onclick: async () => { await game.useHeroPower(p); onUpdate?.(); } }, 'Hero Power'),
+      el('button', { class: 'btn-hero-power', onclick: async () => { await game.useHeroPower(game.player); onUpdate?.(); } }, 'Hero Power'),
       el('button', { class: 'btn-end-turn', onclick: async (ev) => {
         const btn = ev?.currentTarget;
         if (btn) btn.disabled = true;
@@ -230,13 +230,13 @@ export function renderPlay(container, game, { onUpdate, onOpenDeckBuilder } = {}
     const pHero = el('div', { class: 'slot p-hero' }, el('h3', {}, 'Player hero'), buildCardEl(p.hero));
     const heroEl = pHero.querySelector('.card-tooltip');
     if (heroEl && !heroEl.dataset.clickAttached) {
-      heroEl.addEventListener('click', async () => { await game.attack(p, p.hero.id); onUpdate?.(); });
+      heroEl.addEventListener('click', async () => { await game.attack(game.player, game.player.hero.id); onUpdate?.(); });
       heroEl.dataset.clickAttached = '1';
     }
     const pMana = el('div', { class: 'slot p-mana' }, el('h3', {}, 'Mana'), el('div', { class: 'mana' }, `${game.resources.pool(p)} / ${game.resources.available(p)}`));
     const pLog = logPane('Player Log', p.log); pLog.classList.add('p-log');
-    const pField = zoneCards('Player Battlefield', p.battlefield.cards, { clickCard: async (c)=>{ await game.attack(p, c.id); onUpdate?.(); } }); pField.classList.add('p-field');
-    const pHand = zoneCards('Player Hand', p.hand.cards, { clickCard: async (c)=>{ if (!await game.playFromHand(p, c.id)) { /* ignore */ } onUpdate?.(); } }); pHand.classList.add('p-hand');
+    const pField = zoneCards('Player Battlefield', p.battlefield.cards, { clickCard: async (c)=>{ await game.attack(game.player, c.id); onUpdate?.(); } }); pField.classList.add('p-field');
+    const pHand = zoneCards('Player Hand', p.hand.cards, { clickCard: async (c)=>{ if (!await game.playFromHand(game.player, c.id)) { /* ignore */ } onUpdate?.(); } }); pHand.classList.add('p-hand');
 
     board.append(aiHero, aiMana, aiHand, aiField, aiLog, pHero, pMana, pField, pHand, pLog);
     container.append(controls, board);
@@ -248,7 +248,7 @@ export function renderPlay(container, game, { onUpdate, onOpenDeckBuilder } = {}
 
   // Update controls disabled states
   const heroPowerBtn = controls.querySelector('.btn-hero-power');
-  if (heroPowerBtn) heroPowerBtn.disabled = !!(game.state?.aiThinking || p.hero.powerUsed || game.resources.pool(p) < 2 || p.hero.data.freezeTurns > 0);
+  if (heroPowerBtn) heroPowerBtn.disabled = !!(game.state?.aiThinking || game.player.hero.powerUsed || game.resources.pool(game.player) < 2 || game.player.hero.data.freezeTurns > 0);
   const endTurnBtn = controls.querySelector('.btn-end-turn');
   if (endTurnBtn) endTurnBtn.disabled = !!(game.state?.aiThinking);
   const deckBtn = controls.querySelector('.btn-deck-builder');
@@ -268,8 +268,8 @@ export function renderPlay(container, game, { onUpdate, onOpenDeckBuilder } = {}
 
   // Update zones
   syncCardsSection(board.querySelector('.ai-field'), e.battlefield.cards, {});
-  syncCardsSection(board.querySelector('.p-field'), p.battlefield.cards, { clickCard: async (c)=>{ await game.attack(p, c.id); onUpdate?.(); } });
-  syncCardsSection(board.querySelector('.p-hand'), p.hand.cards, { clickCard: async (c)=>{ if (!await game.playFromHand(p, c.id)) { /* ignore */ } onUpdate?.(); } });
+  syncCardsSection(board.querySelector('.p-field'), p.battlefield.cards, { clickCard: async (c)=>{ await game.attack(game.player, c.id); onUpdate?.(); } });
+  syncCardsSection(board.querySelector('.p-hand'), p.hand.cards, { clickCard: async (c)=>{ if (!await game.playFromHand(game.player, c.id)) { /* ignore */ } onUpdate?.(); } });
   const aiHand = board.querySelector('.ai-hand .count');
   if (aiHand) aiHand.textContent = `${e.hand.size()} cards`;
 
