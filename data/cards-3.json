@@ -166,10 +166,7 @@
     "type": "spell",
     "cost": 2,
     "effects": [
-      {
-        "type": "rawText",
-        "text": "Secret — When an enemy attacks, return it to its owner’s hand; it costs (2) more."
-      }
+      { "type": "freezingTrap" }
     ],
     "keywords": [
       "Secret",

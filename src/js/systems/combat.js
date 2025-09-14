@@ -20,14 +20,29 @@ function armorApply(card, amount) {
 }
 
 export class CombatSystem {
-  constructor() {
+  constructor(bus = null) {
     this._attacks = new Map(); // attackerId -> { attacker, blockers: Card[] }
     this._defenderHero = null;
+    this.bus = bus;
   }
 
   declareAttacker(attacker) {
     // Cannot attack when frozen/stunned
     if (getStat(attacker, 'freezeTurns', 0) > 0) return false;
+    // Emit an attack declaration event to allow reactive effects (e.g., secrets)
+    if (this.bus) {
+      try {
+        this.bus.emit('attackDeclared', { attacker });
+      } catch (e) {
+        // Defensive: do not block combat due to handler errors
+        console.error(e);
+      }
+      // A handler may cancel the attack by setting a flag on the attacker
+      if (attacker?.data?.attackCancelled) {
+        attacker.data.attackCancelled = false; // reset flag for future turns
+        return false;
+      }
+    }
     this._attacks.set(attacker.id, { attacker, blockers: [] });
     return true;
   }

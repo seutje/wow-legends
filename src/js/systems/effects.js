@@ -128,6 +128,9 @@ export class EffectSystem {
         case 'explosiveTrap':
           this.explosiveTrap(effect, context);
           break;
+        case 'freezingTrap':
+          this.freezingTrap(effect, context);
+          break;
         case 'chooseOne':
           await this.handleChooseOne(effect, context);
           break;
@@ -430,6 +433,33 @@ export class EffectSystem {
     };
 
     const off = game.bus.on('damageDealt', handler);
+  }
+
+  freezingTrap(effect, context) {
+    const { game, player, card } = context;
+    const opponent = player === game.player ? game.opponent : game.player;
+
+    const handler = ({ attacker }) => {
+      // Trigger only when an enemy ally (not hero/equipment) declares an attack
+      if (!attacker || attacker.type !== 'ally') return;
+      // Ensure the attacker belongs to the opponent side at the moment of attack
+      const isEnemy = opponent.battlefield.cards.includes(attacker);
+      if (!isEnemy) return;
+
+      // Cancel the attack via flag recognized by CombatSystem
+      attacker.data = attacker.data || {};
+      attacker.data.attackCancelled = true;
+
+      // Return to owner's hand and increase cost by 2
+      opponent.battlefield.moveTo(opponent.hand, attacker.id);
+      attacker.cost = (attacker.cost || 0) + 2;
+      game.bus.emit('cardReturned', { player, card: attacker });
+
+      // Secret triggers once
+      off();
+    };
+
+    const off = game.bus.on('attackDeclared', handler);
   }
 
   drawOnHeal(effect, context) {

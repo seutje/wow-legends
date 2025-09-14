@@ -26,7 +26,9 @@ export default class Game {
     // Systems
     this.turns = new TurnSystem();
     this.resources = new ResourceSystem(this.turns);
-    this.combat = new CombatSystem();
+    // Create the event bus before systems that depend on it
+    this.bus = new EventBus();
+    this.combat = new CombatSystem(this.bus);
     this.effects = new EffectSystem(this);
     // Use deterministic RNG in tests/node to stabilize content selection
     if (typeof window === 'undefined') {
@@ -34,7 +36,6 @@ export default class Game {
     } else {
       this.rng = new RNG();
     }
-    this.bus = new EventBus();
     this.quests = new QuestSystem(this);
 
       this.turns.bus.on('turn:start', ({ player }) => {
