@@ -11,11 +11,11 @@ function setStat(card, key, val) {
 }
 
 function armorApply(card, amount) {
-  const a = (card?.data?.armor ?? 0);
+  const current = (card?.data?.armor ?? 0);
+  const a = Math.max(0, current);
   const use = Math.min(a, amount);
-  if (use > 0) {
-    card.data.armor = a - use;
-  }
+  if (!card.data) card.data = {};
+  card.data.armor = a - use; // never negative
   return amount - use;
 }
 

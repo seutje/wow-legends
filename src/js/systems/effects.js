@@ -34,8 +34,22 @@ export class EffectSystem {
         }
 
         const { player, game } = context;
-        const candidates = [player.hero, ...player.battlefield.cards.filter(c => c.type !== 'quest')]
-          .filter(isTargetable);
+        const opponent = player === game.player ? game.opponent : game.player;
+        // If any grouped buff has a negative amount, treat it as a debuff and allow enemy targets
+        const isDebuff = grouped.some(g => typeof g.amount === 'number' && g.amount < 0);
+
+        let candidates = [
+          player.hero,
+          ...player.battlefield.cards.filter(c => c.type !== 'quest')
+        ].filter(isTargetable);
+
+        if (isDebuff) {
+          const enemy = selectTargets([
+            opponent.hero,
+            ...opponent.battlefield.cards.filter(c => c.type !== 'quest'),
+          ]);
+          candidates = [...candidates, ...enemy];
+        }
         const chosen = await game.promptTarget(candidates);
         if (chosen === game.CANCEL) throw game.CANCEL;
         if (chosen) {
@@ -250,8 +264,10 @@ export class EffectSystem {
       }
       let remaining = dmgAmount;
       if (t.data && typeof t.data.armor === 'number') {
-        const use = Math.min(t.data.armor, remaining);
-        t.data.armor -= use;
+        const current = t.data.armor;
+        const a = Math.max(0, current);
+        const use = Math.min(a, remaining);
+        t.data.armor = a - use; // never negative
         remaining -= use;
       }
       if (remaining <= 0) continue;
@@ -726,10 +742,19 @@ export class EffectSystem {
         if (forcedTarget) {
           actualTargets.push(forcedTarget);
         } else {
-          const candidates = [
+          // Allow enemy targets when this is a debuff (negative amount)
+          const isDebuff = typeof amount === 'number' && amount < 0;
+          let candidates = [
             player.hero,
             ...player.battlefield.cards.filter(c => c.type !== 'quest')
           ].filter(isTargetable);
+          if (isDebuff) {
+            const enemy = selectTargets([
+              opponent.hero,
+              ...opponent.battlefield.cards.filter(c => c.type !== 'quest'),
+            ]);
+            candidates = [...candidates, ...enemy];
+          }
           const chosen = await game.promptTarget(candidates);
           if (chosen) actualTargets.push(chosen);
         }
@@ -763,9 +788,14 @@ export class EffectSystem {
                   t.health = Math.max(0, Math.min(t.health, t.maxHealth));
                 }
               }
-            } else if (property === 'armor') {
-              if (t.data && t.data.armor != null) t.data.armor -= amount;
-              else if (t.armor != null) t.armor -= amount; // For hero
+      } else if (property === 'armor') {
+        if (t.data && t.data.armor != null) {
+          t.data.armor -= amount;
+          if (t.data.armor < 0) t.data.armor = 0;
+        } else if (t.armor != null) {
+          t.armor -= amount; // For hero
+          if (t.armor < 0) t.armor = 0;
+        }
             } else if (property === 'spellDamage') {
               if (t.data && typeof t.data.spellDamage === 'number') {
                 t.data.spellDamage -= amount;
@@ -799,8 +829,13 @@ export class EffectSystem {
           }
         }
       } else if (property === 'armor') {
-        if (t.data && t.data.armor != null) t.data.armor += amount;
-        else if (t.armor != null) t.armor += amount; // For hero
+        if (t.data && t.data.armor != null) {
+          t.data.armor += amount;
+          if (t.data.armor < 0) t.data.armor = 0;
+        } else if (t.armor != null) {
+          t.armor += amount; // For hero
+          if (t.armor < 0) t.armor = 0;
+        }
         if (amount > 0) {
           let p = null;
           if (t === player.hero) p = player;
