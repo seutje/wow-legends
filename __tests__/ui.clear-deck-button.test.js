@@ -49,6 +49,7 @@ test('clear deck button empties deck and disables use', async () => {
   });
   clearDeckBtn.addEventListener('click', () => {
     deckState.cards.length = 0;
+    deckState.hero = null;
     rerenderDeck();
   });
   useDeckBtn.addEventListener('click', async () => {
@@ -64,10 +65,9 @@ test('clear deck button empties deck and disables use', async () => {
   expect(deckState.cards.length).toBe(60);
   expect(useDeckBtn.disabled).toBe(false);
 
-  // Clear deck should empty cards but keep hero, and disable use
+  // Clear deck should empty cards AND clear hero, and disable use
   clearDeckBtn.dispatchEvent(new window.Event('click'));
-  expect(deckState.hero?.type).toBe('hero');
+  expect(deckState.hero).toBeNull();
   expect(deckState.cards.length).toBe(0);
   expect(useDeckBtn.disabled).toBe(true);
 });
-

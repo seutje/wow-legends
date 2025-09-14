@@ -190,6 +190,8 @@ function syncLogPane(pane, entries = []) {
 
 import { setDebugLogging, isDebugLogging } from '../utils/logger.js';
 
+import { saveDifficulty } from '../utils/settings.js';
+
 export function renderPlay(container, game, { onUpdate, onOpenDeckBuilder } = {}) {
   const p = game.player; const e = game.opponent;
 
@@ -205,6 +207,7 @@ export function renderPlay(container, game, { onUpdate, onOpenDeckBuilder } = {}
       onchange: (e) => {
         const v = e.target.value;
         if (game.state) game.state.difficulty = v;
+        try { saveDifficulty(v); } catch {}
         onUpdate?.();
       }
     }, ...diffOptions.map(opt => el('option', { value: opt, selected: (game.state?.difficulty || 'easy') === opt }, opt.charAt(0).toUpperCase() + opt.slice(1))));

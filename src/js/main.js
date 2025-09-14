@@ -4,6 +4,8 @@ import { renderOptions } from './ui/options.js';
 import { setDebugLogging } from './utils/logger.js';
 import { fillDeckRandomly } from './utils/deckbuilder.js';
 import { renderPlay } from './ui/play.js';
+import { loadSettings, rehydrateDeck, saveLastDeck } from './utils/settings.js';
+import { deriveDeckFromGame } from './utils/deckstate.js';
 
 function qs(sel) { return document.querySelector(sel); }
 
@@ -13,6 +15,20 @@ const mainEl = qs('main');
 
 const game = new Game(root);
 await game.init();
+
+// Load persisted settings: difficulty and last used deck
+try {
+  const settings = loadSettings();
+  if (settings?.difficulty) {
+    game.state.difficulty = settings.difficulty;
+  }
+  if (settings?.lastDeck) {
+    const deck = rehydrateDeck(settings.lastDeck, game.allCards);
+    if (deck) {
+      await game.reset(deck);
+    }
+  }
+} catch {}
 
 // Expose for quick dev console hooks
 window.game = game;
@@ -86,6 +102,12 @@ const rerenderDeck = () => {
 };
 function openDeckBuilder() {
   // Show deck builder in sidebar and hide the game board
+  // Load the active deck into the editor state
+  try {
+    const cur = deriveDeckFromGame(game);
+    if (cur.hero) deckState.hero = cur.hero;
+    deckState.cards = Array.isArray(cur.cards) ? Array.from(cur.cards) : [];
+  } catch {}
   deckRoot.style.display = 'block';
   sidebar.style.display = 'block';
   toggleGameVisible(false);
@@ -97,6 +119,7 @@ fillRandomBtn.addEventListener('click', () => {
 });
 clearDeckBtn.addEventListener('click', () => {
   deckState.cards.length = 0;
+  deckState.hero = null;
   rerenderDeck();
 });
   useDeckBtn.addEventListener('click', async () => {
@@ -105,6 +128,8 @@ clearDeckBtn.addEventListener('click', () => {
     sidebar.style.display = 'none';
     toggleGameVisible(true);
     await game.reset({ hero: deckState.hero, cards: deckState.cards });
+    // Persist last used deck
+    try { saveLastDeck({ hero: deckState.hero, cards: deckState.cards }); } catch {}
     rerender();
     // No RAF loop; state updates via DOM events
   });
