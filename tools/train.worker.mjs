@@ -22,8 +22,8 @@ async function evalCandidate(model, { games = 5, maxRounds = 20 } = {}) {
     setActiveModel(model);
 
     const aiOpp = new NeuralAI({ game, resourceSystem: game.resources, combatSystem: game.combat, model });
-    // Use "hard" difficulty MCTS settings
-    const playerAI = new MCTS_AI({ resourceSystem: game.resources, combatSystem: game.combat, game, iterations: 5000, rolloutDepth: 10 });
+    // Use "hard" difficulty MCTS settings with full-effect simulation during search
+    const playerAI = new MCTS_AI({ resourceSystem: game.resources, combatSystem: game.combat, game, iterations: 5000, rolloutDepth: 10, fullSim: true });
 
     let rounds = 0;
     while (rounds < maxRounds && game.player.hero.data.health > 0 && game.opponent.hero.data.health > 0) {

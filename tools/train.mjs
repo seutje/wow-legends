@@ -79,8 +79,8 @@ async function evalCandidate(model, { games = 5, maxRounds = 20, opponentMode = 
 
     // Opponent is the nightmare AI (we control it directly), player uses MCTS baseline
     const aiOpp = new NeuralAI({ game, resourceSystem: game.resources, combatSystem: game.combat, model });
-    // Use "hard" difficulty MCTS settings
-    const playerAI = new MCTS_AI({ resourceSystem: game.resources, combatSystem: game.combat, game, iterations: 5000, rolloutDepth: 10 });
+    // Use "hard" difficulty MCTS settings with full-effect simulation during search
+    const playerAI = new MCTS_AI({ resourceSystem: game.resources, combatSystem: game.combat, game, iterations: 5000, rolloutDepth: 10, fullSim: true });
 
     // Ensure start is player's turn (Game.setupMatch sets player start)
     let rounds = 0;

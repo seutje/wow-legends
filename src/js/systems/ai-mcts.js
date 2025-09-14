@@ -2,6 +2,9 @@ import CombatSystem from './combat.js';
 import { selectTargets } from './targeting.js';
 import { evaluateGameState } from './ai-heuristics.js';
 import Card from '../entities/card.js';
+import Game from '../game.js';
+import Player from '../entities/player.js';
+import Hero from '../entities/hero.js';
 
 // Simple Monte Carlo Tree Search AI
 // - Explores sequences of actions (play card / use hero power / end)
@@ -28,12 +31,13 @@ class MCTSNode {
 }
 
 export class MCTS_AI {
-  constructor({ resourceSystem, combatSystem, game = null, iterations = 500, rolloutDepth = 5 } = {}) {
+  constructor({ resourceSystem, combatSystem, game = null, iterations = 500, rolloutDepth = 5, fullSim = false } = {}) {
     this.resources = resourceSystem;
     this.combat = combatSystem;
     this.game = game; // for applying chosen actions correctly
     this.iterations = iterations;
     this.rolloutDepth = rolloutDepth;
+    this.fullSim = !!fullSim;
     // Prefer offloading search to a Web Worker when available (browser only)
     this._canUseWorker = (typeof window !== 'undefined') && (typeof Worker !== 'undefined');
   }
@@ -292,6 +296,197 @@ export class MCTS_AI {
     return best;
   }
 
+  // ---------- Full-fidelity simulation using cloned Game ----------
+
+  _deepCloneEffects(effects) {
+    return effects ? JSON.parse(JSON.stringify(effects)) : [];
+  }
+
+  _cloneCardEntity(c) {
+    const copy = new Card({
+      id: c.id,
+      type: c.type,
+      name: c.name,
+      cost: c.cost,
+      keywords: Array.isArray(c.keywords) ? Array.from(c.keywords) : [],
+      data: c.data ? { ...c.data } : {},
+      text: c.text,
+      effects: this._deepCloneEffects(c.effects),
+      combo: this._deepCloneEffects(c.combo),
+      requirement: c.requirement || null,
+      reward: this._deepCloneEffects(c.reward || []),
+      summonedBy: c.summonedBy || null,
+    });
+    if (c.deathrattle) copy.deathrattle = this._deepCloneEffects(c.deathrattle);
+    return copy;
+  }
+
+  _cloneHero(h) {
+    const hero = new Hero({
+      id: h.id,
+      name: h.name,
+      data: h.data ? { ...h.data } : {},
+      keywords: Array.isArray(h.keywords) ? Array.from(h.keywords) : [],
+      text: h.text,
+      effects: this._deepCloneEffects(h.active || h.effects || []),
+      active: this._deepCloneEffects(h.active || []),
+      passive: this._deepCloneEffects(h.passive || []),
+    });
+    hero.powerUsed = !!h.powerUsed;
+    // Equipment can be either Equipment entities or equipment-like cards; copy shallowly
+    hero.equipment = Array.isArray(h.equipment) ? h.equipment.map(eq => ({
+      id: eq.id,
+      name: eq.name,
+      attack: eq.attack || 0,
+      armor: eq.armor || 0,
+      durability: eq.durability || 0,
+      type: eq.type,
+    })) : [];
+    return hero;
+  }
+
+  _clonePlayer(p) {
+    const player = new Player({ name: p.name, hero: this._cloneHero(p.hero) });
+    player.cardsPlayedThisTurn = p.cardsPlayedThisTurn || 0;
+    player.armorGainedThisTurn = p.armorGainedThisTurn || 0;
+    // Zones: preserve order
+    player.library.cards = p.library.cards.map(c => this._cloneCardEntity(c));
+    player.hand.cards = p.hand.cards.map(c => this._cloneCardEntity(c));
+    player.graveyard.cards = p.graveyard.cards.map(c => this._cloneCardEntity(c));
+    player.battlefield.cards = p.battlefield.cards.map(c => this._cloneCardEntity(c));
+    player.removed.cards = p.removed.cards.map(c => this._cloneCardEntity(c));
+    return player;
+  }
+
+  _buildSimFrom(game, me, opp) {
+    const sim = new Game(null);
+    // Clone players (do not call setupMatch)
+    sim.player = this._clonePlayer(me);
+    sim.opponent = this._clonePlayer(opp);
+    // Sync turns and activePlayer
+    sim.turns.turn = game?.turns?.turn || 1;
+    sim.turns.setActivePlayer(sim.player);
+    // Sync resources pool to current values
+    const myPool = this.resources?.pool ? this.resources.pool(me) : Math.min(sim.turns.turn, 10);
+    const opPool = this.resources?.pool ? this.resources.pool(opp) : Math.min(sim.turns.turn, 10);
+    // startTurn initializes internal pool maps; then overwrite to exact values
+    sim.resources.startTurn(sim.player);
+    sim.resources.startTurn(sim.opponent);
+    sim.resources._pool.set(sim.player, myPool);
+    sim.resources._pool.set(sim.opponent, opPool);
+    return sim;
+  }
+
+  _legalActionsSim(sim, me) {
+    const actions = [];
+    const pool = sim.resources.pool(me);
+    const canPower = me.hero?.active?.length && !me.hero.powerUsed && pool >= 2;
+    if (canPower) actions.push({ card: null, usePower: true, end: false });
+    for (const c of me.hand.cards) {
+      const cost = c.cost || 0;
+      if (pool >= cost) actions.push({ card: c, usePower: false, end: false });
+    }
+    actions.push({ card: null, usePower: false, end: true });
+    return actions;
+  }
+
+  _cloneSim(sim) {
+    // Clone from current sim to a fresh sim snapshot
+    return this._buildSimFrom(sim, sim.player, sim.opponent);
+  }
+
+  async _applyActionSim(sim, action) {
+    const s = this._cloneSim(sim);
+    const me = s.player; const opp = s.opponent;
+    if (action.end) {
+      return await this._resolveCombatAndScoreSim(s);
+    }
+    if (action.card) {
+      const ok = await s.playFromHand(me, action.card.id);
+      if (!ok) return { terminal: true, value: -Infinity }; // illegal in sim => punish
+    }
+    if (action.usePower) {
+      const ok = await s.useHeroPower(me);
+      if (!ok) return { terminal: true, value: -Infinity };
+    }
+    return { terminal: false, state: s };
+  }
+
+  async _resolveCombatAndScoreSim(sim) {
+    const me = sim.player; const opp = sim.opponent;
+    // Attack with all ready attackers; let Game decide targets
+    const attackers = [me.hero, ...me.battlefield.cards]
+      .filter(c => (c.type !== 'equipment') && !c.data?.attacked && ((typeof c.totalAttack === 'function' ? c.totalAttack() : c.data?.attack || 0) > 0) && !c.data?.summoningSick);
+    for (const a of attackers) {
+      // Respect Windfury (two attacks)
+      const maxAttacks = a?.keywords?.includes?.('Windfury') ? 2 : 1;
+      for (let i = (a.data?.attacksUsed || 0); i < maxAttacks; i++) {
+        const ok = await sim.attack(me, a.id);
+        if (!ok) break;
+      }
+    }
+    const value = evaluateGameState({
+      player: me,
+      opponent: opp,
+      turn: sim.turns.turn,
+      resources: sim.resources.pool(me),
+      overloadNextPlayer: 0,
+      overloadNextOpponent: 0,
+    });
+    return { terminal: true, value };
+  }
+
+  async _randomPlayoutSim(sim) {
+    let s = this._cloneSim(sim);
+    for (let d = 0; d < this.rolloutDepth; d++) {
+      const actions = this._legalActionsSim(s, s.player);
+      if (!actions.length) break;
+      const nonEnd = actions.filter(a => !a.end);
+      const pickFrom = nonEnd.length ? nonEnd : actions;
+      const a = pickFrom[Math.floor(Math.random() * pickFrom.length)];
+      const res = await this._applyActionSim(s, a);
+      if (res.terminal) return res.value;
+      s = res.state;
+    }
+    const res = await this._resolveCombatAndScoreSim(s);
+    return res.value;
+  }
+
+  async _searchFullSimAsync(rootGame) {
+    // Root is a sim snapshot built from the external game state
+    const rootSim = rootGame;
+    const root = new MCTSNode(rootSim);
+    for (let i = 0; i < this.iterations; i++) {
+      let node = root;
+      // Selection
+      while (node.untried === null ? false : node.untried.length === 0 && node.children.length) {
+        node = node.children.reduce((a, b) => (a.ucb1() > b.ucb1() ? a : b));
+      }
+      // Expansion
+      if (node.untried === null) node.untried = this._legalActionsSim(node.state, node.state.player);
+      if (node.untried.length) {
+        const idx = Math.floor(Math.random() * node.untried.length);
+        const action = node.untried.splice(idx, 1)[0];
+        const res = await this._applyActionSim(node.state, action);
+        if (res.terminal) {
+          const value = res.value;
+          let n = node; while (n) { n.visits++; n.total += value; n = n.parent; }
+          continue;
+        } else {
+          const child = new MCTSNode(res.state, node, action);
+          node.children.push(child);
+          node = child;
+        }
+      }
+      // Rollout
+      const value = await this._randomPlayoutSim(node.state);
+      // Backpropagation
+      while (node) { node.visits++; node.total += value; node = node.parent; }
+    }
+    const best = this._bestChild(root);
+    return best?.action || { end: true };
+  }
+
   _search(rootState) {
     const root = new MCTSNode(this._cloneState(rootState));
     for (let i = 0; i < this.iterations; i++) {
@@ -450,7 +645,13 @@ export class MCTS_AI {
         overloadNextPlayer: 0,
         overloadNextOpponent: 0,
       };
-      const action = await this._searchAsync(rootState);
+      let action;
+      if (this.fullSim && this.game) {
+        const simRoot = this._buildSimFrom(this.game, player, opponent);
+        action = await this._searchFullSimAsync(simRoot);
+      } else {
+        action = await this._searchAsync(rootState);
+      }
       if (!action || action.end) break;
       // Apply chosen action to real game state
       if (action.card) {
