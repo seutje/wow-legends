@@ -169,7 +169,16 @@ async function main() {
     const genBest = population[top[0].idx];
     const genBestScore = top[0].score;
     if (genBestScore > bestScore) { best = genBest.clone(); bestScore = genBestScore; }
-    progress(`[${now()}] Gen ${gen+1}/${GENS} best=${genBestScore.toFixed(3)} overall=${bestScore.toFixed(3)}`);
+
+    // Save best model for this generation
+    try {
+      const genPath = path.join(__dirname, '..', 'data', `model_gen_${gen+1}.json`);
+      const genJSON = JSON.stringify(genBest.toJSON(), null, 2);
+      await fs.writeFile(genPath, genJSON, 'utf8');
+      progress(`[${now()}] Gen ${gen+1}/${GENS} best=${genBestScore.toFixed(3)} overall=${bestScore.toFixed(3)} | saved ${genPath}`);
+    } catch (e) {
+      progress(`[${now()}] Gen ${gen+1}/${GENS} best=${genBestScore.toFixed(3)} overall=${bestScore.toFixed(3)} | failed to save generation model: ${e?.message || e}`);
+    }
   }
 
   // Save best model
