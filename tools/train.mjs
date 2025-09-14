@@ -1,11 +1,13 @@
 // Train the neural network AI with simple evolutionary RL.
 // - Loads best model from data/model.json if present
-// - Runs population of 500 for 10 generations
+// - Runs population of 100 for 10 generations
 // - Evaluates vs a baseline MCTS opponent with capped steps
 // - Saves best to data/model.json
 
 import fs from 'fs/promises';
 import path from 'path';
+import os from 'os';
+import { Worker } from 'node:worker_threads';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -15,15 +17,19 @@ import Game from '../src/js/game.js';
 import MLP from '../src/js/systems/nn.js';
 import NeuralAI, { setActiveModel } from '../src/js/systems/ai-nn.js';
 import MCTS_AI from '../src/js/systems/ai-mcts.js';
+import { setDebugLogging, getOriginalConsole } from '../src/js/utils/logger.js';
 
 // Restrict console output during training to progress reports only
-const __originalLog = console.log;
+const __originalLog = getOriginalConsole().log;
 const __originalInfo = console.info;
 const __originalWarning = console.warn;
 console.log = function noop() {};
 console.info = function noop() {};
 console.warn = function noop() {};
 function progress(msg) { __originalLog(msg); }
+
+// Ensure any debug logging flags are off in Node context
+setDebugLogging(false);
 
 const MODEL_PATH = path.join(__dirname, '..', 'data', 'model.json');
 
@@ -91,10 +97,53 @@ async function evalCandidate(model, { games = 1, maxRounds = 20, opponentMode = 
   return total / games;
 }
 
+// Parallel evaluation with worker pool
+async function evalPopulationParallel(population, { games = 1, maxRounds = 16, concurrency = Math.max(1, (os.cpus()?.length || 2) - 1) } = {}) {
+  const workerURL = new URL('./train.worker.mjs', import.meta.url);
+  const poolSize = Math.max(1, Number(process.env.TRAIN_WORKERS) || concurrency);
+  const workers = Array.from({ length: poolSize }, () => new Worker(workerURL, { type: 'module' }));
+  let nextTask = 0;
+  const scores = new Array(population.length);
+  let completed = 0;
+
+  function runTaskOn(worker, idx) {
+    return new Promise((resolve) => {
+      const id = `${idx}-${Math.random().toString(36).slice(2)}`;
+      const onMsg = (msg) => {
+        if (msg?.id !== id) return;
+        worker.off('message', onMsg);
+        resolve(msg);
+      };
+      worker.on('message', onMsg);
+      worker.postMessage({
+        id,
+        cmd: 'eval',
+        payload: { modelJSON: population[idx].toJSON(), games, maxRounds }
+      });
+    });
+  }
+
+  async function workerLoop(worker) {
+    while (true) {
+      const idx = nextTask++;
+      if (idx >= population.length) break;
+      const res = await runTaskOn(worker, idx);
+      if (res?.ok) scores[idx] = res.result;
+      else scores[idx] = -Infinity;
+      completed++;
+      if (completed % 50 === 0) progress(`[${now()}] Evaluated ${completed}/${population.length}`);
+    }
+  }
+
+  await Promise.all(workers.map(w => workerLoop(w)));
+  await Promise.all(workers.map(w => w.terminate()));
+  return scores.map((score, idx) => ({ idx, score }));
+}
+
 async function main() {
   const base = await loadBestOrRandom();
   const POP = 100;
-  const GENS = 50;
+  const GENS = 10;
   const KEEP = Math.max(5, Math.floor(POP * 0.1));
   let best = base.clone();
   let bestScore = -Infinity;
@@ -108,12 +157,8 @@ async function main() {
       const sigma = 0.1 * (1 - gen / GENS) + 0.02; // anneal mutation
       population.push(cloneAndMutate(best, sigma));
     }
-    const scores = [];
-    for (let i = 0; i < population.length; i++) {
-      const score = await evalCandidate(population[i], { games: 1, maxRounds: 16 });
-      scores.push({ idx: i, score });
-      if ((i+1) % 50 === 0) progress(`[${now()}] Gen ${gen+1}/${GENS} evaluated ${i+1}/${POP}`);
-    }
+    // Evaluate in parallel using worker threads
+    const scores = await evalPopulationParallel(population, { games: 1, maxRounds: 16 });
     scores.sort((a,b)=> b.score - a.score);
     const top = scores.slice(0, KEEP);
     const genBest = population[top[0].idx];

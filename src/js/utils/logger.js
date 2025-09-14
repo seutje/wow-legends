@@ -1,28 +1,45 @@
-// Simple browser-only debug logger switcher.
-// By default, console.log is disabled in the browser to avoid noisy output.
-// Tests already silence console in jest.setup.js; tools remain unaffected (Node).
+// Simple debug logging switcher for both browser and Node.
+// By default, console.log is silenced to avoid noisy output in CLI and UI.
 
 let originals = null;
 let enabled = false;
 const LEVELS = { debug: 0, info: 1, warn: 2, error: 3, silent: 4 };
 
-export function setDebugLogging(on) {
-  enabled = !!on;
-  if (typeof window === 'undefined') return; // Don't touch Node tools
+function ensureOriginals() {
   if (!originals) {
     originals = {
       log: console.log,
+      info: console.info ? console.info.bind(console) : console.log.bind(console),
+      warn: console.warn ? console.warn.bind(console) : console.log.bind(console),
+      error: console.error ? console.error.bind(console) : console.log.bind(console),
     };
   }
-  console.log = enabled ? originals.log : function noop() {};
+}
+
+function debugLogWrapper(...args) {
+  if (!enabled) return;
+  ensureOriginals();
+  return originals.log(...args);
+}
+debugLogWrapper.__isDebugWrapper = true;
+
+export function setDebugLogging(on) {
+  enabled = !!on;
+  ensureOriginals();
+  if (!console.log.__isDebugWrapper) {
+    console.log = debugLogWrapper;
+  }
 }
 
 export function isDebugLogging() { return !!enabled; }
 
-// Initialize disabled by default in the browser
-if (typeof window !== 'undefined') {
-  setDebugLogging(false);
+export function getOriginalConsole() {
+  ensureOriginals();
+  return originals;
 }
+
+// Initialize disabled by default in all environments
+setDebugLogging(false);
 
 export function createLogger(tag = 'app', level = 'info') {
   const norm = (lvl) => (LEVELS[lvl] != null ? lvl : 'info');
@@ -36,8 +53,8 @@ export function createLogger(tag = 'app', level = 'info') {
     setLevel(lvl) { current = norm(lvl); },
     getLevel() { return current; },
     debug: (...args) => { if (should('debug')) console.log(...prefix('debug', args)); },
-    info: (...args) => { if (should('info')) console.info ? console.info(...prefix('info', args)) : console.log(...prefix('info', args)); },
-    warn: (...args) => { if (should('warn')) console.warn ? console.warn(...prefix('warn', args)) : console.log(...prefix('warn', args)); },
-    error: (...args) => { if (should('error')) console.error ? console.error(...prefix('error', args)) : console.log(...prefix('error', args)); },
+    info: (...args) => { if (should('info')) (console.info ? console.info(...prefix('info', args)) : console.log(...prefix('info', args))); },
+    warn: (...args) => { if (should('warn')) (console.warn ? console.warn(...prefix('warn', args)) : console.log(...prefix('warn', args))); },
+    error: (...args) => { if (should('error')) (console.error ? console.error(...prefix('error', args)) : console.log(...prefix('error', args))); },
   };
 }
