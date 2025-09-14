@@ -46,8 +46,17 @@ export default class Game {
       if (bonus?.eachTurn) bonus.used = false;
       if (player?.hero) {
         player.hero.powerUsed = false;
+        // Reset per-turn attack state
         player.hero.data.attacked = false;
-        for (const c of player.battlefield.cards) { if (c.data) c.data.attacked = false; }
+        player.hero.data.attacksUsed = 0;
+        player.hero.data.summoningSick = false;
+        for (const c of player.battlefield.cards) {
+          if (c.data) {
+            c.data.attacked = false;
+            c.data.attacksUsed = 0;
+            c.data.summoningSick = false;
+          }
+        }
         if (player.hero.passive?.length) {
           this.effects.execute(player.hero.passive, { game: this, player, card: player.hero });
         }
@@ -304,6 +313,7 @@ export default class Game {
       if (card.type === 'ally' && !card.keywords?.includes('Rush')) {
         card.data = card.data || {};
         card.data.attacked = true;
+        card.data.summoningSick = true;
       }
       // Initialize Divine Shield on allies that have the keyword when entering play
       if (card.type === 'ally' && card.keywords?.includes('Divine Shield')) {
@@ -424,7 +434,12 @@ export default class Game {
     const card = [player.hero, ...player.battlefield.cards].find(c => c.id === cardId);
     if (!card) return false;
     const atk = typeof card.totalAttack === 'function' ? card.totalAttack() : (card.data?.attack ?? 0);
-    if (atk < 1 || card.data?.attacked) return false;
+    if (atk < 1) return false;
+    // Block if summoning sick (no Rush)
+    if (card?.data?.summoningSick) return false;
+    const maxAttacks = card?.keywords?.includes?.('Windfury') ? 2 : 1;
+    const used = card?.data?.attacksUsed || 0;
+    if (used >= maxAttacks) return false;
     let target = null;
     const candidates = [
       defender.hero,
@@ -456,7 +471,9 @@ export default class Game {
     await this.cleanupDeaths(defender, player);
     const actualTarget = target || defender.hero;
     player.log.push(`Attacked ${actualTarget.name} with ${card.name}`);
+    // Mark attack usage
     card.data.attacked = true;
+    card.data.attacksUsed = (card.data.attacksUsed || 0) + 1;
     // Stealth is lost when a unit attacks
     if (card?.keywords?.includes?.('Stealth')) {
       card.keywords = card.keywords.filter(k => k !== 'Stealth');
@@ -523,12 +540,17 @@ export default class Game {
       const attackers = this.opponent.battlefield.cards.filter(c => {
         if (!(c.type === 'ally' || c.type === 'equipment')) return false;
         const atk = typeof c.totalAttack === 'function' ? c.totalAttack() : (c.data?.attack || 0);
-        return atk > 0 && !c.data?.attacked;
+        const maxAttacks = c?.keywords?.includes?.('Windfury') ? 2 : 1;
+        const used = c?.data?.attacksUsed || 0;
+        return atk > 0 && !c?.data?.summoningSick && used < maxAttacks;
       });
       for (const c of attackers) {
         const declared = this.combat.declareAttacker(c);
         if (!declared) continue;
-        if (c.data) c.data.attacked = true;
+        if (c.data) {
+          c.data.attacked = true;
+          c.data.attacksUsed = (c.data.attacksUsed || 0) + 1;
+        }
         // Stealth is lost when a unit attacks (AI - easy difficulty path)
         if (c?.keywords?.includes?.('Stealth')) {
           c.keywords = c.keywords.filter(k => k !== 'Stealth');

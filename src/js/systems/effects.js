@@ -296,6 +296,7 @@ export class EffectSystem {
       }
       if (!newUnit.keywords?.includes('Rush')) {
         newUnit.data.attacked = true;
+        newUnit.data.summoningSick = true;
       }
       player.battlefield.add(newUnit);
       console.log(`Summoned ${newUnit.name} to battlefield.`);
