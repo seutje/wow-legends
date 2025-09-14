@@ -96,6 +96,7 @@ export default class Game {
       const txt1 = await fs.readFile(path1, 'utf8');
       const baseCards = JSON.parse(txt1);
       let extraCards = [];
+      let extraCards2 = [];
       try {
         const path2 = new URL('../../data/cards-2.json', import.meta.url);
         const txt2 = await fs.readFile(path2, 'utf8');
@@ -103,19 +104,31 @@ export default class Game {
       } catch (err) {
         // cards-2.json is optional in some environments; ignore if missing
       }
-      this.allCards = [...baseCards, ...extraCards];
+      try {
+        const path3 = new URL('../../data/cards-3.json', import.meta.url);
+        const txt3 = await fs.readFile(path3, 'utf8');
+        extraCards2 = JSON.parse(txt3);
+      } catch (err) {
+        // cards-3.json is optional; ignore if missing
+      }
+      this.allCards = [...baseCards, ...extraCards, ...extraCards2];
     } else {
-      const [res1, res2] = await Promise.all([
+      const [res1, res2, res3] = await Promise.all([
         fetch(new URL('../../data/cards.json', import.meta.url)),
         // cards-2.json may not exist in some builds; fetch and ignore errors
-        fetch(new URL('../../data/cards-2.json', import.meta.url)).catch(() => null)
+        fetch(new URL('../../data/cards-2.json', import.meta.url)).catch(() => null),
+        fetch(new URL('../../data/cards-3.json', import.meta.url)).catch(() => null)
       ]);
       const baseCards = await res1.json();
       let extraCards = [];
+      let extraCards2 = [];
       if (res2 && res2.ok) {
         try { extraCards = await res2.json(); } catch {}
       }
-      this.allCards = [...baseCards, ...extraCards];
+      if (res3 && res3.ok) {
+        try { extraCards2 = await res3.json(); } catch {}
+      }
+      this.allCards = [...baseCards, ...extraCards, ...extraCards2];
     }
 
     const heroes = this.allCards.filter(c => c.type === 'hero');

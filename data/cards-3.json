@@ -1,0 +1,1209 @@
+[
+  {
+    "id": "hero-anduin-wrynn-high-king-priest",
+    "name": "Anduin Wrynn, High King Priest",
+    "type": "hero",
+    "effects": [
+      {
+        "type": "heal",
+        "target": "character",
+        "amount": 2
+      }
+    ],
+    "keywords": [
+      "Inspiration — The first heal each turn costs (1) less."
+    ],
+    "data": {},
+    "text": "Lesser Heal — Restore 2 HP to a character.",
+    "prompt": "A young human king-priest in ornate white and gold robes raises a radiant staff, golden light pouring over wounded soldiers in Stormwind’s cathedral district."
+  },
+  {
+    "id": "hero-sylvanas-windrunner-banshee-queen",
+    "name": "Sylvanas Windrunner, Banshee Queen",
+    "type": "hero",
+    "effects": [
+      {
+        "type": "damage",
+        "target": "any",
+        "amount": 2
+      }
+    ],
+    "keywords": [
+      "Undead",
+      "Arrows of the Banshee — Your secrets cost (1) less."
+    ],
+    "data": {},
+    "text": "Black Arrow — Deal 2 damage to any target.",
+    "prompt": "An undead ranger-queen with glowing red eyes draws a shadowy bow in the ruins of Lordaeron, purple banshee energy trailing her arrow."
+  },
+  {
+    "id": "hero-garrosh-hellscream-warmonger",
+    "name": "Garrosh Hellscream, Warmonger",
+    "type": "hero",
+    "effects": [
+      {
+        "type": "buff",
+        "target": "hero",
+        "property": "armor",
+        "amount": 2
+      }
+    ],
+    "keywords": [
+      "Berserker — After you gain Armor, your hero has +1 ATK this turn."
+    ],
+    "data": {},
+    "text": "Armor Up! — Gain 2 Armor.",
+    "prompt": "A brutal orc warlord with Gorehowl raised high, red war banners whipping in a dusty Durotar gale as embers rain from a distant siege."
+  },
+  {
+    "id": "hero-illidan-stormrage-the-betrayer",
+    "name": "Illidan Stormrage, The Betrayer",
+    "type": "hero",
+    "effects": [
+      {
+        "type": "damage",
+        "target": "allEnemies",
+        "amount": 1
+      }
+    ],
+    "keywords": [
+      "Demon Hunter",
+      "Fel Rush — Your hero can attack this turn."
+    ],
+    "data": {},
+    "text": "Fel Glaives — Deal 1 damage to all enemies.",
+    "prompt": "A night elf demon hunter with blindfold and fel-green tattoos slashes twin warglaives, waves of green energy ripping through demon ranks."
+  },
+  {
+    "id": "hero-arthas-menethil-deathlord",
+    "name": "Arthas Menethil, Deathlord",
+    "type": "hero",
+    "effects": [
+      {
+        "type": "damage",
+        "target": "any",
+        "amount": 1,
+        "freeze": 1
+      }
+    ],
+    "keywords": [
+      "Undead",
+      "At end of your turn, gain 1 Armor."
+    ],
+    "data": {},
+    "text": "Frostmourne’s Bite — Deal 1 damage and Freeze the target.",
+    "prompt": "A death knight in black-and-ice plate grips a runeblade wreathed in frost, blue soul fire spilling across a frozen battlefield."
+  },
+  {
+    "id": "spell-arcane-barrage",
+    "name": "Arcane Barrage",
+    "type": "spell",
+    "cost": 3,
+    "effects": [
+      {
+        "type": "damage",
+        "target": "allEnemies",
+        "amount": 2
+      }
+    ],
+    "keywords": [
+      "AoE"
+    ],
+    "data": {},
+    "text": "Deal 2 damage to all enemies.",
+    "prompt": "Ribbons of blue arcane missiles streak from a mage’s hands, detonating among a cluster of charging gnolls in Elwynn."
+  },
+  {
+    "id": "spell-renew",
+    "name": "Renew",
+    "type": "spell",
+    "cost": 1,
+    "effects": [
+      {
+        "type": "heal",
+        "target": "character",
+        "amount": 3
+      }
+    ],
+    "keywords": [
+      "Heal"
+    ],
+    "data": {},
+    "text": "Restore 3 HP to a character.",
+    "prompt": "Golden prayer sigils wrap a wounded knight, torn tabard mending under warm cathedral light."
+  },
+  {
+    "id": "spell-windfury-totem",
+    "name": "Windfury Totem",
+    "type": "spell",
+    "cost": 2,
+    "effects": [
+      {
+        "type": "summon",
+        "unit": {
+          "name": "Windfury Totem",
+          "attack": 0,
+          "health": 3,
+          "keywords": [
+            "Totem",
+            "Windfury"
+          ]
+        },
+        "count": 1
+      }
+    ],
+    "keywords": [
+      "Totem",
+      "Windfury"
+    ],
+    "data": {},
+    "text": "Summon a 0/3 Windfury Totem.",
+    "prompt": "A carved shamanic totem crackles with whirling gusts, banners snapping as dust devils spiral outward."
+  },
+  {
+    "id": "spell-freezing-trap",
+    "name": "Freezing Trap",
+    "type": "spell",
+    "cost": 2,
+    "effects": [
+      {
+        "type": "rawText",
+        "text": "Secret — When an enemy attacks, return it to its owner’s hand; it costs (2) more."
+      }
+    ],
+    "keywords": [
+      "Secret",
+      "Tempo"
+    ],
+    "data": {},
+    "text": "Secret — When an enemy attacks, return it to its owner’s hand; it costs (2) more.",
+    "prompt": "Frosty glyphs bloom across a forest floor as a leaping beast is hurled back in a surge of ice."
+  },
+  {
+    "id": "spell-snake-trap",
+    "name": "Snake Trap",
+    "type": "spell",
+    "cost": 2,
+    "effects": [
+      {
+        "type": "rawText",
+        "text": "Secret — When one of your allies is attacked, summon three 1/1 Snakes with Rush."
+      }
+    ],
+    "keywords": [
+      "Secret",
+      "Summon"
+    ],
+    "data": {},
+    "text": "Secret — When one of your allies is attacked, summon three 1/1 Snakes with Rush.",
+    "prompt": "A sprung hunter’s trap erupts into a writhing mass of serpents in a jungle clearing."
+  },
+  {
+    "id": "spell-counter-shot",
+    "name": "Counter Shot",
+    "type": "spell",
+    "cost": 3,
+    "effects": [
+      {
+        "type": "rawText",
+        "text": "Secret — When your opponent casts a spell, counter it."
+      }
+    ],
+    "keywords": [
+      "Secret",
+      "Counter"
+    ],
+    "data": {},
+    "text": "Secret — When your opponent casts a spell, counter it.",
+    "prompt": "An arrow of pure silence shatters a mage’s spell mid-cast, ripples of null energy scattering runes."
+  },
+  {
+    "id": "spell-retaliation-runes",
+    "name": "Retaliation Runes",
+    "type": "spell",
+    "cost": 2,
+    "effects": [
+      {
+        "type": "rawText",
+        "text": "Secret — When a friendly character takes damage, deal 2 damage to the source."
+      }
+    ],
+    "keywords": [
+      "Secret",
+      "Reflect"
+    ],
+    "data": {},
+    "text": "Secret — When a friendly character takes damage, deal 2 damage to the source.",
+    "prompt": "Blue runes flare across the ground; a striking foe recoils as the blow rebounds with icy force."
+  },
+  {
+    "id": "spell-vengeful-spirit",
+    "name": "Vengeful Spirit",
+    "type": "spell",
+    "cost": 2,
+    "effects": [
+      {
+        "type": "rawText",
+        "text": "Secret — After a friendly ally dies, deal 3 damage to a random enemy."
+      }
+    ],
+    "keywords": [
+      "Secret",
+      "Undead"
+    ],
+    "data": {},
+    "text": "Secret — After a friendly ally dies, deal 3 damage to a random enemy.",
+    "prompt": "A tormented banshee streaks from a fallen ranger, shrieking toward an enemy line."
+  },
+  {
+    "id": "spell-heroic-leap",
+    "name": "Heroic Leap",
+    "type": "spell",
+    "cost": 2,
+    "effects": [
+      {
+        "type": "damage",
+        "target": "allEnemies",
+        "amount": 1
+      },
+      {
+        "type": "buff",
+        "target": "hero",
+        "property": "armor",
+        "amount": 2
+      }
+    ],
+    "keywords": [
+      "Armor",
+      "AoE"
+    ],
+    "data": {},
+    "text": "Deal 1 damage to all enemies. Gain 2 Armor.",
+    "prompt": "A warrior crashes down from a mighty leap, shockwaves rippling through a crowd of kobolds."
+  },
+  {
+    "id": "spell-blade-flurry",
+    "name": "Blade Flurry",
+    "type": "spell",
+    "cost": 3,
+    "effects": [
+      {
+        "type": "damage",
+        "target": "allEnemies",
+        "amount": 2
+      }
+    ],
+    "keywords": [
+      "AoE",
+      "Combo"
+    ],
+    "data": {},
+    "text": "Deal 2 damage to all enemies.",
+    "prompt": "A rogue becomes a blur of steel, arcs of slash-marks trailing through a bandit camp."
+  },
+  {
+    "id": "spell-bloodlust",
+    "name": "Bloodlust",
+    "type": "spell",
+    "cost": 5,
+    "effects": [
+      {
+        "type": "buff",
+        "target": "allies",
+        "property": "attack",
+        "amount": 3,
+        "duration": "thisTurn"
+      }
+    ],
+    "keywords": [
+      "Burst"
+    ],
+    "data": {},
+    "text": "Give your hero and allies +3 ATK this turn.",
+    "prompt": "Orcish drums thunder as red rage magic surges across a warband charging into battle."
+  },
+  {
+    "id": "spell-mark-of-the-wild",
+    "name": "Mark of the Wild",
+    "type": "spell",
+    "cost": 2,
+    "effects": [
+      {
+        "type": "buff",
+        "target": "character",
+        "property": "attack",
+        "amount": 2
+      },
+      {
+        "type": "buff",
+        "target": "character",
+        "property": "health",
+        "amount": 2
+      }
+    ],
+    "keywords": [
+      "Buff"
+    ],
+    "data": {},
+    "text": "Give a friendly character +2/+2.",
+    "prompt": "Emerald vines and antlered spirit energy wrap a warrior beneath towering night elven trees."
+  },
+  {
+    "id": "spell-savage-strike",
+    "name": "Savage Strike",
+    "type": "spell",
+    "cost": 1,
+    "effects": [
+      {
+        "type": "damage",
+        "target": "any",
+        "amount": 2
+      }
+    ],
+    "keywords": [
+      "Burst"
+    ],
+    "data": {},
+    "text": "Deal 2 damage.",
+    "prompt": "A feral druid lunges with clawed hands, a single target engulfed by a crescent slash."
+  },
+  {
+    "id": "spell-ancestral-knowledge",
+    "name": "Ancestral Knowledge",
+    "type": "spell",
+    "cost": 2,
+    "effects": [
+      {
+        "type": "draw",
+        "count": 2
+      },
+      {
+        "type": "overload",
+        "amount": 1
+      }
+    ],
+    "keywords": [
+      "Draw",
+      "Overload"
+    ],
+    "data": {},
+    "text": "Draw 2 cards. Overload (1).",
+    "prompt": "A shaman communes with stone-carved spirits, glowing glyphs pouring into a scroll."
+  },
+  {
+    "id": "spell-ice-lance",
+    "name": "Ice Lance",
+    "type": "spell",
+    "cost": 1,
+    "effects": [
+      {
+        "type": "damage",
+        "target": "any",
+        "amount": 1,
+        "freeze": 1
+      }
+    ],
+    "keywords": [
+      "Freeze"
+    ],
+    "data": {},
+    "text": "Deal 1 damage and Freeze the target.",
+    "prompt": "A razor of blue ice pierces a charging gnoll, frost racing across its fur."
+  },
+  {
+    "id": "spell-flamestrike",
+    "name": "Flamestrike",
+    "type": "spell",
+    "cost": 7,
+    "effects": [
+      {
+        "type": "damage",
+        "target": "allEnemies",
+        "amount": 4
+      }
+    ],
+    "keywords": [
+      "AoE"
+    ],
+    "data": {},
+    "text": "Deal 4 damage to all enemies.",
+    "prompt": "Columns of fire roar across a battlefield, molten cobblestones and ash swirling in a gale."
+  },
+  {
+    "id": "spell-holy-smite",
+    "name": "Holy Smite",
+    "type": "spell",
+    "cost": 1,
+    "effects": [
+      {
+        "type": "damage",
+        "target": "any",
+        "amount": 3
+      }
+    ],
+    "keywords": [
+      "Burst"
+    ],
+    "data": {},
+    "text": "Deal 3 damage.",
+    "prompt": "A spear of golden light lances down from a stained-glass sky, blasting a ghoul."
+  },
+  {
+    "id": "spell-nature-s-grasp",
+    "name": "Nature’s Grasp",
+    "type": "spell",
+    "cost": 3,
+    "effects": [
+      {
+        "type": "transform",
+        "target": "randomAlly",
+        "into": {
+          "name": "Treant",
+          "attack": 3,
+          "health": 3,
+          "keywords": [
+            "Beast"
+          ]
+        },
+        "duration": "endOfTurn"
+      }
+    ],
+    "keywords": [
+      "Choose One synergy"
+    ],
+    "data": {},
+    "text": "Transform a random friendly ally into a 3/3 Treant until end of turn.",
+    "prompt": "Vines whip around a druid’s companion, reshaping into a bark-skinned treant mid-roar."
+  },
+  {
+    "id": "spell-rallying-cry",
+    "name": "Rallying Cry",
+    "type": "spell",
+    "cost": 2,
+    "effects": [
+      {
+        "type": "buff",
+        "target": "allies",
+        "property": "health",
+        "amount": 1
+      }
+    ],
+    "keywords": [
+      "Buff"
+    ],
+    "data": {},
+    "text": "Give your hero and allies +1 Health.",
+    "prompt": "A commander raises a banner; a surge of courage steels the line."
+  },
+  {
+    "id": "spell-warglaive-training",
+    "name": "Warglaive Training",
+    "type": "spell",
+    "cost": 2,
+    "effects": [
+      {
+        "type": "equip",
+        "item": {
+          "name": "Azzinoth Warglaive",
+          "attack": 2,
+          "durability": 2
+        }
+      }
+    ],
+    "keywords": [
+      "Equipment"
+    ],
+    "data": {},
+    "text": "Equip a 2/2 Warglaive.",
+    "prompt": "Fel-green etched blades hum as a demon hunter grips twin warglaives."
+  },
+  {
+    "id": "spell-mind-vision",
+    "name": "Mind Vision",
+    "type": "spell",
+    "cost": 1,
+    "effects": [
+      {
+        "type": "draw",
+        "count": 1
+      }
+    ],
+    "keywords": [
+      "Discover"
+    ],
+    "data": {},
+    "text": "Draw a card.",
+    "prompt": "A priest peers into an enemy’s mind, reflections of their secrets rippling across an orb."
+  },
+  {
+    "id": "spell-ferocious-bite",
+    "name": "Ferocious Bite",
+    "type": "spell",
+    "cost": 3,
+    "effects": [
+      {
+        "type": "damage",
+        "target": "any",
+        "amount": 4
+      }
+    ],
+    "keywords": [
+      "Beast synergy"
+    ],
+    "data": {},
+    "text": "Deal 4 damage.",
+    "prompt": "A spectral bear jaw snaps shut around a target, glowing fangs crunching magic wards."
+  },
+  {
+    "id": "spell-sunder-armor",
+    "name": "Sunder Armor",
+    "type": "spell",
+    "cost": 2,
+    "effects": [
+      {
+        "type": "buff",
+        "target": "character",
+        "property": "armor",
+        "amount": -2
+      }
+    ],
+    "keywords": [
+      "Debuff"
+    ],
+    "data": {},
+    "text": "Give a character -2 Armor.",
+    "prompt": "A warrior’s hammer shatters a shield crest, metal shards spraying."
+  },
+  {
+    "id": "spell-call-of-the-wild",
+    "name": "Call of the Wild",
+    "type": "spell",
+    "cost": 6,
+    "effects": [
+      {
+        "type": "summon",
+        "unit": {
+          "name": "Great Wolf",
+          "attack": 4,
+          "health": 4,
+          "keywords": [
+            "Beast",
+            "Rush"
+          ]
+        },
+        "count": 2
+      }
+    ],
+    "keywords": [
+      "Summon",
+      "Beast"
+    ],
+    "data": {},
+    "text": "Summon two 4/4 Great Wolves with Rush.",
+    "prompt": "Two massive spectral wolves bound from a green portal, snow spraying."
+  },
+  {
+    "id": "spell-thorns",
+    "name": "Thorns",
+    "type": "spell",
+    "cost": 1,
+    "effects": [
+      {
+        "type": "rawText",
+        "text": "Give a character ‘Damage Reflect (1) this turn.’"
+      }
+    ],
+    "keywords": [
+      "Reflect",
+      "Buff"
+    ],
+    "data": {},
+    "text": "Give a character ‘Damage Reflect (1) this turn.’",
+    "prompt": "Barbed vines coil around a guardian, spikes poised to lash at attackers."
+  },
+  {
+    "id": "ally-windfury-harpy",
+    "name": "Windfury Harpy",
+    "type": "ally",
+    "cost": 5,
+    "effects": [],
+    "keywords": [
+      "Windfury",
+      "Beast"
+    ],
+    "data": {
+      "attack": 4,
+      "health": 5
+    },
+    "text": "Windfury.",
+    "prompt": "A shrieking harpy rides a raging gale over Thousand Needles, twin talons outstretched."
+  },
+  {
+    "id": "ally-stormheim-vrykul-berserker",
+    "name": "Stormheim Vrykul Berserker",
+    "type": "ally",
+    "cost": 3,
+    "effects": [
+      {
+        "type": "buffOnSurviveDamage",
+        "attack": 2
+      }
+    ],
+    "keywords": [
+      "Enrage",
+      "Human"
+    ],
+    "data": {
+      "attack": 3,
+      "health": 3
+    },
+    "text": "Enrage — Whenever this survives damage, gain +2 ATK.",
+    "prompt": "A towering vrykul howls, frost winds whipping his braids as arrows splinter on his shield."
+  },
+  {
+    "id": "ally-sunfury-archer",
+    "name": "Sunfury Archer",
+    "type": "ally",
+    "cost": 2,
+    "effects": [
+      {
+        "type": "damage",
+        "target": "any",
+        "amount": 1
+      }
+    ],
+    "keywords": [
+      "Blood Elf",
+      "Battlecry"
+    ],
+    "data": {
+      "attack": 2,
+      "health": 2
+    },
+    "text": "Battlecry — Deal 1 damage.",
+    "prompt": "A blood elf archer looses a radiant arrow from a gilded balcony in Silvermoon."
+  },
+  {
+    "id": "ally-warsong-outrider",
+    "name": "Warsong Outrider",
+    "type": "ally",
+    "cost": 4,
+    "effects": [],
+    "keywords": [
+      "Charge",
+      "Orc"
+    ],
+    "data": {
+      "attack": 4,
+      "health": 3
+    },
+    "text": "Charge.",
+    "prompt": "An orc outrider spurs a wolf mount across the Barrens, red war banners snapping in the wind."
+  },
+  {
+    "id": "ally-draenei-vindicator",
+    "name": "Draenei Vindicator",
+    "type": "ally",
+    "cost": 3,
+    "effects": [
+      {
+        "type": "heal",
+        "target": "character",
+        "amount": 2
+      }
+    ],
+    "keywords": [
+      "Battlecry",
+      "Draenei"
+    ],
+    "data": {
+      "attack": 3,
+      "health": 3
+    },
+    "text": "Battlecry — Restore 2 HP to a character.",
+    "prompt": "A crystal-wreathed draenei paladin raises a glowing hammer, holy light spilling outward."
+  },
+  {
+    "id": "ally-nightblade-assassin",
+    "name": "Nightblade Assassin",
+    "type": "ally",
+    "cost": 3,
+    "effects": [],
+    "keywords": [
+      "Stealth",
+      "Night Elf"
+    ],
+    "data": {
+      "attack": 4,
+      "health": 2
+    },
+    "text": "Stealth.",
+    "prompt": "A shadowy night elf with crescent blades perches in moonlit branches."
+  },
+  {
+    "id": "ally-grizzly-protector",
+    "name": "Grizzly Protector",
+    "type": "ally",
+    "cost": 3,
+    "effects": [],
+    "keywords": [
+      "Taunt",
+      "Beast"
+    ],
+    "data": {
+      "attack": 3,
+      "health": 4
+    },
+    "text": "Taunt.",
+    "prompt": "A massive brown bear rears, interposing itself between hunters and their charge."
+  },
+  {
+    "id": "ally-felstalker-hound",
+    "name": "Felstalker Hound",
+    "type": "ally",
+    "cost": 2,
+    "effects": [],
+    "keywords": [
+      "Demon"
+    ],
+    "data": {
+      "attack": 3,
+      "health": 1
+    },
+    "text": "Demon.",
+    "prompt": "A lean felhound prowls, green runes pulsing along its spines."
+  },
+  {
+    "id": "ally-tirisfal-shadow-priest",
+    "name": "Tirisfal Shadow Priest",
+    "type": "ally",
+    "cost": 3,
+    "effects": [
+      {
+        "type": "damage",
+        "target": "any",
+        "amount": 2
+      }
+    ],
+    "keywords": [
+      "Undead",
+      "Battlecry"
+    ],
+    "data": {
+      "attack": 3,
+      "health": 2
+    },
+    "text": "Battlecry — Deal 2 damage.",
+    "prompt": "An undead priest in dark vestments channels void bolts in a ruined crypt."
+  },
+  {
+    "id": "ally-reef-crawler",
+    "name": "Reef Crawler",
+    "type": "ally",
+    "cost": 1,
+    "effects": [],
+    "keywords": [
+      "Beast"
+    ],
+    "data": {
+      "attack": 1,
+      "health": 3
+    },
+    "text": "Beast.",
+    "prompt": "A chitinous crustacean scuttles along a tidepool, spines bristling."
+  },
+  {
+    "id": "ally-nagrand-talonwind",
+    "name": "Nagrand Talonwind",
+    "type": "ally",
+    "cost": 4,
+    "effects": [],
+    "keywords": [
+      "Windfury",
+      "Beast"
+    ],
+    "data": {
+      "attack": 3,
+      "health": 5
+    },
+    "text": "Windfury.",
+    "prompt": "A great bird of prey dives and wheels over the green plains of Nagrand."
+  },
+  {
+    "id": "ally-thalassian-ranger",
+    "name": "Thalassian Ranger",
+    "type": "ally",
+    "cost": 2,
+    "effects": [
+      {
+        "type": "damage",
+        "target": "any",
+        "amount": 1
+      }
+    ],
+    "keywords": [
+      "Blood Elf",
+      "Battlecry"
+    ],
+    "data": {
+      "attack": 2,
+      "health": 2
+    },
+    "text": "Battlecry — Deal 1 damage.",
+    "prompt": "A crimson-clad archer strings a luminous arrow along the Sunfury Spire."
+  },
+  {
+    "id": "ally-stonetalon-sentry",
+    "name": "Stonetalon Sentry",
+    "type": "ally",
+    "cost": 2,
+    "effects": [],
+    "keywords": [
+      "Taunt"
+    ],
+    "data": {
+      "attack": 2,
+      "health": 3
+    },
+    "text": "Taunt.",
+    "prompt": "A sentinel braces a wooden shield among sharp pine ridges and rope bridges."
+  },
+  {
+    "id": "ally-argent-medic",
+    "name": "Argent Medic",
+    "type": "ally",
+    "cost": 2,
+    "effects": [
+      {
+        "type": "heal",
+        "target": "character",
+        "amount": 2
+      }
+    ],
+    "keywords": [
+      "Battlecry",
+      "Human"
+    ],
+    "data": {
+      "attack": 2,
+      "health": 2
+    },
+    "text": "Battlecry — Restore 2 HP to a character.",
+    "prompt": "A tabarded medic binds wounds under a fluttering Argent Crusade banner."
+  },
+  {
+    "id": "ally-thunder-bluff-brave",
+    "name": "Thunder Bluff Brave",
+    "type": "ally",
+    "cost": 3,
+    "effects": [],
+    "keywords": [
+      "Taunt",
+      "Tauren"
+    ],
+    "data": {
+      "attack": 2,
+      "health": 5
+    },
+    "text": "Taunt.",
+    "prompt": "A tauren shieldbearer stands resolute atop the mesas of Thunder Bluff."
+  },
+  {
+    "id": "ally-scourge-thorncaller",
+    "name": "Scourge Thorncaller",
+    "type": "ally",
+    "cost": 3,
+    "effects": [],
+    "keywords": [
+      "Undead",
+      "Reflect"
+    ],
+    "data": {
+      "attack": 3,
+      "health": 3
+    },
+    "text": "Damage Reflect (1).",
+    "prompt": "Barbed bone spikes jut from a skeletal knight’s armor, dripping necrotic sap."
+  },
+  {
+    "id": "ally-darkspear-witch-doctor",
+    "name": "Darkspear Witch Doctor",
+    "type": "ally",
+    "cost": 4,
+    "effects": [
+      {
+        "type": "summon",
+        "unit": {
+          "name": "Loa Spirit",
+          "attack": 1,
+          "health": 1,
+          "keywords": [
+            "Spirit",
+            "Rush",
+            "Token"
+          ]
+        },
+        "count": 2
+      }
+    ],
+    "keywords": [
+      "Troll",
+      "Battlecry"
+    ],
+    "data": {
+      "attack": 3,
+      "health": 4
+    },
+    "text": "Battlecry — Summon two 1/1 Loa Spirits with Rush.",
+    "prompt": "A troll witch doctor rattles bone charms as spectral loa spirits bound from a mask-lined hut."
+  },
+  {
+    "id": "ally-stormwind-captain",
+    "name": "Stormwind Captain",
+    "type": "ally",
+    "cost": 4,
+    "effects": [
+      {
+        "type": "buffAtEndOfTurn",
+        "target": "randomFriendlyAlly",
+        "property": "attack",
+        "amount": 1
+      }
+    ],
+    "keywords": [
+      "Human"
+    ],
+    "data": {
+      "attack": 4,
+      "health": 4
+    },
+    "text": "End of your turn: Give a random ally +1 ATK.",
+    "prompt": "A stern captain rallies footmen along Stormwind’s battlements."
+  },
+  {
+    "id": "ally-gadgetzan-sapper",
+    "name": "Gadgetzan Sapper",
+    "type": "ally",
+    "cost": 3,
+    "effects": [
+      {
+        "type": "damage",
+        "target": "enemyHeroOrMinionWithoutTaunt",
+        "amount": 2
+      }
+    ],
+    "keywords": [
+      "Goblin",
+      "Battlecry"
+    ],
+    "data": {
+      "attack": 2,
+      "health": 3
+    },
+    "text": "Battlecry — Deal 2 damage to the enemy hero or a minion without Taunt.",
+    "prompt": "A grinning goblin hefts a bundle of dynamite in a back-alley bazaar."
+  },
+  {
+    "id": "ally-obsidian-destroyer",
+    "name": "Obsidian Destroyer",
+    "type": "ally",
+    "cost": 7,
+    "effects": [],
+    "keywords": [
+      "Elemental"
+    ],
+    "data": {
+      "attack": 7,
+      "health": 7
+    },
+    "text": "Elemental.",
+    "prompt": "A hulking obsidian golem cracks with inner magma light."
+  },
+  {
+    "id": "ally-riverpaw-marauder",
+    "name": "Riverpaw Marauder",
+    "type": "ally",
+    "cost": 2,
+    "effects": [],
+    "keywords": [
+      "Gnoll"
+    ],
+    "data": {
+      "attack": 3,
+      "health": 2
+    },
+    "text": "Gnoll.",
+    "prompt": "A snarling gnoll brandishes a jagged cleaver along a riverside camp."
+  },
+  {
+    "id": "ally-twilight-drake",
+    "name": "Twilight Drake",
+    "type": "ally",
+    "cost": 4,
+    "effects": [],
+    "keywords": [
+      "Dragon"
+    ],
+    "data": {
+      "attack": 4,
+      "health": 5
+    },
+    "text": "Dragon.",
+    "prompt": "A dark-scaled dragon coils in a crystalline cavern lit by violet flame."
+  },
+  {
+    "id": "ally-bloodhoof-protector",
+    "name": "Bloodhoof Protector",
+    "type": "ally",
+    "cost": 4,
+    "effects": [],
+    "keywords": [
+      "Tauren",
+      "Taunt"
+    ],
+    "data": {
+      "attack": 3,
+      "health": 6
+    },
+    "text": "Taunt.",
+    "prompt": "A tauren in totemic armor braces under a rain of arrows."
+  },
+  {
+    "id": "ally-redridge-hunter",
+    "name": "Redridge Hunter",
+    "type": "ally",
+    "cost": 3,
+    "effects": [
+      {
+        "type": "summon",
+        "unit": {
+          "name": "Hound",
+          "attack": 1,
+          "health": 1,
+          "keywords": [
+            "Beast",
+            "Rush",
+            "Token"
+          ]
+        },
+        "count": 1
+      }
+    ],
+    "keywords": [
+      "Human",
+      "Battlecry"
+    ],
+    "data": {
+      "attack": 3,
+      "health": 2
+    },
+    "text": "Battlecry — Summon a 1/1 Hound with Rush.",
+    "prompt": "A ranger whistles as a lean hound darts from the brush in Redridge."
+  },
+  {
+    "id": "ally-cenarion-warder",
+    "name": "Cenarion Warder",
+    "type": "ally",
+    "cost": 3,
+    "effects": [
+      {
+        "type": "healAtEndOfTurn",
+        "target": "randomFriendlyCharacter",
+        "amount": 2
+      }
+    ],
+    "keywords": [
+      "Night Elf"
+    ],
+    "data": {
+      "attack": 2,
+      "health": 4
+    },
+    "text": "End of your turn: Restore 2 HP to a random friendly character.",
+    "prompt": "A druid tends a moonwell as silver ripples radiate healing."
+  },
+  {
+    "id": "ally-frostwolf-grunt",
+    "name": "Frostwolf Grunt",
+    "type": "ally",
+    "cost": 2,
+    "effects": [],
+    "keywords": [
+      "Orc",
+      "Taunt"
+    ],
+    "data": {
+      "attack": 2,
+      "health": 3
+    },
+    "text": "Taunt.",
+    "prompt": "A fur-clad orc braces a shield amid a snowy pass."
+  },
+  {
+    "id": "ally-gilnean-sprinter",
+    "name": "Gilnean Sprinter",
+    "type": "ally",
+    "cost": 4,
+    "effects": [],
+    "keywords": [
+      "Worgen",
+      "Rush"
+    ],
+    "data": {
+      "attack": 4,
+      "health": 3
+    },
+    "text": "Rush.",
+    "prompt": "A worgen dashes on all fours through rain-slick cobbles under gas lamps."
+  },
+  {
+    "id": "ally-bloodsail-buccaneer",
+    "name": "Bloodsail Buccaneer",
+    "type": "ally",
+    "cost": 1,
+    "effects": [],
+    "keywords": [
+      "Pirate"
+    ],
+    "data": {
+      "attack": 2,
+      "health": 1
+    },
+    "text": "Pirate.",
+    "prompt": "A laughing pirate swings from rigging over a cannon-blasted deck."
+  },
+  {
+    "id": "ally-kul-tiran-deckhand",
+    "name": "Kul Tiran Deckhand",
+    "type": "ally",
+    "cost": 2,
+    "effects": [],
+    "keywords": [
+      "Pirate",
+      "Rush"
+    ],
+    "data": {
+      "attack": 3,
+      "health": 2
+    },
+    "text": "Rush.",
+    "prompt": "A burly sailor in blue coat barrels down a gangplank with a boarding axe."
+  },
+  {
+    "id": "ally-ashenvale-protector",
+    "name": "Ashenvale Protector",
+    "type": "ally",
+    "cost": 3,
+    "effects": [],
+    "keywords": [
+      "Beast",
+      "Taunt"
+    ],
+    "data": {
+      "attack": 3,
+      "health": 3
+    },
+    "text": "Taunt.",
+    "prompt": "A massive guardian beast stands firm beneath Ashenvale boughs, bark-like fur bristling."
+  }
+]
