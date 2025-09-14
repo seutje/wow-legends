@@ -25,9 +25,36 @@ async function optimizePng(inPath, outPath) {
     .toFile(outPath);
 }
 
+function parseArgs(argv) {
+  const args = { id: null };
+  const rest = [];
+  for (const a of argv.slice(2)) {
+    if (a.startsWith('--id=')) args.id = a.slice('--id='.length);
+    else if (a === '--id') args.id = null; // value may follow
+    else if (args.id === null && rest.length && rest[rest.length - 1] === '--id') args.id = a;
+    else rest.push(a);
+  }
+  // Fallback: allow positional id without --id
+  if (!args.id && rest.length > 0 && !rest[0].startsWith('-')) args.id = rest[0];
+  return args;
+}
+
 async function main() {
+  const { id } = parseArgs(process.argv);
   await ensureDir(outputDir);
-  const files = await listPngs(inputDir);
+  let files = await listPngs(inputDir);
+  if (id) {
+    const target = `${id}-art.png`;
+    // Prefer exact match; otherwise, try startsWith fallback for flexibility
+    const exact = files.find((f) => f === target);
+    const starts = files.find((f) => f.startsWith(`${id}-art`) && f.endsWith('.png'));
+    const chosen = exact || starts;
+    if (!chosen) {
+      console.error(`No art found for id "${id}" under ${inputDir}. Expected "${target}".`);
+      process.exit(2);
+    }
+    files = [chosen];
+  }
   if (files.length === 0) {
     console.log('No PNGs found to optimize.');
     return;
@@ -51,4 +78,3 @@ main().catch((err) => {
   console.error('PNG optimization failed:', err);
   process.exit(1);
 });
-
