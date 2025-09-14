@@ -1,7 +1,9 @@
 // Client-side live reload poller for dev
-// Polls /live-reload.json and reloads the page when the `time` or `version` changes.
+// Polls live-reload.json (relative to the current page) and reloads
+// the page when the `time` or `version` changes. Using a relative
+// path ensures it works when served from a subfolder (e.g. GitHub Pages).
 
-const ENDPOINT = '/live-reload.json';
+const ENDPOINT = './live-reload.json';
 const INTERVAL_MS = 1000;
 
 let lastVersion = null;
@@ -29,4 +31,3 @@ async function check() {
 }
 
 setInterval(check, INTERVAL_MS);
-
