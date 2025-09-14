@@ -123,7 +123,7 @@ export class EffectSystem {
   }
 
   async dealDamage(effect, context) {
-    const { target, amount, freeze, beastBonus, comboAmount } = effect;
+    const { target, amount, freeze, beastBonus, comboAmount, usesSpellDamage } = effect;
     const { game, player, card, comboActive } = context;
     const opponent = player === game.player ? game.opponent : game.player;
       let dmgAmount = amount;
@@ -134,7 +134,10 @@ export class EffectSystem {
         const hasBeast = player.battlefield.cards.some(c => c.keywords?.includes('Beast'));
         if (hasBeast) dmgAmount += beastBonus;
       }
-      if (card?.type === 'spell') {
+      // Apply spell damage bonuses when appropriate:
+      // - For spells
+      // - For explicit non-spell effects that opt-in via `usesSpellDamage`
+      if (card?.type === 'spell' || usesSpellDamage) {
         const bonus = getSpellDamageBonus(player);
         dmgAmount = computeSpellDamage(dmgAmount, bonus);
       }

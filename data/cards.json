@@ -186,7 +186,8 @@
       {
         "type": "damage",
         "target": "enemyHeroOrMinionWithoutTaunt",
-        "amount": 2
+        "amount": 2,
+        "usesSpellDamage": true
       }
     ],
     "keywords": [
