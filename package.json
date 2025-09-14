@@ -13,7 +13,8 @@
     "test:coverage": "npm run test -- --coverage",
     "simulate": "node tools/simulate.mjs",
     "ingest": "node tools/cards-ingest.mjs",
-    "lint": "eslint . --ext .js,.mjs && echo ESLint scanned $(git ls-files '*.js' '*.mjs' | wc -l) JS files && htmlhint index.html"
+    "lint": "eslint . --ext .js,.mjs && echo ESLint scanned $(git ls-files '*.js' '*.mjs' | wc -l) JS files && htmlhint index.html",
+    "train": "node tools/train.mjs"
   },
   "keywords": [],
   "author": "AI Agents",

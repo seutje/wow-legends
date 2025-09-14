@@ -70,7 +70,7 @@ export default class Game {
     this.player = new Player({ name: 'You' });
     this.opponent = new Player({ name: 'AI' });
 
-    this.state = { frame: 0, startedAt: 0, difficulty: 'easy' };
+    this.state = { frame: 0, startedAt: 0, difficulty: 'easy', debug: false };
   }
 
   setUIRerender(fn) {
@@ -435,7 +435,21 @@ export default class Game {
     this.resources.startTurn(this.opponent);
 
     const diff = this.state?.difficulty || 'easy';
-    if (diff === 'medium' || diff === 'hard') {
+    if (diff === 'nightmare') {
+      // Neural network AI (nightmare)
+      const { default: NeuralAI, loadModelFromDiskOrFetch } = await import('./systems/ai-nn.js');
+      // Lazy-load model if not already set
+      await loadModelFromDiskOrFetch();
+      const ai = new NeuralAI({ game: this, resourceSystem: this.resources, combatSystem: this.combat });
+      if (this.state) this.state.aiThinking = true;
+      this.bus.emit('ai:thinking', { thinking: true });
+      try {
+        await ai.takeTurn(this.opponent, this.player);
+      } finally {
+        if (this.state) this.state.aiThinking = false;
+        this.bus.emit('ai:thinking', { thinking: false });
+      }
+    } else if (diff === 'medium' || diff === 'hard') {
       // Use MCTS for medium/hard; hard uses deeper search
       const { default: MCTS_AI } = await import('./systems/ai-mcts.js');
       const ai = new MCTS_AI({

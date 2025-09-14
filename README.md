@@ -54,6 +54,13 @@ Developer Notes
   - Game orchestrator: `src/js/game.js`
   - Browser entry: `src/js/main.js`
 - Tests: `__tests__/*`, run with `npm test` or `npm run test:coverage`.
+- Train Nightmare AI: `npm run train` — evolutionary RL trains a neural model and saves to `data/model.json`.
 - Simulation CLI: `npm run simulate` (quick AI turns). Balance sampling: `node tools/balance.mjs`.
 - Content pipeline: `node tools/cards-ingest.mjs` parses `CARDS.md` to `data/cards.json` (best effort).
 - Live reload policy: `live-reload.json` must be committed; never add to `.gitignore`.
+
+Nightmare AI
+- Uses a small MLP (two hidden layers of 64) to score Q(s,a).
+- Inputs include normalized state features (health, armor, resources, board/hand metrics) and action features (type, cost, stats, keywords).
+- Output is a scalar score per candidate action; picks the highest.
+- Training runs population=500 for 10 generations vs an MCTS baseline and saves the best model to `data/model.json`.

@@ -168,6 +168,8 @@ function syncLogPane(pane, entries = []) {
   if (wasAtBottom) ul.scrollTop = ul.scrollHeight;
 }
 
+import { setDebugLogging, isDebugLogging } from '../utils/logger.js';
+
 export function renderPlay(container, game, { onUpdate, onOpenDeckBuilder } = {}) {
   const p = game.player; const e = game.opponent;
 
@@ -177,7 +179,7 @@ export function renderPlay(container, game, { onUpdate, onOpenDeckBuilder } = {}
   const initialMount = !controls || !board;
   if (initialMount) {
     container.innerHTML = '';
-    const diffOptions = ['easy', 'medium', 'hard'];
+    const diffOptions = ['easy', 'medium', 'hard', 'nightmare'];
     const diffSelect = el('select', {
       class: 'select-difficulty',
       onchange: (e) => {
@@ -186,6 +188,15 @@ export function renderPlay(container, game, { onUpdate, onOpenDeckBuilder } = {}
         onUpdate?.();
       }
     }, ...diffOptions.map(opt => el('option', { value: opt, selected: (game.state?.difficulty || 'easy') === opt }, opt.charAt(0).toUpperCase() + opt.slice(1))));
+
+    // Debug checkbox (default off)
+    const debugChk = el('input', { type: 'checkbox', class: 'chk-debug', onchange: (e) => {
+      const on = !!e.target.checked;
+      if (game.state) game.state.debug = on;
+      setDebugLogging(on);
+      onUpdate?.();
+    } });
+    debugChk.checked = !!(game.state?.debug);
 
     controls = el('div', { class: 'controls' },
       el('button', { class: 'btn-deck-builder', onclick: () => { onOpenDeckBuilder?.(); } }, 'Deck Builder'),
@@ -203,7 +214,8 @@ export function renderPlay(container, game, { onUpdate, onOpenDeckBuilder } = {}
           onUpdate?.();
         }
       } }, 'End Turn'),
-      el('label', { class: 'lbl-difficulty' }, 'Difficulty: ', diffSelect)
+      el('label', { class: 'lbl-difficulty' }, 'Difficulty: ', diffSelect),
+      el('label', { class: 'lbl-debug' }, debugChk, ' Debug logs')
     );
     board = el('div', { class: 'board' });
 
@@ -264,6 +276,15 @@ export function renderPlay(container, game, { onUpdate, onOpenDeckBuilder } = {}
   // Logs
   syncLogPane(board.querySelector('.ai-log'), e.log);
   syncLogPane(board.querySelector('.p-log'), p.log);
+
+  // Keep debug checkbox in sync
+  const debugEl = controls.querySelector('input.chk-debug');
+  if (debugEl) {
+    const on = !!(game.state?.debug);
+    if (debugEl.checked !== on) debugEl.checked = on;
+    // Ensure console state matches checkbox
+    if (typeof window !== 'undefined') setDebugLogging(on);
+  }
 
   // Game over dialog
   const pDead = p.hero.data.health <= 0;

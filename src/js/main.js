@@ -1,6 +1,7 @@
 import Game from './game.js';
 import { renderDeckBuilder } from './ui/deckbuilder.js';
 import { renderOptions } from './ui/options.js';
+import { setDebugLogging } from './utils/logger.js';
 import { fillDeckRandomly } from './utils/deckbuilder.js';
 import { renderPlay } from './ui/play.js';
 
@@ -91,4 +92,7 @@ clearDeckBtn.addEventListener('click', () => {
     // No RAF loop; state updates via DOM events
   });
 let logsOn = true;
-renderOptions(optsRoot, { onReset: async () => { deckState.cards.length = 0; deckState.hero = null; rerenderDeck(); await game.reset(); rerender(); }, onToggleLogs: () => { logsOn = !logsOn; setStatus(logsOn ? 'Logs ON' : 'Logs OFF'); } });
+renderOptions(optsRoot, { onReset: async () => { deckState.cards.length = 0; deckState.hero = null; rerenderDeck(); await game.reset(); rerender(); } });
+
+// Ensure logs are disabled by default in browser UI
+setDebugLogging(false);
