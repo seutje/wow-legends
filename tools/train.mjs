@@ -35,7 +35,21 @@ setDebugLogging(false);
 
 const MODEL_PATH = path.join(__dirname, '..', 'data', 'model.json');
 
-function now() { return new Date().toISOString(); }
+function now() {
+  const d = new Date();
+  const pad = (n) => String(n).padStart(2, '0');
+  const y = d.getFullYear();
+  const mo = pad(d.getMonth() + 1);
+  const da = pad(d.getDate());
+  const h = pad(d.getHours());
+  const mi = pad(d.getMinutes());
+  const s = pad(d.getSeconds());
+  const tzMin = -d.getTimezoneOffset(); // minutes east of UTC
+  const sign = tzMin >= 0 ? '+' : '-';
+  const tzH = pad(Math.floor(Math.abs(tzMin) / 60));
+  const tzM = pad(Math.abs(tzMin) % 60);
+  return `${y}-${mo}-${da}T${h}:${mi}:${s}${sign}${tzH}:${tzM}`;
+}
 
 async function loadBestOrRandom() {
   try {
