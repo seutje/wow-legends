@@ -41,6 +41,12 @@ export class ResourceSystem {
     this._pool.set(player, p + Math.min(missing, amount));
   }
 
+  // Refund paid resources without capping to available. Intended for action cancellations.
+  refund(player, amount) {
+    const p = this.pool(player);
+    this._pool.set(player, p + amount);
+  }
+
   addOverloadNextTurn(player, amount) {
     const cur = this._overloadNext.get(player) || 0;
     this._overloadNext.set(player, cur + amount);

@@ -37,6 +37,7 @@ export class EffectSystem {
         const candidates = [player.hero, ...player.battlefield.cards.filter(c => c.type !== 'quest')]
           .filter(isTargetable);
         const chosen = await game.promptTarget(candidates);
+        if (chosen === game.CANCEL) throw game.CANCEL;
         if (chosen) {
           for (const g of grouped) {
             await this.applyBuff(g, context, chosen);
@@ -156,6 +157,7 @@ export class EffectSystem {
         ].filter(isTargetable);
         const candidates = [...enemy, ...friendly];
         const chosen = await game.promptTarget(candidates);
+        if (chosen === game.CANCEL) throw game.CANCEL;
         if (chosen) actualTargets.push(chosen);
         break;
       }
@@ -170,6 +172,7 @@ export class EffectSystem {
         ]);
         const candidates = [...friendly, ...enemy];
         const chosen = await game.promptTarget(candidates);
+        if (chosen === game.CANCEL) throw game.CANCEL;
         if (chosen) actualTargets.push(chosen);
         break;
       }
@@ -189,6 +192,7 @@ export class EffectSystem {
             candidates.filter(c => !chosen.has(c)),
             { allowNoMore: chosen.size > 0 }
           );
+          if (pick === game.CANCEL) throw game.CANCEL;
           if (!pick) break;
           chosen.add(pick);
         }
@@ -214,6 +218,7 @@ export class EffectSystem {
           .filter(isTargetable);
         const candidates = [...enemy, ...friendly];
         const chosen = await game.promptTarget(candidates);
+        if (chosen === game.CANCEL) throw game.CANCEL;
         if (chosen) actualTargets.push(chosen);
         break;
       }
@@ -223,6 +228,7 @@ export class EffectSystem {
           ...opponent.battlefield.cards.filter(c => !c.keywords?.includes('Taunt') && c.type !== 'quest'),
         ].filter(isTargetable);
         const chosen = await game.promptTarget(candidates);
+        if (chosen === game.CANCEL) throw game.CANCEL;
         if (chosen) actualTargets.push(chosen);
         break;
       }
@@ -358,6 +364,7 @@ export class EffectSystem {
         ]);
         const candidates = [...friendly, ...enemy];
         const chosen = await game.promptTarget(candidates);
+        if (chosen === game.CANCEL) throw game.CANCEL;
         if (chosen) actualTargets.push(chosen);
         break;
       }
@@ -949,6 +956,8 @@ export class EffectSystem {
     // Player's turn: show prompt UI and execute the selected option.
     const optionTexts = options.map(o => o.text) || [];
     const idx = await game.promptOption(optionTexts);
+    // If the user cancels, abort the card play entirely
+    if (idx === game.CANCEL) throw game.CANCEL;
     const chosen = options[idx] || options[0];
     if (chosen?.effects) {
       await this.execute(chosen.effects, context);

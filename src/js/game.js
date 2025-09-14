@@ -20,6 +20,8 @@ export default class Game {
     this.running = false;
     this._raf = 0;
     this._lastTs = 0;
+    // Sentinel for UI prompt cancellation
+    this.CANCEL = Symbol('CANCEL');
 
     // Systems
     this.turns = new TurnSystem();
@@ -251,18 +253,32 @@ export default class Game {
       comboEffects = null;
     }
 
-    if (primaryEffects && primaryEffects.length > 0) {
-      const hasDeathrattle = card.keywords?.includes('Deathrattle');
-      if (card.type === 'ally' && hasDeathrattle) {
-        card.deathrattle = primaryEffects;
-        card.effects = [];
-      } else {
-        await this.effects.execute(primaryEffects, context);
+    try {
+      if (primaryEffects && primaryEffects.length > 0) {
+        const hasDeathrattle = card.keywords?.includes('Deathrattle');
+        if (card.type === 'ally' && hasDeathrattle) {
+          card.deathrattle = primaryEffects;
+          card.effects = [];
+        } else {
+          await this.effects.execute(primaryEffects, context);
+        }
       }
-    }
 
-    if (comboEffects) {
-      await this.effects.execute(comboEffects, context);
+      if (comboEffects) {
+        await this.effects.execute(comboEffects, context);
+      }
+    } catch (err) {
+      if (err === this.CANCEL) {
+        // Refund cost and revert temporary spell damage bonus consumption
+        if (typeof this.resources.refund === 'function') this.resources.refund(player, cost);
+        else this.resources.restore(player, cost);
+        if (tempSpellDamage) {
+          player.hero.data.spellDamage -= tempSpellDamage;
+          if (bonus) bonus.used = false;
+        }
+        return false;
+      }
+      throw err;
     }
 
     if (tempSpellDamage) {
@@ -342,6 +358,15 @@ export default class Game {
         overlay.appendChild(done);
       }
 
+      // Always provide a cancel option to close without choosing
+      const cancel = document.createElement('button');
+      cancel.textContent = 'Cancel';
+      cancel.addEventListener('click', () => {
+        document.body.removeChild(overlay);
+        resolve(this.CANCEL);
+      });
+      overlay.appendChild(cancel);
+
       document.body.appendChild(overlay);
     });
   }
@@ -368,6 +393,15 @@ export default class Game {
       });
 
       overlay.appendChild(list);
+
+      // Add a cancel button to allow backing out of the choice
+      const cancel = document.createElement('button');
+      cancel.textContent = 'Cancel';
+      cancel.addEventListener('click', () => {
+        document.body.removeChild(overlay);
+        resolve(this.CANCEL);
+      });
+      overlay.appendChild(cancel);
       document.body.appendChild(overlay);
     });
   }
@@ -393,7 +427,7 @@ export default class Game {
         if (target?.id === defender.hero.id) target = null;
       } else {
         const choice = await this.promptTarget(legal);
-        if (choice && choice.id !== defender.hero.id) target = choice;
+        if (choice && choice !== this.CANCEL && choice.id !== defender.hero.id) target = choice;
       }
     }
     this.combat.clear();
