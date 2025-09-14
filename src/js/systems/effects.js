@@ -758,6 +758,11 @@ export class EffectSystem {
             } else if (property === 'armor') {
               if (t.data && t.data.armor != null) t.data.armor -= amount;
               else if (t.armor != null) t.armor -= amount; // For hero
+            } else if (property === 'spellDamage') {
+              if (t.data && typeof t.data.spellDamage === 'number') {
+                t.data.spellDamage -= amount;
+                if (t.data.spellDamage < 0) t.data.spellDamage = 0;
+              }
             }
           }
         };
@@ -797,6 +802,9 @@ export class EffectSystem {
             game.bus.emit('armorGained', { player: p, amount, source: context.card });
           }
         }
+      } else if (property === 'spellDamage') {
+        if (!t.data) t.data = {};
+        t.data.spellDamage = (t.data.spellDamage || 0) + amount;
       }
       console.log(`Applied +${amount} ${property} to ${t.name}.`);
     }

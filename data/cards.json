@@ -1343,8 +1343,11 @@
     "cost": 1,
     "effects": [
       {
-        "type": "rawText",
-        "text": "Your Spells deal +1 damage this turn."
+        "type": "buff",
+        "target": "hero",
+        "property": "spellDamage",
+        "amount": 1,
+        "duration": "thisTurn"
       }
     ],
     "keywords": [
