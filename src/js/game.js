@@ -310,7 +310,12 @@ export default class Game {
     if (card.type === 'ally' || card.type === 'equipment') {
       player.hand.moveTo(player.battlefield, cardId);
       if (card.type === 'equipment') player.hero.equipment.push(card);
-      if (card.type === 'ally' && !card.keywords?.includes('Rush')) {
+      if (card.type === 'ally') {
+        // Track the turn the ally entered play to reason about Rush/Charge
+        card.data = card.data || {};
+        card.data.enteredTurn = this.turns.turn;
+      }
+      if (card.type === 'ally' && !(card.keywords?.includes('Rush') || card.keywords?.includes('Charge'))) {
         card.data = card.data || {};
         card.data.attacked = true;
         card.data.summoningSick = true;
@@ -437,6 +442,9 @@ export default class Game {
     if (atk < 1) return false;
     // Block if summoning sick (no Rush)
     if (card?.data?.summoningSick) return false;
+    // Rush restriction: if the attacker has Rush and just entered this turn, it cannot hit the hero
+    const hasRush = !!card?.keywords?.includes?.('Rush');
+    const justEntered = !!(card?.data?.enteredTurn && card.data.enteredTurn === this.turns.turn);
     const maxAttacks = card?.keywords?.includes?.('Windfury') ? 2 : 1;
     const used = card?.data?.attacksUsed || 0;
     if (used >= maxAttacks) return false;
@@ -446,15 +454,18 @@ export default class Game {
       ...defender.battlefield.cards.filter(c => c.type !== 'equipment' && c.type !== 'quest')
     ];
     const legal = selectTargets(candidates);
-    if (legal.length === 1) {
-      const only = legal[0];
+    // For Rush on the turn it was summoned: require an enemy ally target; if none, the attack is not legal
+    const pool = (hasRush && justEntered) ? legal.filter(c => c.id !== defender.hero.id) : legal;
+    if ((hasRush && justEntered) && pool.length === 0) return false;
+    if (pool.length === 1) {
+      const only = pool[0];
       if (only.id !== defender.hero.id) target = only;
-    } else if (legal.length > 1) {
+    } else if (pool.length > 1) {
       if (targetId) {
-        target = legal.find(c => c.id === targetId) || null;
+        target = pool.find(c => c.id === targetId) || null;
         if (target?.id === defender.hero.id) target = null;
       } else {
-        const choice = await this.promptTarget(legal);
+        const choice = await this.promptTarget(pool);
         if (choice && choice !== this.CANCEL && choice.id !== defender.hero.id) target = choice;
       }
     }
@@ -545,21 +556,29 @@ export default class Game {
         return atk > 0 && !c?.data?.summoningSick && used < maxAttacks;
       });
       for (const c of attackers) {
+        // Enforce Rush restriction on entry: must have a non-hero target available
+        const hasRush = !!c?.keywords?.includes?.('Rush');
+        const justEntered = !!(c?.data?.enteredTurn && c.data.enteredTurn === this.turns.turn);
+        // Stealth is lost when a unit attacks (AI - easy difficulty path)
+        const defenders = [
+          this.player.hero,
+          ...this.player.battlefield.cards.filter(d => d.type !== 'equipment' && d.type !== 'quest')
+        ];
+        const legal = selectTargets(defenders);
+        // If Rush on entry and no non-hero targets, skip attacking with this unit
+        if (hasRush && justEntered) {
+          const nonHero = legal.filter(t => t.id !== this.player.hero.id);
+          if (nonHero.length === 0) continue;
+        }
         const declared = this.combat.declareAttacker(c);
         if (!declared) continue;
         if (c.data) {
           c.data.attacked = true;
           c.data.attacksUsed = (c.data.attacksUsed || 0) + 1;
         }
-        // Stealth is lost when a unit attacks (AI - easy difficulty path)
         if (c?.keywords?.includes?.('Stealth')) {
           c.keywords = c.keywords.filter(k => k !== 'Stealth');
         }
-        const defenders = [
-          this.player.hero,
-          ...this.player.battlefield.cards.filter(d => d.type !== 'equipment' && d.type !== 'quest')
-        ];
-        const legal = selectTargets(defenders);
         let block = null;
         if (legal.length === 1) {
           const only = legal[0];

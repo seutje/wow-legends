@@ -310,7 +310,10 @@ export class EffectSystem {
       if (newUnit.keywords?.includes('Divine Shield')) {
         newUnit.data.divineShield = true;
       }
-      if (!newUnit.keywords?.includes('Rush')) {
+      // Track entry turn for Rush/Charge logic
+      newUnit.data.enteredTurn = this.game?.turns?.turn || 0;
+      // Summoning sickness applies unless the unit has Rush or Charge
+      if (!(newUnit.keywords?.includes('Rush') || newUnit.keywords?.includes('Charge'))) {
         newUnit.data.attacked = true;
         newUnit.data.summoningSick = true;
       }

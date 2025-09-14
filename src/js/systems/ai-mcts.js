@@ -106,7 +106,7 @@ export class MCTS_AI {
               data: { attack: unit.attack, health: unit.health },
               keywords: unit.keywords
             });
-            if (!summoned.keywords?.includes('Rush')) {
+            if (!(summoned.keywords?.includes('Rush') || summoned.keywords?.includes('Charge'))) {
               summoned.data.attacked = true;
             }
             player.battlefield.cards.push(summoned);
@@ -182,7 +182,7 @@ export class MCTS_AI {
           p.hero.equipment = p.hero.equipment || [];
           p.hero.equipment.push(played);
         }
-        if (played.type === 'ally' && !played.keywords?.includes('Rush')) {
+        if (played.type === 'ally' && !(played.keywords?.includes('Rush') || played.keywords?.includes('Charge'))) {
           played.data = played.data || {};
           played.data.attacked = true;
         }
@@ -226,12 +226,11 @@ export class MCTS_AI {
         // Allies: enforce summoning sickness guard regardless of flags
         const entered = state.enteredThisTurn?.has?.(c.id);
         const rush = !!c.keywords?.includes?.('Rush');
-        if (entered && !rush) return false;
+        const charge = !!c.keywords?.includes?.('Charge');
+        if (entered && !(rush || charge)) return false;
         return !c.data?.attacked;
       });
     for (const a of attackers) {
-      if (!combat.declareAttacker(a)) continue;
-      if (a.data) a.data.attacked = true;
       // Assign a blocker obeying Taunt (similar to real flow)
       const defenders = [
         o.hero,
@@ -246,6 +245,12 @@ export class MCTS_AI {
         const choices = legal.filter(t => t.id !== o.hero.id);
         block = choices[0] || null;
       }
+      // Rush restriction on entry: if no non-hero target, skip attack
+      const entered = state.enteredThisTurn?.has?.(a.id);
+      const rush = !!a.keywords?.includes?.('Rush');
+      if (entered && rush && !block) continue;
+      if (!combat.declareAttacker(a)) continue;
+      if (a.data) a.data.attacked = true;
       if (block) combat.assignBlocker(a.id, block);
     }
     combat.setDefenderHero(o.hero);
@@ -694,14 +699,6 @@ export class MCTS_AI {
       const attackers = [player.hero, ...player.battlefield.cards]
         .filter(c => (c.type !== 'equipment') && !c.data?.attacked && ((typeof c.totalAttack === 'function' ? c.totalAttack() : c.data?.attack || 0) > 0));
       for (const a of attackers) {
-        if (!this.combat.declareAttacker(a)) continue;
-
-        if (a.data) a.data.attacked = true;
-        // Stealth is lost when a unit attacks (AI - MCTS path)
-        if (a?.keywords?.includes?.('Stealth')) {
-          a.keywords = a.keywords.filter(k => k !== 'Stealth');
-        }
-
         // Choose a legal defender, honoring Taunt; default to hero if none picked
         const defenders = [
           opponent.hero,
@@ -716,6 +713,16 @@ export class MCTS_AI {
           const choices = legal.filter(t => t.id !== opponent.hero.id);
           // Prefer RNG from game if available for variety
           block = this.game?.rng?.pick ? this.game.rng.pick(choices) : (choices[0] || null);
+        }
+        // If Rush and just entered, skip if no non-hero block target
+        const enteredTurn = a?.data?.enteredTurn;
+        const justEntered = !!(enteredTurn && (enteredTurn === (this.resources?.turns?.turn || 0)));
+        if (a?.keywords?.includes?.('Rush') && justEntered && !block) continue;
+        if (!this.combat.declareAttacker(a)) continue;
+        if (a.data) a.data.attacked = true;
+        // Stealth is lost when a unit attacks (AI - MCTS path)
+        if (a?.keywords?.includes?.('Stealth')) {
+          a.keywords = a.keywords.filter(k => k !== 'Stealth');
         }
         if (block) this.combat.assignBlocker(a.id, block);
         const target = block || opponent.hero;

@@ -13,16 +13,22 @@ describe('summoning sickness and rush', () => {
     expect(await g.attack(g.player, ally.id)).toBe(false);
   });
 
-  test('played ally with Rush can attack immediately', async () => {
+  test('played ally with Rush can attack enemy allies immediately, not hero', async () => {
     const g = new Game();
     g.player.hero = new Hero({ name: 'Hero', data: { health: 10 } });
     g.opponent.hero = new Hero({ name: 'Enemy', data: { health: 10 } });
     const ally = new Card({ type: 'ally', name: 'Raider', cost: 0, data: { attack: 1, health: 1 }, keywords: ['Rush'] });
     g.player.hand.add(ally);
     await g.playFromHand(g.player, ally.id);
+    // With no enemy allies, cannot hit face
     const initial = g.opponent.hero.data.health;
+    expect(await g.attack(g.player, ally.id)).toBe(false);
+    expect(g.opponent.hero.data.health).toBe(initial);
+    // Add an enemy ally; should be able to attack it
+    const foe = new Card({ type: 'ally', name: 'Foe', data: { attack: 0, health: 2 }, keywords: [] });
+    g.opponent.battlefield.add(foe);
     expect(await g.attack(g.player, ally.id)).toBe(true);
-    expect(g.opponent.hero.data.health).toBe(initial - 1);
+    expect(foe.data.health).toBe(1);
   });
 
   test('summoned ally without Rush cannot attack immediately', async () => {
@@ -36,7 +42,7 @@ describe('summoning sickness and rush', () => {
     expect(await g.attack(g.player, summoned.id)).toBe(false);
   });
 
-  test('summoned ally with Rush can attack immediately', async () => {
+  test('summoned ally with Rush can attack enemy allies immediately, not hero', async () => {
     const g = new Game();
     g.player.hero = new Hero({ name: 'Hero', data: { health: 10 } });
     g.opponent.hero = new Hero({ name: 'Enemy', data: { health: 10 } });
@@ -45,8 +51,12 @@ describe('summoning sickness and rush', () => {
     await g.playFromHand(g.player, spell.id);
     const summoned = g.player.battlefield.cards.find(c => c.name === 'Rusher');
     const initial = g.opponent.hero.data.health;
+    // Cannot hit face if no enemy allies
+    expect(await g.attack(g.player, summoned.id)).toBe(false);
+    expect(g.opponent.hero.data.health).toBe(initial);
+    const foe = new Card({ type: 'ally', name: 'Foe', data: { attack: 0, health: 2 }, keywords: [] });
+    g.opponent.battlefield.add(foe);
     expect(await g.attack(g.player, summoned.id)).toBe(true);
-    expect(g.opponent.hero.data.health).toBe(initial - 1);
+    expect(foe.data.health).toBe(1);
   });
 });
-
