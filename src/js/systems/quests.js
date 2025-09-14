@@ -28,6 +28,10 @@ export class QuestSystem {
     if (idx !== -1) arr.splice(idx, 1);
     // move quest card to graveyard
     player.battlefield.moveTo(player.graveyard, rec.card.id);
+    // notify listeners (e.g., UI) that a quest completed and was removed
+    try {
+      this.game?.bus?.emit?.('quest:completed', { player, card: rec.card });
+    } catch {}
     if (rec.card.reward?.length) {
       this.game.effects.execute(rec.card.reward, { game: this.game, player, card: rec.card });
     }

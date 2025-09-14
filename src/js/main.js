@@ -46,6 +46,10 @@ game.bus.on('ai:progress', ({ progress }) => {
   if (game.state) game.state.aiProgress = Math.max(0, Math.min(1, progress ?? 0));
   rerender();
 });
+// Keep UI in sync when quests complete (quest card moves off battlefield)
+game.bus.on('quest:completed', () => {
+  rerender();
+});
 
 function toggleGameVisible(show) {
   board.style.display = show ? 'block' : 'none';
