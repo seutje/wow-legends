@@ -206,6 +206,42 @@ ul.zone-list li {
   padding: 4px 6px;
 }
 
+/* AI thinking overlay */
+.ai-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 900;
+}
+.ai-overlay .panel {
+  background: #0b0f14;
+  border: 1px solid #203040;
+  padding: 1em 1.25em;
+  min-width: 280px;
+  max-width: 420px;
+}
+.ai-overlay .msg { margin: 0 0 8px; }
+.ai-overlay .progress {
+  position: relative;
+  height: 10px;
+  border: 1px solid #203040;
+  background: #10171f;
+}
+.ai-overlay .progress .bar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 0%;
+  background: linear-gradient(90deg, #1e90ff, #55b0ff);
+}
+
 /* Card tooltip styling */
 
 .card-tooltip {

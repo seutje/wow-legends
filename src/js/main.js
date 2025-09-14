@@ -34,6 +34,19 @@ rerender();
 
 game.setUIRerender(rerender);
 
+// Reflect AI thinking/progress to UI state and trigger rerenders
+game.bus.on('ai:thinking', ({ thinking }) => {
+  if (game.state) {
+    game.state.aiThinking = !!thinking;
+    if (thinking) game.state.aiProgress = 0;
+  }
+  rerender();
+});
+game.bus.on('ai:progress', ({ progress }) => {
+  if (game.state) game.state.aiProgress = Math.max(0, Math.min(1, progress ?? 0));
+  rerender();
+});
+
 function toggleGameVisible(show) {
   board.style.display = show ? 'block' : 'none';
   root.style.display = show ? 'block' : 'none';

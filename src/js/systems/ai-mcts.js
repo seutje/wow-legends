@@ -295,6 +295,11 @@ export class MCTS_AI {
   _search(rootState) {
     const root = new MCTSNode(this._cloneState(rootState));
     for (let i = 0; i < this.iterations; i++) {
+      // Progress events for UI overlays (best-effort; in main thread these won't paint until yielding)
+      if (i === 0 || (i % 100) === 0) {
+        const progress = Math.min(1, i / Math.max(1, this.iterations));
+        try { this.game?.bus?.emit?.('ai:progress', { progress }); } catch {}
+      }
       // Selection
       let node = root;
       while (node.untried === null ? false : node.untried.length === 0 && node.children.length) {
@@ -326,13 +331,58 @@ export class MCTS_AI {
     }
     // Choose child with best average value
     const best = this._bestChild(root);
+    try { this.game?.bus?.emit?.('ai:progress', { progress: 1 }); } catch {}
     return best?.action || { end: true };
   }
 
   // Offload search to a web worker when running in browser on hard difficulty.
   async _searchAsync(rootState) {
     const useWorker = this._canUseWorker && this.game?.state?.difficulty === 'hard';
-    if (!useWorker) return this._search(rootState);
+    if (!useWorker) {
+      // Perform incremental search on the main thread, yielding periodically for UI updates
+      const root = new MCTSNode(this._cloneState(rootState));
+      const iterations = this.iterations;
+      const chunk = 200;
+      const doOne = () => {
+        // Selection
+        let node = root;
+        while (node.untried === null ? false : node.untried.length === 0 && node.children.length) {
+          node = node.children.reduce((a, b) => (a.ucb1() > b.ucb1() ? a : b));
+        }
+        // Expansion
+        if (node.untried === null) node.untried = this._legalActions(node.state);
+        if (node.untried.length) {
+          const idx = Math.floor(Math.random() * node.untried.length);
+          const action = node.untried.splice(idx, 1)[0];
+          const res = this._applyAction(node.state, action);
+          if (res.terminal) {
+            const value = res.value;
+            let n = node;
+            while (n) { n.visits++; n.total += value; n = n.parent; }
+            return;
+          } else {
+            const child = new MCTSNode(res.state, node, action);
+            node.children.push(child);
+            node = child;
+          }
+        }
+        // Rollout
+        const value = this._randomPlayout(node.state);
+        while (node) { node.visits++; node.total += value; node = node.parent; }
+      };
+      for (let i = 0; i < iterations; i++) {
+        doOne();
+        if (i === 0 || (i % 50) === 0) {
+          const progress = Math.min(1, i / Math.max(1, iterations));
+          try { this.game?.bus?.emit?.('ai:progress', { progress }); } catch {}
+          // Yield to allow paints
+          await new Promise(r => setTimeout(r, 0));
+        }
+      }
+      const best = this._bestChild(root);
+      try { this.game?.bus?.emit?.('ai:progress', { progress: 1 }); } catch {}
+      return best?.action || { end: true };
+    }
 
     // Resolve relative to this module so it works in the dev server
     const workerUrl = new URL('../workers/mcts.worker.js', import.meta.url);
@@ -342,11 +392,23 @@ export class MCTS_AI {
         const w = new Worker(workerUrl, { type: 'module' });
         w.onmessage = (ev) => {
           if (settled) return;
+          const data = ev.data || {};
+          // Treat messages with a final result as completion, even if they include progress
+          if (data && (data.ok != null)) {
+            settled = true;
+            try { w.terminate(); } catch {}
+            const { ok, action } = data;
+            if (ok && action) return resolve(action);
+            return resolve(this._search(rootState));
+          }
+          if (data && typeof data.progress === 'number') {
+            // Forward progress to game bus
+            try { this.game?.bus?.emit?.('ai:progress', { progress: data.progress }); } catch {}
+            return; // keep waiting for result
+          }
+          // Unknown payload; fallback to local search
           settled = true;
           try { w.terminate(); } catch {}
-          const { ok, action } = ev.data || {};
-          if (ok && action) return resolve(action);
-          // Fallback to local search on failure
           resolve(this._search(rootState));
         };
         w.onerror = () => {

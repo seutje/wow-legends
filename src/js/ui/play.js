@@ -286,6 +286,29 @@ export function renderPlay(container, game, { onUpdate, onOpenDeckBuilder } = {}
     if (typeof window !== 'undefined') setDebugLogging(on);
   }
 
+  // AI Thinking overlay with progress bar
+  const thinking = !!(game.state?.aiThinking);
+  let aiOverlay = container.querySelector('.ai-overlay');
+  if (thinking) {
+    const pct = Math.round(((game.state?.aiProgress ?? 0) * 100));
+    if (!aiOverlay) {
+      aiOverlay = el('div', { class: 'ai-overlay' },
+        el('div', { class: 'panel' },
+          el('p', { class: 'msg' }, 'AI is thinking...'),
+          el('div', { class: 'progress' },
+            el('div', { class: 'bar', style: `width: ${pct}%` })
+          )
+        )
+      );
+      container.append(aiOverlay);
+    } else {
+      const bar = aiOverlay.querySelector('.progress .bar');
+      if (bar) bar.style.width = `${pct}%`;
+    }
+  } else if (aiOverlay) {
+    aiOverlay.remove();
+  }
+
   // Game over dialog
   const pDead = p.hero.data.health <= 0;
   const eDead = e.hero.data.health <= 0;
