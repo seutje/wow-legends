@@ -5,7 +5,6 @@ import Card from '../entities/card.js';
 import Game from '../game.js';
 import Player from '../entities/player.js';
 import Hero from '../entities/hero.js';
-import { getOriginalConsole } from '../utils/logger.js';
 
 // Simple Monte Carlo Tree Search AI
 // - Explores sequences of actions (play card / use hero power / end)
@@ -41,8 +40,6 @@ export class MCTS_AI {
     this.fullSim = !!fullSim;
     // Prefer offloading search to a Web Worker when available (browser only)
     this._canUseWorker = (typeof window !== 'undefined') && (typeof Worker !== 'undefined');
-    const { log } = getOriginalConsole();
-    log('MCTS AI backend: CPU');
   }
 
   _selectChild(node) {
