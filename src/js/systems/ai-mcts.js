@@ -5,6 +5,7 @@ import Card from '../entities/card.js';
 import Game from '../game.js';
 import Player from '../entities/player.js';
 import Hero from '../entities/hero.js';
+import { getOriginalConsole } from '../utils/logger.js';
 
 // Simple Monte Carlo Tree Search AI
 // - Explores sequences of actions (play card / use hero power / end)
@@ -43,6 +44,7 @@ export class MCTS_AI {
     // Attempt GPU acceleration when running in Node; report backend choice
     this._gpuKernel = null;
     this._gpuReady = Promise.resolve();
+    const { log } = getOriginalConsole();
     if (typeof process !== 'undefined' && process.versions?.node) {
       this._gpuReady = import('gpu.js').then(({ GPU }) => {
         try {
@@ -51,16 +53,18 @@ export class MCTS_AI {
             const v = visits[this.thread.x];
             return v === 0 ? 1e9 : (totals[this.thread.x] / v) + c * Math.sqrt(Math.log(parentVisits + 1) / v);
           });
-          console.log('MCTS AI backend: GPU');
-        } catch {
+          log('MCTS AI backend: GPU');
+        } catch (error) {
           this._gpuKernel = null;
-          console.log('MCTS AI backend: CPU (GPU init failed)');
+          const reason = error?.message ?? String(error);
+          log(`MCTS AI backend: CPU (GPU init failed: ${reason})`);
         }
-      }).catch(() => {
-        console.log('MCTS AI backend: CPU');
+      }).catch((error) => {
+        const reason = error?.message ?? String(error);
+        log(`MCTS AI backend: CPU (GPU unavailable: ${reason})`);
       });
     } else {
-      console.log('MCTS AI backend: CPU');
+      log('MCTS AI backend: CPU');
     }
   }
 
