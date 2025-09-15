@@ -52,6 +52,7 @@
     "name": "Benediction",
     "type": "equipment",
     "cost": 4,
+    "attack": 1,
     "durability": 3,
     "effects": [
       {
@@ -156,6 +157,7 @@
     "name": "Masterwork Longbow",
     "type": "equipment",
     "cost": 4,
+    "attack": 1,
     "durability": 3,
     "effects": [
       {
