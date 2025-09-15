@@ -99,9 +99,29 @@ export class CombatSystem {
         for (const eq of attacker.equipment) {
           if (typeof eq.durability === 'number') {
             eq.durability -= 1;
+            // Log equipment taking a hit
+            const owner = attacker?.owner;
+            if (owner?.log) owner.log.push(`${eq.name} took a hit (-1 durability).`);
           }
         }
-        attacker.equipment = attacker.equipment.filter(e => (e.durability ?? 1) > 0);
+        // Move broken equipment to graveyard and remove from hero
+        const owner = attacker?.owner;
+        const broken = attacker.equipment.filter(e => (e?.durability ?? 1) <= 0);
+        if (owner && broken.length > 0) {
+          for (const b of broken) {
+            // Log breaking
+            if (owner?.log) owner.log.push(`${b.name} broke and was destroyed.`);
+            let moved = false;
+            if (owner?.battlefield && owner?.graveyard) {
+              const res = owner.battlefield.moveTo(owner.graveyard, b.id);
+              moved = !!res;
+            }
+            if (!moved && owner?.graveyard?.add) {
+              owner.graveyard.add(b);
+            }
+          }
+        }
+        attacker.equipment = attacker.equipment.filter(e => (e?.durability ?? 1) > 0);
       }
     }
 
@@ -118,10 +138,29 @@ export class CombatSystem {
             addDmg(ev.source, eqAtk, this._defenderHero);
             // Consume 1 durability from one attacking-capable equipment
             const eq = eqList.find(e => (e?.attack || 0) > 0 && typeof e?.durability === 'number');
-            if (eq) eq.durability -= 1;
+            if (eq) {
+              eq.durability -= 1;
+              const owner = this._defenderHero?.owner;
+              if (owner?.log) owner.log.push(`${eq.name} reflected damage (-1 durability).`);
+            }
           }
         }
-        // Remove broken equipment
+        // Remove broken equipment and send to graveyard
+        const owner = this._defenderHero?.owner;
+        const broken = eqList.filter(e => (e?.durability ?? 1) <= 0);
+        if (owner && broken.length > 0) {
+          for (const b of broken) {
+            if (owner?.log) owner.log.push(`${b.name} broke and was destroyed.`);
+            let moved = false;
+            if (owner?.battlefield && owner?.graveyard) {
+              const res = owner.battlefield.moveTo(owner.graveyard, b.id);
+              moved = !!res;
+            }
+            if (!moved && owner?.graveyard?.add) {
+              owner.graveyard.add(b);
+            }
+          }
+        }
         this._defenderHero.equipment = eqList.filter(e => (e?.durability ?? 1) > 0);
       }
     }

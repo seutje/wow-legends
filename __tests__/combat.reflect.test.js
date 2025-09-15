@@ -47,5 +47,21 @@ describe('Combat reflection from player equipment', () => {
     expect(toHero?.amount).toBe(5);
     expect(toAttacker?.amount).toBe(2);
   });
-});
 
+  test('reflection can break equipment and move it to graveyard', () => {
+    const player = new Player({ name: 'You', hero: new Hero({ name: 'Player', data: { health: 30, armor: 0 } }) });
+    // Equip a weapon with 1 durability so reflection consumes it
+    const weapon = player.equip({ id: 'equip-break-test', name: 'Brittle Blade', attack: 2, durability: 1 });
+
+    const attacker = new Card({ id: 'ai-ally', name: 'Raider', type: 'ally', data: { attack: 3, health: 4 } });
+
+    const combat = new CombatSystem();
+    combat.setDefenderHero(player.hero);
+    expect(combat.declareAttacker(attacker)).toBe(true);
+    combat.resolve();
+
+    // Equipment should have broken and moved to graveyard
+    expect(player.hero.equipment.length).toBe(0);
+    expect(player.graveyard.cards).toContain(weapon);
+  });
+});

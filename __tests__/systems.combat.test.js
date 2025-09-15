@@ -80,7 +80,7 @@ describe('CombatSystem', () => {
     expect(p.hero.equipment[0].durability).toBe(1);
   });
 
-  test('unblocked attacks consume equipment durability until it breaks', () => {
+  test('unblocked attacks consume equipment durability until it breaks and moves to graveyard', () => {
     const atk = new Player({ name: 'Atk' });
     const dagger = new Equipment({ name: 'Dagger', attack: 1, durability: 2 });
     atk.equip(dagger);
@@ -96,6 +96,10 @@ describe('CombatSystem', () => {
     c.setDefenderHero(def.hero);
     c.resolve();
     expect(atk.hero.equipment.length).toBe(0);
+    // Broken equipment should be placed into the owner's graveyard
+    expect(atk.graveyard.cards).toContain(dagger);
+    // And no longer be on the battlefield
+    expect(atk.battlefield.cards).not.toContain(dagger);
   });
 
   test('freeze keyword freezes surviving targets in combat', () => {

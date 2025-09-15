@@ -332,3 +332,18 @@ ul.zone-list li {
   font-style: italic;
   font-size: 10px;
 }
+
+/* Shake animation for hit feedback */
+@keyframes shake-hit {
+  0% { transform: translate3d(0, 0, 0) rotate(0deg); }
+  20% { transform: translate3d(-2px, 0, 0) rotate(-1deg); }
+  40% { transform: translate3d(2px, 0, 0) rotate(1deg); }
+  60% { transform: translate3d(-2px, 0, 0) rotate(-1deg); }
+  80% { transform: translate3d(2px, 0, 0) rotate(1deg); }
+  100% { transform: translate3d(0, 0, 0) rotate(0deg); }
+}
+
+.card-tooltip.shake-hit {
+  animation: shake-hit 0.35s ease;
+  box-shadow: 0 0 0 2px rgba(255, 64, 64, 0.6);
+}

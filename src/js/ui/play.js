@@ -81,6 +81,8 @@ function buildCardEl(card, { owner } = {}) {
     }
     if (eqAttack != null) wrap.append(el('div', { class: 'stat attack' }, eqAttack));
     if (eqDurability != null) wrap.append(el('div', { class: 'stat health' }, eqDurability));
+    // Track durability for future change detection
+    if (typeof eqDurability === 'number') wrap.dataset.prevDurability = String(eqDurability);
   }
 
   art.src = `src/assets/optim/${tooltipCard.id}-art.png`;
@@ -177,6 +179,14 @@ function updateCardEl(cardEl, card, { owner } = {}) {
     // If missing nodes (e.g., newly became equipment), add them
     if (!atkEl && eqAttack != null) cardEl.append(el('div', { class: 'stat attack' }, String(eqAttack)));
     if (!hpEl && eqDurability != null) cardEl.append(el('div', { class: 'stat health' }, String(eqDurability)));
+
+    // Shake animation when durability decreased
+    const prev = Number(cardEl.dataset.prevDurability);
+    if (!Number.isNaN(prev) && typeof eqDurability === 'number' && eqDurability < prev) {
+      cardEl.classList.add('shake-hit');
+      setTimeout(() => { cardEl.classList.remove('shake-hit'); }, 400);
+    }
+    if (typeof eqDurability === 'number') cardEl.dataset.prevDurability = String(eqDurability);
   }
 }
 
