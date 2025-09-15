@@ -59,6 +59,9 @@ export class MCTS_AI {
             const mean = total / v;
             const exploration = c * Math.sqrt(Math.log(parentVisits + 1) / v);
             return mean + exploration;
+          }, {
+            dynamicOutput: true,
+            output: [1],
           });
           log('MCTS AI backend: GPU');
         } catch (error) {
