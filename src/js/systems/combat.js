@@ -107,20 +107,20 @@ export class CombatSystem {
         // Move broken equipment to graveyard and remove from hero
         const owner = attacker?.owner;
         const broken = attacker.equipment.filter(e => (e?.durability ?? 1) <= 0);
-        if (owner && broken.length > 0) {
-          for (const b of broken) {
-            // Log breaking
-            if (owner?.log) owner.log.push(`${b.name} broke and was destroyed.`);
-            let moved = false;
-            if (owner?.battlefield && owner?.graveyard) {
-              const res = owner.battlefield.moveTo(owner.graveyard, b.id);
-              moved = !!res;
+            if (owner && broken.length > 0) {
+              for (const b of broken) {
+                // Log breaking
+                if (owner?.log) owner.log.push(`${b.name} broke and was destroyed.`);
+                let moved = false;
+                if (owner?.battlefield && owner?.graveyard) {
+              const res = owner.battlefield.moveTo(owner.graveyard, b);
+                  moved = !!res;
+                }
+                if (!moved && owner?.graveyard?.add) {
+                  owner.graveyard.add(b);
+                }
+              }
             }
-            if (!moved && owner?.graveyard?.add) {
-              owner.graveyard.add(b);
-            }
-          }
-        }
         attacker.equipment = attacker.equipment.filter(e => (e?.durability ?? 1) > 0);
       }
     }
@@ -153,7 +153,7 @@ export class CombatSystem {
             if (owner?.log) owner.log.push(`${b.name} broke and was destroyed.`);
             let moved = false;
             if (owner?.battlefield && owner?.graveyard) {
-              const res = owner.battlefield.moveTo(owner.graveyard, b.id);
+              const res = owner.battlefield.moveTo(owner.graveyard, b);
               moved = !!res;
             }
             if (!moved && owner?.graveyard?.add) {

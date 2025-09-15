@@ -313,7 +313,7 @@ export default class Game {
     }
 
     if (card.type === 'ally' || card.type === 'equipment') {
-      player.hand.moveTo(player.battlefield, cardId);
+      player.hand.moveTo(player.battlefield, card);
       if (card.type === 'equipment') player.equip(card);
       if (card.type === 'ally') {
         // Track the turn the ally entered play to reason about Rush/Charge
@@ -331,10 +331,10 @@ export default class Game {
         card.data.divineShield = true;
       }
     } else if (card.type === 'quest') {
-      player.hand.moveTo(player.battlefield, cardId);
+      player.hand.moveTo(player.battlefield, card);
       this.quests.addQuest(player, card);
     } else {
-      player.hand.moveTo(player.graveyard, cardId);
+      player.hand.moveTo(player.graveyard, card);
     }
 
     this.bus.emit('cardPlayed', { player, card });
@@ -505,6 +505,10 @@ export default class Game {
       const srcOwner = [player.hero, ...player.battlefield.cards].includes(ev.source) ? player : defender;
       this.bus.emit('damageDealt', { player: srcOwner, source: ev.source, amount: ev.amount, target: ev.target });
     }
+    // Allow UI to reflect HP changes before removals
+    if (this._uiRerender) {
+      try { this._uiRerender(); } catch {}
+    }
     await this.cleanupDeaths(player, defender);
     await this.cleanupDeaths(defender, player);
     const actualTarget = target || defender.hero;
@@ -522,7 +526,8 @@ export default class Game {
   async cleanupDeaths(player, killer) {
     const dead = player.battlefield.cards.filter(c => c.data?.dead);
     for (const c of dead) {
-      player.battlefield.moveTo(player.graveyard, c.id);
+      // Move the exact instance that died, not the first with matching id
+      player.battlefield.moveTo(player.graveyard, c);
       if (c.keywords?.includes('Deathrattle') && c.deathrattle?.length) {
         await this.effects.execute(c.deathrattle, { game: this, player, card: c });
       }
@@ -623,6 +628,10 @@ export default class Game {
       for (const ev of events) {
         const srcOwner = [this.opponent.hero, ...this.opponent.battlefield.cards].includes(ev.source) ? this.opponent : this.player;
         this.bus.emit('damageDealt', { player: srcOwner, source: ev.source, amount: ev.amount, target: ev.target });
+      }
+      // Allow UI to reflect HP changes before removals
+      if (this._uiRerender) {
+        try { this._uiRerender(); } catch {}
       }
       await this.cleanupDeaths(this.player, this.opponent);
       await this.cleanupDeaths(this.opponent, this.player);

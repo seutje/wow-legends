@@ -667,14 +667,14 @@ export class MCTS_AI {
           const cost = action.card.cost || 0;
           if (!this.resources.pay(player, cost)) break;
           if (action.card.type === 'ally' || action.card.type === 'equipment' || action.card.type === 'quest') {
-            player.hand.moveTo(player.battlefield, action.card.id);
+            player.hand.moveTo(player.battlefield, action.card);
             if (action.card.type === 'equipment') player.hero.equipment = [action.card];
             if (action.card.type === 'ally' && !action.card.keywords?.includes('Rush')) {
               action.card.data = action.card.data || {};
               action.card.data.attacked = true;
             }
           } else {
-            player.hand.moveTo(player.graveyard, action.card.id);
+            player.hand.moveTo(player.graveyard, action.card);
           }
           player.cardsPlayedThisTurn += 1;
         }
@@ -732,7 +732,7 @@ export class MCTS_AI {
 
       for (const p of [player, opponent]) {
         const dead = p.battlefield.cards.filter(c => c.data?.dead);
-        for (const d of dead) { p.battlefield.moveTo(p.graveyard, d.id); }
+        for (const d of dead) { p.battlefield.moveTo(p.graveyard, d); }
       }
     }
 

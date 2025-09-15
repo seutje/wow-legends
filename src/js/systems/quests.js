@@ -26,8 +26,8 @@ export class QuestSystem {
     const arr = this.active.get(player) || [];
     const idx = arr.indexOf(rec);
     if (idx !== -1) arr.splice(idx, 1);
-    // move quest card to graveyard
-    player.battlefield.moveTo(player.graveyard, rec.card.id);
+    // move quest card to graveyard (by instance)
+    player.battlefield.moveTo(player.graveyard, rec.card);
     // notify listeners (e.g., UI) that a quest completed and was removed
     try {
       this.game?.bus?.emit?.('quest:completed', { player, card: rec.card });

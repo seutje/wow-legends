@@ -196,14 +196,14 @@ export class BasicAI {
       this.resources.pay(player, best.card.cost || 0);
       if (best.card.effects) this._applySimpleEffects(best.card.effects, player, opponent, pool);
       if (best.card.type === 'ally' || best.card.type === 'equipment' || best.card.type === 'quest') {
-        player.hand.moveTo(player.battlefield, best.card.id);
+        player.hand.moveTo(player.battlefield, best.card);
         if (best.card.type === 'equipment') player.hero.equipment = [best.card];
         if (best.card.type === 'ally' && !best.card.keywords?.includes('Rush')) {
           best.card.data = best.card.data || {};
           best.card.data.attacked = true;
         }
       } else {
-        player.hand.moveTo(player.graveyard, best.card.id);
+        player.hand.moveTo(player.graveyard, best.card);
       }
       player.cardsPlayedThisTurn += 1;
     }
@@ -229,7 +229,7 @@ export class BasicAI {
       for (const p of [player, opponent]) {
         const dead = p.battlefield.cards.filter(c => c.data?.dead);
         for (const d of dead) {
-          p.battlefield.moveTo(p.graveyard, d.id);
+          p.battlefield.moveTo(p.graveyard, d);
         }
       }
     }

@@ -9,14 +9,27 @@ export class Zone {
 
   add(card) { this.cards.push(card); return card; }
 
-  removeById(id) {
-    const i = this.cards.findIndex(c => c.id === id);
-    if (i !== -1) return this.cards.splice(i, 1)[0];
+  // Remove by strict reference or by id
+  remove(refOrId) {
+    let idx = -1;
+    if (refOrId && typeof refOrId === 'object') {
+      idx = this.cards.indexOf(refOrId);
+      if (idx === -1 && refOrId.id) {
+        idx = this.cards.findIndex(c => c.id === refOrId.id);
+      }
+    } else {
+      idx = this.cards.findIndex(c => c.id === refOrId);
+    }
+    if (idx !== -1) return this.cards.splice(idx, 1)[0];
     return null;
   }
 
-  moveTo(otherZone, id) {
-    const c = this.removeById(id);
+  removeById(id) {
+    return this.remove(id);
+  }
+
+  moveTo(otherZone, refOrId) {
+    const c = this.remove(refOrId);
     if (c) otherZone.add(c);
     return c;
   }
@@ -27,4 +40,3 @@ export class Zone {
 }
 
 export default Zone;
-

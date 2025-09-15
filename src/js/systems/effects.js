@@ -305,7 +305,10 @@ export class EffectSystem {
       }
       game.bus.emit('damageDealt', { player, source: card, amount: remaining, target: t });
     }
-
+    // Let UI reflect HP changes before removals
+    if (game._uiRerender) {
+      try { game._uiRerender(); } catch {}
+    }
     await game.cleanupDeaths(player, player);
     await game.cleanupDeaths(opponent, player);
   }
@@ -474,7 +477,7 @@ export class EffectSystem {
       attacker.data.attackCancelled = true;
 
       // Return to owner's hand and increase cost by 2
-      opponent.battlefield.moveTo(opponent.hand, attacker.id);
+      opponent.battlefield.moveTo(opponent.hand, attacker);
       attacker.cost = (attacker.cost || 0) + 2;
       game.bus.emit('cardReturned', { player, card: attacker });
 
@@ -680,7 +683,7 @@ export class EffectSystem {
 
     if (targetMinions.length > 0) {
       const minionToDestroy = game.rng.pick(targetMinions);
-      opponent.battlefield.moveTo(opponent.graveyard, minionToDestroy.id);
+      opponent.battlefield.moveTo(opponent.graveyard, minionToDestroy);
       console.log(`Destroyed ${minionToDestroy.name}.`);
     } else {
       console.log('No minion found to destroy.');
@@ -728,7 +731,7 @@ export class EffectSystem {
                 : null;
     if (!owner) return;
 
-    owner.battlefield.moveTo(owner.hand, chosen.id);
+    owner.battlefield.moveTo(owner.hand, chosen);
     chosen.cost = (chosen.cost || 0) + costIncrease;
     console.log(`Returned ${chosen.name} to hand. New cost: ${chosen.cost}`);
     game.bus.emit('cardReturned', { player, card: chosen });
