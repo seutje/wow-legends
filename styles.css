@@ -301,6 +301,35 @@ ul.zone-list li {
   background: #e74c3c;
 }
 
+/* Status indicators */
+.card-tooltip .status-overlay {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 92%;
+  height: 90%;
+  border-radius: 50% / 55%; /* ellipse */
+  pointer-events: none;
+  z-index: 1; /* above art/frame, below text/stats */
+}
+
+.card-tooltip.status-stealthed {
+  opacity: 0.8; /* stealth dim */
+}
+
+.card-tooltip .status-overlay.status-divine-shield {
+  background: rgba(250, 128, 114, 0.35); /* salmon pink */
+}
+
+.card-tooltip .status-overlay.status-frozen {
+  background: rgba(0, 255, 255, 0.30); /* cyan */
+}
+
+.card-tooltip .status-overlay.status-windfury {
+  background: rgba(255, 255, 255, 0.25); /* white */
+}
+
 .card-info {
   position: absolute;
   left: 10.4%;

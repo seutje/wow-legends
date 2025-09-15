@@ -94,6 +94,8 @@ function buildCardEl(card, { owner } = {}) {
   }
 
   art.src = `src/assets/optim/${tooltipCard.id}-art.png`;
+  // Apply initial status indicators (divine shield, frozen, windfury, stealth)
+  applyStatusIndicators(wrap, card);
   return wrap;
 }
 
@@ -210,8 +212,11 @@ function updateCardEl(cardEl, card, { owner } = {}) {
       cardEl.classList.add('shake-hit');
       setTimeout(() => { cardEl.classList.remove('shake-hit'); }, 400);
     }
-    if (typeof eqDurability === 'number') cardEl.dataset.prevDurability = String(eqDurability);
+  if (typeof eqDurability === 'number') cardEl.dataset.prevDurability = String(eqDurability);
   }
+
+  // Refresh status indicators (divine shield, frozen, windfury, stealth)
+  applyStatusIndicators(cardEl, card);
 }
 
 function syncCardsSection(sectionEl, cards, { clickCard, owner } = {}) {
@@ -267,6 +272,43 @@ function syncLogPane(pane, entries = []) {
     }
   }
   if (wasAtBottom) ul.scrollTop = ul.scrollHeight;
+}
+
+// --- Status indicators ---
+function ensureOverlay(cardEl, cls) {
+  let ov = cardEl.querySelector(`.status-overlay.${cls}`);
+  if (!ov) {
+    ov = el('div', { class: `status-overlay ${cls}` });
+    cardEl.append(ov);
+  }
+  return ov;
+}
+
+function removeOverlay(cardEl, cls) {
+  const ov = cardEl.querySelector(`.status-overlay.${cls}`);
+  if (ov) ov.remove();
+}
+
+function applyStatusIndicators(cardEl, card) {
+  // Stealth: dim the entire card
+  const hasStealth = !!(card?.keywords?.includes?.('Stealth'));
+  if (hasStealth) cardEl.classList.add('status-stealthed');
+  else cardEl.classList.remove('status-stealthed');
+
+  // Divine Shield: boolean on data
+  const hasShield = !!(card?.data?.divineShield);
+  if (hasShield) ensureOverlay(cardEl, 'status-divine-shield');
+  else removeOverlay(cardEl, 'status-divine-shield');
+
+  // Frozen: freezeTurns > 0
+  const isFrozen = ((card?.data?.freezeTurns || 0) > 0);
+  if (isFrozen) ensureOverlay(cardEl, 'status-frozen');
+  else removeOverlay(cardEl, 'status-frozen');
+
+  // Windfury: keyword presence
+  const hasWindfury = !!(card?.keywords?.includes?.('Windfury'));
+  if (hasWindfury) ensureOverlay(cardEl, 'status-windfury');
+  else removeOverlay(cardEl, 'status-windfury');
 }
 
 import { setDebugLogging, isDebugLogging } from '../utils/logger.js';
