@@ -52,7 +52,7 @@ export class MCTS_AI {
           this._gpuKernel = gpu.createKernel(function(totals, visits, parentVisits, c) {
             const v = visits[this.thread.x];
             return v === 0 ? 1e9 : (totals[this.thread.x] / v) + c * Math.sqrt(Math.log(parentVisits + 1) / v);
-          });
+          }, { dynamicOutput: true });
           log('MCTS AI backend: GPU');
         } catch (error) {
           this._gpuKernel = null;
