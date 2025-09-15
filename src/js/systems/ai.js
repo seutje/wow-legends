@@ -212,6 +212,7 @@ export class BasicAI {
       this.resources.pay(player, 2);
       player.hero.powerUsed = true;
       if (player.hero.active) this._applySimpleEffects(player.hero.active, player, opponent, pool);
+      if (player?.log) player.log.push('Used hero power');
     }
 
     if (this.combat && opponent) {

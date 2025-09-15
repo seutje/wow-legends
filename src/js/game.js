@@ -223,6 +223,8 @@ export default class Game {
     if (!this.resources.pay(player, cost)) return false;
     await this.effects.execute(hero.active, { game: this, player, card: hero });
     hero.powerUsed = true;
+    // Combat log indicator for hero power usage
+    if (player?.log) player.log.push('Used hero power');
     return true;
   }
 
