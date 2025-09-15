@@ -126,8 +126,11 @@
     "cost": 3,
     "effects": [
       {
-        "type": "rawText",
-        "text": "Battlecry — Give a Beast +1/+1 and Rush this turn."
+        "type": "buffBeast",
+        "attack": 1,
+        "health": 1,
+        "keywords": ["Rush"],
+        "duration": "thisTurn"
       }
     ],
     "keywords": [

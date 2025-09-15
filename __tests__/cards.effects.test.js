@@ -388,6 +388,16 @@ describe.each(effectCards)('$id executes its effect', (card) => {
         expect(unit.data.attack).toBe(before + effect.attack);
         break;
       }
+      case 'buffBeast': {
+        const beast = new Card({ name: 'Beast', type: 'ally', data: { attack: 1, health: 1 }, keywords: ['Beast'] });
+        g.player.battlefield.add(beast);
+        g.promptTarget = async () => beast;
+        await g.playFromHand(g.player, card.id);
+        if (effect.attack) expect(beast.data.attack).toBe(1 + effect.attack);
+        if (effect.health) expect(beast.data.health).toBe(1 + effect.health);
+        if (effect.keywords?.includes('Rush')) expect(beast.keywords).toContain('Rush');
+        break;
+      }
       default:
         throw new Error('Unhandled effect type: ' + effect.type);
     }
