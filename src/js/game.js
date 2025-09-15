@@ -249,6 +249,22 @@ export default class Game {
     if (!card) return false;
     const cost = card.cost || 0;
     if (!this.resources.pay(player, cost)) return false;
+    // Check opponent secrets that may counter spells before any effects resolve
+    const defender = (player === this.player) ? this.opponent : this.player;
+    const oppSecrets = Array.isArray(defender?.hero?.data?.secrets) ? defender.hero.data.secrets : [];
+    const counterIdx = (card.type === 'spell') ? oppSecrets.findIndex(s => s?.type === 'counterShot') : -1;
+    if (counterIdx >= 0) {
+      // Consume the counter secret and fizzle the spell
+      const tok = oppSecrets.splice(counterIdx, 1)[0];
+      try { this.bus.emit('secret:removed', { player: defender, card: null }); } catch {}
+      try { this._uiRerender?.(); } catch {}
+      // Move spell straight to graveyard without resolving effects
+      player.hand.moveTo(player.graveyard, card);
+      this.bus.emit('cardPlayed', { player, card });
+      player.log.push(`Played ${card.name} (countered)`);
+      player.cardsPlayedThisTurn += 1;
+      return true;
+    }
     let tempSpellDamage = 0;
     const bonus = player.hero.data.nextSpellDamageBonus;
     if (card.type === 'spell' && bonus && !bonus.used) {

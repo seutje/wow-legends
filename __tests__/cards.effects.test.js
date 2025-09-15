@@ -241,6 +241,63 @@ describe.each(effectCards)('$id executes its effect', (card) => {
         expect(enemy.cost).toBe(3);
         break;
       }
+      case 'snakeTrap': {
+        await g.playFromHand(g.player, card.id);
+        const enemy = new Card({ id: 'enemy-2', name: 'Enemy', type: 'ally', cost: 1, data: { attack: 1, health: 2 }, keywords: [] });
+        g.opponent.battlefield.add(enemy);
+        g.combat.declareAttacker(enemy);
+        // Expect 3 snakes summoned for player
+        const snakes = g.player.battlefield.cards.filter(c => c.name === 'Snake');
+        expect(snakes.length).toBe(3);
+        expect(snakes.every(s => s.data.attack === 1 && s.data.health === 1 && s.keywords.includes('Rush'))).toBe(true);
+        break;
+      }
+      case 'counterShot': {
+        await g.playFromHand(g.player, card.id);
+        // Opponent tries to play a spell
+        const renewData = cards.find(c => c.id === 'spell-renew');
+        const oppSpell = new Card(renewData);
+        g.opponent.hand.add(oppSpell);
+        g.opponent.hero.data.maxHealth = 30;
+        g.opponent.hero.data.health = 20;
+        await g.playFromHand(g.opponent, oppSpell.id);
+        // Spell should be countered: moved to graveyard, no heal applied
+        expect(g.opponent.graveyard.cards.includes(oppSpell)).toBe(true);
+        expect(g.opponent.hero.data.health).toBe(20);
+        break;
+      }
+      case 'retaliationRunes': {
+        await g.playFromHand(g.player, card.id);
+        // Enemy deals damage to our hero; source is an enemy ally
+        const src = new Card({ id: 'enemy-src', name: 'Enemy Src', type: 'ally', data: { attack: 0, health: 3 }, keywords: [] });
+        g.opponent.battlefield.add(src);
+        g.promptTarget = async () => g.player.hero;
+        await g.effects.dealDamage(
+          { target: 'character', amount: 1 },
+          { game: g, player: g.opponent, card: src }
+        );
+        // Secret should reflect 2 damage to the source
+        expect(src.data.health).toBe(1);
+        break;
+      }
+      case 'vengefulSpirit': {
+        g.rng.pick = arr => arr[0]; // deterministic target: enemy hero first
+        await g.playFromHand(g.player, card.id);
+        // Set up enemy hero and friendly ally
+        g.opponent.hero.data.maxHealth = 30;
+        g.opponent.hero.data.health = 10;
+        const ally = new Card({ id: 'ally-1', name: 'Ally1', type: 'ally', data: { attack: 0, health: 1 }, keywords: [] });
+        g.player.battlefield.add(ally);
+        // Enemy deals lethal damage to our ally
+        g.promptTarget = async () => ally;
+        await g.effects.dealDamage(
+          { target: 'character', amount: 1 },
+          { game: g, player: g.opponent, card: null }
+        );
+        // Secret should deal 3 to enemy hero
+        expect(g.opponent.hero.data.health).toBe(7);
+        break;
+      }
       case 'spellDamageNextSpell': {
         await g.playFromHand(g.player, card.id);
         expect(g.player.hero.data.nextSpellDamageBonus.amount).toBe(effect.amount);

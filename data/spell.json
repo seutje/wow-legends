@@ -497,8 +497,7 @@
     "cost": 2,
     "effects": [
       {
-        "type": "rawText",
-        "text": "Secret — When one of your allies is attacked, summon three 1/1 Snakes with Rush."
+        "type": "snakeTrap"
       }
     ],
     "keywords": [
@@ -513,11 +512,10 @@
     "id": "spell-counter-shot",
     "name": "Counter Shot",
     "type": "spell",
-    "cost": 3,
+    "cost": 2,
     "effects": [
       {
-        "type": "rawText",
-        "text": "Secret — When your opponent casts a spell, counter it."
+        "type": "counterShot"
       }
     ],
     "keywords": [
@@ -535,8 +533,8 @@
     "cost": 2,
     "effects": [
       {
-        "type": "rawText",
-        "text": "Secret — When a friendly character takes damage, deal 2 damage to the source."
+        "type": "retaliationRunes",
+        "amount": 2
       }
     ],
     "keywords": [
@@ -554,8 +552,8 @@
     "cost": 2,
     "effects": [
       {
-        "type": "rawText",
-        "text": "Secret — After a friendly ally dies, deal 3 damage to a random enemy."
+        "type": "vengefulSpirit",
+        "amount": 3
       }
     ],
     "keywords": [

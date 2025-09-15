@@ -131,6 +131,18 @@ export class EffectSystem {
         case 'freezingTrap':
           this.freezingTrap(effect, context);
           break;
+        case 'snakeTrap':
+          this.snakeTrap(effect, context);
+          break;
+        case 'counterShot':
+          this.counterShot(effect, context);
+          break;
+        case 'retaliationRunes':
+          this.retaliationRunes(effect, context);
+          break;
+        case 'vengefulSpirit':
+          this.vengefulSpirit(effect, context);
+          break;
         case 'chooseOne':
           await this.handleChooseOne(effect, context);
           break;
@@ -518,6 +530,149 @@ export class EffectSystem {
     };
 
     const off = game.bus.on('attackDeclared', handler);
+  }
+
+  snakeTrap(effect, context) {
+    const { game, player, card } = context;
+    // Track an active secret on the owner's hero for UI
+    player.hero.data = player.hero.data || {};
+    const secrets = (player.hero.data.secrets ||= []);
+    const token = { type: 'snakeTrap' };
+    secrets.push(token);
+    try { game.bus.emit('secret:added', { player, card }); } catch {}
+    try { game._uiRerender?.(); } catch {}
+
+    const opponent = player === game.player ? game.opponent : game.player;
+
+    const handler = async ({ attacker }) => {
+      // Trigger on enemy attack declaration (target-agnostic, similar to Freezing Trap)
+      if (!attacker) return;
+      const isEnemy = opponent.battlefield.cards.includes(attacker) || attacker === opponent.hero;
+      if (!isEnemy) return;
+      off();
+      // Remove the secret indicator when it triggers
+      const arr = player.hero?.data?.secrets;
+      if (Array.isArray(arr)) {
+        const idx = arr.indexOf(token);
+        if (idx >= 0) arr.splice(idx, 1);
+      }
+      try { game.bus.emit('secret:removed', { player, card }); } catch {}
+      try { game._uiRerender?.(); } catch {}
+
+      // Summon three 1/1 Snakes with Rush
+      const summon = {
+        type: 'summon',
+        unit: { name: 'Snake', attack: 1, health: 1, keywords: ['Rush'] },
+        count: 3,
+      };
+      await game.effects.summonUnit(summon, { game, player, card });
+    };
+
+    const off = game.bus.on('attackDeclared', handler);
+  }
+
+  counterShot(effect, context) {
+    // Marker-only; actual counter resolution happens in Game.playFromHand
+    const { game, player, card } = context;
+    player.hero.data = player.hero.data || {};
+    const secrets = (player.hero.data.secrets ||= []);
+    secrets.push({ type: 'counterShot' });
+    try { game.bus.emit('secret:added', { player, card }); } catch {}
+    try { game._uiRerender?.(); } catch {}
+  }
+
+  retaliationRunes(effect, context) {
+    const { game, player, card } = context;
+    const amount = typeof effect.amount === 'number' ? effect.amount : 2;
+    // Track secret for UI
+    player.hero.data = player.hero.data || {};
+    const secrets = (player.hero.data.secrets ||= []);
+    const token = { type: 'retaliationRunes' };
+    secrets.push(token);
+    try { game.bus.emit('secret:added', { player, card }); } catch {}
+    try { game._uiRerender?.(); } catch {}
+
+    const opponent = player === game.player ? game.opponent : game.player;
+
+    const handler = async ({ player: srcOwner, source, target }) => {
+      // Trigger only when a friendly character (hero or ally) takes damage from the opponent
+      const isFriendlyTarget = (target === player.hero) || player.battlefield.cards.includes(target);
+      const fromOpponent = srcOwner === opponent;
+      if (!isFriendlyTarget || !fromOpponent) return;
+
+      off();
+      // Remove secret indicator
+      const arr = player.hero?.data?.secrets;
+      if (Array.isArray(arr)) {
+        const idx = arr.indexOf(token);
+        if (idx >= 0) arr.splice(idx, 1);
+      }
+      try { game.bus.emit('secret:removed', { player, card }); } catch {}
+      try { game._uiRerender?.(); } catch {}
+
+      // Only reflect if the source is a character on the battlefield
+      if (source && (source === opponent.hero || opponent.battlefield.cards.includes(source))) {
+        const prev = game.promptTarget;
+        try {
+          game.promptTarget = async () => source;
+          await game.effects.dealDamage(
+            { target: 'character', amount, usesSpellDamage: false },
+            { game, player, card }
+          );
+        } finally {
+          game.promptTarget = prev;
+        }
+      }
+    };
+
+    const off = game.bus.on('damageDealt', handler);
+  }
+
+  vengefulSpirit(effect, context) {
+    const { game, player, card } = context;
+    const amount = typeof effect.amount === 'number' ? effect.amount : 3;
+    // Track secret for UI
+    player.hero.data = player.hero.data || {};
+    const secrets = (player.hero.data.secrets ||= []);
+    const token = { type: 'vengefulSpirit' };
+    secrets.push(token);
+    try { game.bus.emit('secret:added', { player, card }); } catch {}
+    try { game._uiRerender?.(); } catch {}
+
+    const opponent = player === game.player ? game.opponent : game.player;
+
+    const handler = async ({ player: killer, card: dead }) => {
+      // Our ally died when the killer is the opponent side
+      if (killer !== opponent) return;
+
+      off();
+      // Remove secret indicator
+      const arr = player.hero?.data?.secrets;
+      if (Array.isArray(arr)) {
+        const idx = arr.indexOf(token);
+        if (idx >= 0) arr.splice(idx, 1);
+      }
+      try { game.bus.emit('secret:removed', { player, card }); } catch {}
+      try { game._uiRerender?.(); } catch {}
+
+      // Deal damage to a random enemy character (hero or ally)
+      const enemies = [opponent.hero, ...opponent.battlefield.cards.filter(c => c.type !== 'quest')];
+      const candidates = enemies.filter(Boolean);
+      if (!candidates.length) return;
+      const chosen = game.rng.pick(candidates);
+      const prev = game.promptTarget;
+      try {
+        game.promptTarget = async () => chosen;
+        await game.effects.dealDamage(
+          { target: 'character', amount, usesSpellDamage: false },
+          { game, player, card }
+        );
+      } finally {
+        game.promptTarget = prev;
+      }
+    };
+
+    const off = game.bus.on('allyDefeated', handler);
   }
 
   drawOnHeal(effect, context) {
