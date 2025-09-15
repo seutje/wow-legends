@@ -7,6 +7,9 @@ import Player from '../entities/player.js';
 import Hero from '../entities/hero.js';
 import { getOriginalConsole } from '../utils/logger.js';
 
+const EXPLORATION_CONSTANT = 1.4;
+const SCORE_TOLERANCE = 1e-6;
+
 // Simple Monte Carlo Tree Search AI
 // - Explores sequences of actions (play card / use hero power / end)
 // - Uses a lightweight simulation (not full EffectSystem) for speed
@@ -23,7 +26,7 @@ class MCTSNode {
     this.total = 0;
   }
 
-  ucb1(c = 1.4) {
+  ucb1(c = EXPLORATION_CONSTANT) {
     if (this.visits === 0) return Infinity;
     const mean = this.total / this.visits;
     const exploration = c * Math.sqrt(Math.log(this.parent.visits + 1) / this.visits);
@@ -51,7 +54,11 @@ export class MCTS_AI {
           const gpu = new GPU();
           this._gpuKernel = gpu.createKernel(function(totals, visits, parentVisits, c) {
             const v = visits[this.thread.x];
-            return v === 0 ? 1e9 : (totals[this.thread.x] / v) + c * Math.sqrt(Math.log(parentVisits + 1) / v);
+            if (v === 0) return 0;
+            const total = totals[this.thread.x];
+            const mean = total / v;
+            const exploration = c * Math.sqrt(Math.log(parentVisits + 1) / v);
+            return mean + exploration;
           });
           log('MCTS AI backend: GPU');
         } catch (error) {
@@ -69,18 +76,64 @@ export class MCTS_AI {
   }
 
   _selectChild(node) {
+    const childCount = node.children.length;
+    if (childCount === 0) return null;
+
+    const totals = node.children.map(c => c.total);
+    const visits = node.children.map(c => c.visits);
+    let scores;
+
     if (this._gpuKernel) {
-      const totals = node.children.map(c => c.total);
-      const visits = node.children.map(c => c.visits);
-      this._gpuKernel.setOutput([totals.length]);
-      const scores = this._gpuKernel(totals, visits, node.visits, 1.4);
-      let idx = 0;
-      for (let i = 1; i < scores.length; i++) {
-        if (scores[i] > scores[idx]) idx = i;
-      }
-      return node.children[idx];
+      this._gpuKernel.setOutput([childCount]);
+      scores = Array.from(this._gpuKernel(totals, visits, node.visits, EXPLORATION_CONSTANT));
+    } else {
+      const logParent = Math.log(node.visits + 1);
+      scores = totals.map((total, idx) => {
+        const v = visits[idx];
+        if (v === 0) return 0;
+        const mean = total / v;
+        const exploration = EXPLORATION_CONSTANT * Math.sqrt(logParent / v);
+        return mean + exploration;
+      });
     }
-    return node.children.reduce((a, b) => (a.ucb1() > b.ucb1() ? a : b));
+
+    let bestIdx = 0;
+    let bestVisit = visits[0];
+    let bestScore = bestVisit === 0 ? Infinity : scores[0];
+
+    for (let i = 1; i < childCount; i++) {
+      const visit = visits[i];
+      const score = visit === 0 ? Infinity : scores[i];
+
+      if (visit === 0 && bestVisit !== 0) {
+        bestIdx = i;
+        bestVisit = 0;
+        bestScore = Infinity;
+        continue;
+      }
+
+      if (bestVisit === 0) {
+        // Existing best already guarantees exploration; prefer earliest index deterministically
+        continue;
+      }
+
+      if (visit === 0) {
+        // Both options have zero visits -> keep earlier index (bestIdx)
+        continue;
+      }
+
+      const diff = score - bestScore;
+      if (diff > SCORE_TOLERANCE) {
+        bestIdx = i;
+        bestVisit = visit;
+        bestScore = score;
+      } else if (Math.abs(diff) <= SCORE_TOLERANCE) {
+        // Equal within tolerance -> prefer lowest index (stable ordering)
+        continue;
+      }
+    }
+
+    return node.children[bestIdx];
   }
 
   // Heuristic: skip actions that have no effect for common types

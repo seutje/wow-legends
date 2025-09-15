@@ -35,7 +35,9 @@ self.onmessage = (ev) => {
       // Selection
       let node = root;
       while (node.untried === null ? false : node.untried.length === 0 && node.children.length) {
-        node = node.children.reduce((a, b) => (a.ucb1() > b.ucb1() ? a : b));
+        const next = ai._selectChild(node);
+        if (!next) break;
+        node = next;
       }
       // Expansion
       if (node.untried === null) node.untried = ai._legalActions(node.state);
