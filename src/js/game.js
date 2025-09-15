@@ -365,9 +365,29 @@ export default class Game {
 
       const list = document.createElement('ul');
 
-      candidates.forEach((t) => {
+      // Order: enemy hero, enemy allies, player hero, player allies
+      const enemy = this.opponent;
+      const me = this.player;
+      const inCands = new Set(candidates);
+
+      const ordered = [];
+      if (inCands.has(enemy.hero)) ordered.push(enemy.hero);
+      for (const c of enemy.battlefield.cards) {
+        if (inCands.has(c)) ordered.push(c);
+      }
+      if (inCands.has(me.hero)) ordered.push(me.hero);
+      for (const c of me.battlefield.cards) {
+        if (inCands.has(c)) ordered.push(c);
+      }
+      // Append any remaining candidates not covered above
+      for (const c of candidates) {
+        if (!ordered.includes(c)) ordered.push(c);
+      }
+
+      ordered.forEach((t) => {
         const li = document.createElement('li');
-        li.textContent = t.name;
+        const isEnemy = (t === enemy.hero) || enemy.battlefield.cards.includes(t);
+        li.textContent = isEnemy ? `${t.name} (AI)` : t.name;
         li.addEventListener('click', () => {
           document.body.removeChild(overlay);
           resolve(t);
