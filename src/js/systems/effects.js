@@ -77,6 +77,9 @@ export class EffectSystem {
         case 'buff':
           await this.applyBuff(effect, context);
           break;
+        case 'buffBeast':
+          await this.buffBeast(effect, context);
+          break;
         case 'buffOnArmorGain':
           this.buffOnArmorGain(effect, context);
           break;
@@ -922,6 +925,43 @@ export class EffectSystem {
     chosen.cost = (chosen.cost || 0) + costIncrease;
     console.log(`Returned ${chosen.name} to hand. New cost: ${chosen.cost}`);
     game.bus.emit('cardReturned', { player, card: chosen });
+  }
+
+  async buffBeast(effect, context) {
+    const { attack = 0, health = 0, keywords = [], duration } = effect;
+    const { game, player } = context;
+    const opponent = player === game.player ? game.opponent : game.player;
+
+    const beasts = [
+      ...player.battlefield.cards,
+      ...opponent.battlefield.cards,
+    ]
+      .filter(c => c.keywords?.includes('Beast') && c.type !== 'quest')
+      .filter(isTargetable);
+
+    if (!beasts.length) return;
+
+    const chosen = await game.promptTarget(beasts);
+    if (chosen === game.CANCEL) throw game.CANCEL;
+    if (!chosen) return;
+
+    if (attack) {
+      await this.applyBuff({ target: 'character', property: 'attack', amount: attack, duration }, context, chosen);
+    }
+    if (health) {
+      await this.applyBuff({ target: 'character', property: 'health', amount: health, duration }, context, chosen);
+    }
+
+    for (const kw of keywords) {
+      if (!chosen.keywords) chosen.keywords = [];
+      if (!chosen.keywords.includes(kw)) {
+        chosen.keywords.push(kw);
+        if (duration === 'thisTurn') {
+          const revertEffect = { revert: () => { chosen.keywords = chosen.keywords.filter(k => k !== kw); } };
+          this.temporaryEffects.push(revertEffect);
+        }
+      }
+    }
   }
 
   transformCharacter(effect, context) {
