@@ -350,6 +350,13 @@
     "cost": 1,
     "effects": [
       {
+        "type": "buff",
+        "target": "character",
+        "property": "health",
+        "amount": 3,
+        "duration": "thisTurn"
+      },
+      {
         "type": "draw",
         "count": 1
       }
@@ -921,6 +928,8 @@
     "name": "Ashkandi, Greatsword of the Brotherhood",
     "type": "equipment",
     "cost": 5,
+    "attack": 5,
+    "durability": 1,
     "effects": [
       {
         "type": "rawText",
@@ -940,6 +949,8 @@
     "name": "Core Hound Tooth",
     "type": "equipment",
     "cost": 3,
+    "attack": 2,
+    "durability": 2,
     "effects": [
       {
         "type": "rawText",

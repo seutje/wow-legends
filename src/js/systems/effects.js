@@ -348,7 +348,13 @@ export class EffectSystem {
     const { game, player, card } = context;
 
     const applyBuff = (unit) => {
-      if (!player.hero.equipment.includes(card)) return;
+      const equipped = Array.isArray(player.hero.equipment) && player.hero.equipment.some(eq => {
+        if (eq === card) return true;
+        if (eq?.id && card?.id && eq.id === card.id) return true;
+        if (eq?.name && card?.name && eq.name === card.name) return true;
+        return false;
+      });
+      if (!equipped) return;
       if (!unit.keywords?.includes(keyword)) return;
       unit.data = unit.data || {};
       unit.data.attack = (unit.data.attack || 0) + attack;

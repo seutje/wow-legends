@@ -15,7 +15,7 @@ function el(tag, attrs = {}, ...children) {
 }
 
 // Build a static card element that uses the same visual as tooltips
-function buildCardEl(card) {
+function buildCardEl(card, { owner } = {}) {
   const tooltipCard = card.summonedBy || card;
   const wrap = el('div', { class: 'card-tooltip' });
 
@@ -58,20 +58,42 @@ function buildCardEl(card) {
   } else if (tooltipCard.cost != null) {
     wrap.append(el('div', { class: 'stat cost' }, tooltipCard.cost));
   }
-  if (card.data?.attack != null) wrap.append(el('div', { class: 'stat attack' }, card.data.attack));
-  if (card.data?.health != null) wrap.append(el('div', { class: 'stat health' }, card.data.health));
+  // Allies: attack/health from data
+  if (card.type === 'ally') {
+    if (card.data?.attack != null) wrap.append(el('div', { class: 'stat attack' }, card.data.attack));
+    if (card.data?.health != null) wrap.append(el('div', { class: 'stat health' }, card.data.health));
+  }
+  // Hero: show current total attack and HP
+  if (card.type === 'hero') {
+    const heroAtk = (typeof card.totalAttack === 'function') ? card.totalAttack() : (card.data?.attack ?? 0);
+    const heroHp = card.data?.health;
+    if (heroAtk != null) wrap.append(el('div', { class: 'stat attack' }, heroAtk));
+    if (heroHp != null) wrap.append(el('div', { class: 'stat health' }, heroHp));
+  }
+  // Equipment: show attack and durability similar to ally stats
+  if (card.type === 'equipment') {
+    // Find live equipped instance for current owner to reflect durability changes
+    let eqAttack = card.attack;
+    let eqDurability = card.durability;
+    if (owner && owner.hero?.equipment) {
+      const eq = owner.hero.equipment.find(e => e?.id === card.id || e?.name === card.name);
+      if (eq) { eqAttack = (eq.attack ?? eqAttack); eqDurability = (eq.durability ?? eqDurability); }
+    }
+    if (eqAttack != null) wrap.append(el('div', { class: 'stat attack' }, eqAttack));
+    if (eqDurability != null) wrap.append(el('div', { class: 'stat health' }, eqDurability));
+  }
 
   art.src = `src/assets/optim/${tooltipCard.id}-art.png`;
   return wrap;
 }
 
-function zoneCards(title, cards, { clickCard } = {}) {
+function zoneCards(title, cards, { clickCard, owner } = {}) {
   const wrap = el('div', { class: 'cards' });
   const counts = new Map();
   for (const c of cards) {
     const n = (counts.get(c.id) || 0) + 1; counts.set(c.id, n);
     const key = `${c.id}#${n}`;
-    const cardEl = buildCardEl(c);
+    const cardEl = buildCardEl(c, { owner });
     cardEl.dataset.cardId = c.id;
     cardEl.dataset.key = key;
     if (clickCard) cardEl.addEventListener('click', async () => { await clickCard(c); });
@@ -88,7 +110,7 @@ function logPane(title, entries = []) {
   return pane;
 }
 
-function updateCardEl(cardEl, card) {
+function updateCardEl(cardEl, card, { owner } = {}) {
   if (!cardEl) return;
   const tooltipCard = card.summonedBy || card;
   // Update images if needed
@@ -130,12 +152,35 @@ function updateCardEl(cardEl, card) {
     if (costEl && tooltipCard.cost != null) costEl.textContent = String(tooltipCard.cost);
   }
   const atkEl = cardEl.querySelector('.stat.attack');
-  if (atkEl && card.data?.attack != null) atkEl.textContent = String(card.data.attack);
   const hpEl = cardEl.querySelector('.stat.health');
-  if (hpEl && card.data?.health != null) hpEl.textContent = String(card.data.health);
+  if (card.type === 'ally') {
+    if (atkEl && card.data?.attack != null) atkEl.textContent = String(card.data.attack);
+    if (hpEl && card.data?.health != null) hpEl.textContent = String(card.data.health);
+  }
+  if (card.type === 'hero') {
+    const heroAtk = (typeof card.totalAttack === 'function') ? card.totalAttack() : (card.data?.attack ?? 0);
+    const heroHp = card.data?.health;
+    if (atkEl) atkEl.textContent = String(heroAtk ?? '');
+    else if (heroAtk != null) cardEl.append(el('div', { class: 'stat attack' }, String(heroAtk)));
+    if (hpEl) hpEl.textContent = String(heroHp ?? '');
+    else if (heroHp != null) cardEl.append(el('div', { class: 'stat health' }, String(heroHp)));
+  }
+  if (card.type === 'equipment') {
+    let eqAttack = card.attack;
+    let eqDurability = card.durability;
+    if (owner && owner.hero?.equipment) {
+      const eq = owner.hero.equipment.find(e => e?.id === card.id || e?.name === card.name);
+      if (eq) { eqAttack = (eq.attack ?? eqAttack); eqDurability = (eq.durability ?? eqDurability); }
+    }
+    if (atkEl && eqAttack != null) atkEl.textContent = String(eqAttack);
+    if (hpEl && eqDurability != null) hpEl.textContent = String(eqDurability);
+    // If missing nodes (e.g., newly became equipment), add them
+    if (!atkEl && eqAttack != null) cardEl.append(el('div', { class: 'stat attack' }, String(eqAttack)));
+    if (!hpEl && eqDurability != null) cardEl.append(el('div', { class: 'stat health' }, String(eqDurability)));
+  }
 }
 
-function syncCardsSection(sectionEl, cards, { clickCard } = {}) {
+function syncCardsSection(sectionEl, cards, { clickCard, owner } = {}) {
   if (!sectionEl) return;
   const list = sectionEl.querySelector('.cards') || sectionEl;
   const byKey = new Map(Array.from(list.children).map(node => [node.dataset.key, node]));
@@ -149,7 +194,7 @@ function syncCardsSection(sectionEl, cards, { clickCard } = {}) {
     seen.add(key);
     let node = byKey.get(key);
     if (!node) {
-      node = buildCardEl(c);
+      node = buildCardEl(c, { owner });
       node.dataset.cardId = c.id;
       node.dataset.key = key;
       if (clickCard && !node.dataset.clickAttached) {
@@ -157,7 +202,7 @@ function syncCardsSection(sectionEl, cards, { clickCard } = {}) {
         node.dataset.clickAttached = '1';
       }
     } else {
-      updateCardEl(node, c);
+      updateCardEl(node, c, { owner });
       byKey.delete(key);
     }
     if (lastNode) {
@@ -250,7 +295,7 @@ export function renderPlay(container, game, { onUpdate, onOpenDeckBuilder } = {}
     const aiMana = el('div', { class: 'slot ai-mana' }, el('h3', {}, 'Mana'), el('div', { class: 'mana' }, `${game.resources.pool(e)} / ${game.resources.available(e)}`));
     const aiLog = logPane('Enemy Log', e.log); aiLog.classList.add('ai-log');
     const aiHand = el('div', { class: 'zone ai-hand' }, el('h3', {}, 'Enemy Hand'), el('p', { class: 'count' }, `${e.hand.size()} cards`));
-    const aiField = zoneCards('Enemy Battlefield', e.battlefield.cards, {}); aiField.classList.add('ai-field');
+    const aiField = zoneCards('Enemy Battlefield', e.battlefield.cards, { owner: e }); aiField.classList.add('ai-field');
 
     // Player side
     const pHero = el('div', { class: 'slot p-hero' }, el('h3', {}, 'Player hero'), buildCardEl(p.hero));
@@ -261,8 +306,8 @@ export function renderPlay(container, game, { onUpdate, onOpenDeckBuilder } = {}
     }
     const pMana = el('div', { class: 'slot p-mana' }, el('h3', {}, 'Mana'), el('div', { class: 'mana' }, `${game.resources.pool(p)} / ${game.resources.available(p)}`));
     const pLog = logPane('Player Log', p.log); pLog.classList.add('p-log');
-    const pField = zoneCards('Player Battlefield', p.battlefield.cards, { clickCard: async (c)=>{ await game.attack(game.player, c.id); onUpdate?.(); } }); pField.classList.add('p-field');
-    const pHand = zoneCards('Player Hand', p.hand.cards, { clickCard: async (c)=>{ if (!await game.playFromHand(game.player, c.id)) { /* ignore */ } onUpdate?.(); } }); pHand.classList.add('p-hand');
+    const pField = zoneCards('Player Battlefield', p.battlefield.cards, { owner: p, clickCard: async (c)=>{ await game.attack(game.player, c.id); onUpdate?.(); } }); pField.classList.add('p-field');
+    const pHand = zoneCards('Player Hand', p.hand.cards, { owner: p, clickCard: async (c)=>{ if (!await game.playFromHand(game.player, c.id)) { /* ignore */ } onUpdate?.(); } }); pHand.classList.add('p-hand');
 
     board.append(aiHero, aiMana, aiHand, aiField, aiLog, pHero, pMana, pField, pHand, pLog);
     container.append(controls, board);
@@ -293,9 +338,9 @@ export function renderPlay(container, game, { onUpdate, onOpenDeckBuilder } = {}
   updateCardEl(board.querySelector('.p-hero .card-tooltip'), p.hero);
 
   // Update zones
-  syncCardsSection(board.querySelector('.ai-field'), e.battlefield.cards, {});
-  syncCardsSection(board.querySelector('.p-field'), p.battlefield.cards, { clickCard: async (c)=>{ await game.attack(game.player, c.id); onUpdate?.(); } });
-  syncCardsSection(board.querySelector('.p-hand'), p.hand.cards, { clickCard: async (c)=>{ if (!await game.playFromHand(game.player, c.id)) { /* ignore */ } onUpdate?.(); } });
+  syncCardsSection(board.querySelector('.ai-field'), e.battlefield.cards, { owner: e });
+  syncCardsSection(board.querySelector('.p-field'), p.battlefield.cards, { owner: p, clickCard: async (c)=>{ await game.attack(game.player, c.id); onUpdate?.(); } });
+  syncCardsSection(board.querySelector('.p-hand'), p.hand.cards, { owner: p, clickCard: async (c)=>{ if (!await game.playFromHand(game.player, c.id)) { /* ignore */ } onUpdate?.(); } });
   const aiHand = board.querySelector('.ai-hand .count');
   if (aiHand) aiHand.textContent = `${e.hand.size()} cards`;
 

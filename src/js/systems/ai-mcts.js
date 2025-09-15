@@ -179,8 +179,7 @@ export class MCTS_AI {
       if (played.type === 'ally' || played.type === 'equipment' || played.type === 'quest') {
         p.battlefield.cards.push(played);
         if (played.type === 'equipment') {
-          p.hero.equipment = p.hero.equipment || [];
-          p.hero.equipment.push(played);
+          p.hero.equipment = [played];
         }
         if (played.type === 'ally' && !(played.keywords?.includes('Rush') || played.keywords?.includes('Charge'))) {
           played.data = played.data || {};
@@ -669,7 +668,7 @@ export class MCTS_AI {
           if (!this.resources.pay(player, cost)) break;
           if (action.card.type === 'ally' || action.card.type === 'equipment' || action.card.type === 'quest') {
             player.hand.moveTo(player.battlefield, action.card.id);
-            if (action.card.type === 'equipment') player.hero.equipment.push(action.card);
+            if (action.card.type === 'equipment') player.hero.equipment = [action.card];
             if (action.card.type === 'ally' && !action.card.keywords?.includes('Rush')) {
               action.card.data = action.card.data || {};
               action.card.data.attacked = true;

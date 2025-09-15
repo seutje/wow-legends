@@ -106,8 +106,7 @@ export class BasicAI {
       if (played.type === 'ally' || played.type === 'equipment' || played.type === 'quest') {
         p.battlefield.cards.push(played);
         if (played.type === 'equipment') {
-          p.hero.equipment = p.hero.equipment || [];
-          p.hero.equipment.push(played);
+          p.hero.equipment = [played];
         }
         if (played.type === 'ally' && !played.keywords?.includes('Rush')) {
           played.data = played.data || {};
@@ -198,7 +197,7 @@ export class BasicAI {
       if (best.card.effects) this._applySimpleEffects(best.card.effects, player, opponent, pool);
       if (best.card.type === 'ally' || best.card.type === 'equipment' || best.card.type === 'quest') {
         player.hand.moveTo(player.battlefield, best.card.id);
-        if (best.card.type === 'equipment') player.hero.equipment.push(best.card);
+        if (best.card.type === 'equipment') player.hero.equipment = [best.card];
         if (best.card.type === 'ally' && !best.card.keywords?.includes('Rush')) {
           best.card.data = best.card.data || {};
           best.card.data.attacked = true;

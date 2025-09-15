@@ -310,7 +310,7 @@ export default class Game {
 
     if (card.type === 'ally' || card.type === 'equipment') {
       player.hand.moveTo(player.battlefield, cardId);
-      if (card.type === 'equipment') player.hero.equipment.push(card);
+      if (card.type === 'equipment') player.equip(card);
       if (card.type === 'ally') {
         // Track the turn the ally entered play to reason about Rush/Charge
         card.data = card.data || {};
@@ -487,7 +487,9 @@ export default class Game {
         if (target?.id === defender.hero.id) target = null;
       } else {
         const choice = await this.promptTarget(pool);
-        if (choice && choice !== this.CANCEL && choice.id !== defender.hero.id) target = choice;
+        if (choice === this.CANCEL) return false; // respect cancel
+        // If the enemy hero was chosen, leave target null to attack hero directly
+        if (choice && choice.id !== defender.hero.id) target = choice;
       }
     }
     this.combat.clear();

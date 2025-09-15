@@ -27,7 +27,8 @@ export class Player {
 
   equip(item) {
     const eq = item instanceof Equipment ? item : new Equipment(item);
-    this.hero.equipment.push(eq);
+    // Only one piece of equipment can be active at a time
+    this.hero.equipment = [eq];
     if (eq.armor) {
       this.hero.data.armor = (this.hero.data.armor || 0) + eq.armor;
     }
