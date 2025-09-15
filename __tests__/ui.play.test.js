@@ -125,7 +125,9 @@ describe('UI Play', () => {
     const img = tip.querySelector('.card-art');
     expect(img).toBeTruthy();
     expect(img.getAttribute('src')).toBe(`src/assets/optim/${summoner.id}-art.png`);
-    expect(tip.textContent).toContain(summoner.name);
+    // Name should reflect the summoned unit, not the summoner
+    expect(tip.textContent).toContain(summoned.name);
+    // Text still reflects the summoning effect description
     expect(tip.textContent).toContain(summoner.text);
     expect(tip.querySelector('.stat.attack').textContent).toBe('6');
     expect(tip.querySelector('.stat.health').textContent).toBe('6');

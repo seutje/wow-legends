@@ -39,9 +39,11 @@ function buildCardEl(card) {
   frame.className = 'card-frame';
   frame.src = 'src/assets/frame.png';
 
+  // Show the summoned unit's own name, but use summoner for art/text fallback
   const infoChildren = [
-    el('div', { class: 'card-type' }, tooltipCard.type),
-    el('h4', {}, tooltipCard.name),
+    // Show the actual card's type (e.g., 'ally' for summoned units)
+    el('div', { class: 'card-type' }, card.type),
+    el('h4', {}, card.name),
     el('p', { class: 'card-text' }, tooltipCard.text)
   ];
   if (tooltipCard.keywords?.length) {
@@ -110,9 +112,9 @@ function updateCardEl(cardEl, card) {
 
   // Update info fields
   const typeEl = cardEl.querySelector('.card-type');
-  if (typeEl) typeEl.textContent = tooltipCard.type;
+  if (typeEl) typeEl.textContent = card.type;
   const nameEl = cardEl.querySelector('h4');
-  if (nameEl) nameEl.textContent = tooltipCard.name;
+  if (nameEl) nameEl.textContent = card.name;
   const textEl = cardEl.querySelector('.card-text');
   if (textEl) textEl.textContent = tooltipCard.text ?? '';
   const kwEl = cardEl.querySelector('.card-keywords');

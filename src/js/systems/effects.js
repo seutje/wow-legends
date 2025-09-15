@@ -69,7 +69,7 @@ export class EffectSystem {
           this.buffAtEndOfTurn(effect, context);
           break;
         case 'summon':
-          this.summonUnit(effect, context);
+          await this.summonUnit(effect, context);
           break;
         case 'summonBuff':
           this.registerSummonBuff(effect, context);
@@ -222,6 +222,18 @@ export class EffectSystem {
         actualTargets.push(...player.battlefield.cards.filter(c => c.type !== 'quest'));
         actualTargets.push(...opponent.battlefield.cards.filter(c => c.type !== 'quest'));
         break;
+      case 'allOtherCharacters': {
+        // Same as allCharacters, but exclude the source card if present
+        const source = context?.card || null;
+        actualTargets.push(player.hero);
+        actualTargets.push(opponent.hero);
+        actualTargets.push(...player.battlefield.cards.filter(c => c.type !== 'quest'));
+        actualTargets.push(...opponent.battlefield.cards.filter(c => c.type !== 'quest'));
+        if (source) {
+          actualTargets = actualTargets.filter(t => t !== source);
+        }
+        break;
+      }
       case 'allEnemies':
         actualTargets.push(opponent.hero);
         actualTargets.push(...opponent.battlefield.cards.filter(c => c.type !== 'quest'));
@@ -298,7 +310,7 @@ export class EffectSystem {
     await game.cleanupDeaths(opponent, player);
   }
 
-  summonUnit(effect, context) {
+  async summonUnit(effect, context) {
     const { unit, count } = effect;
     const { player, card, game } = context;
 
@@ -323,6 +335,11 @@ export class EffectSystem {
       player.battlefield.add(newUnit);
       console.log(`Summoned ${newUnit.name} to battlefield.`);
       game?.bus.emit('unitSummoned', { player, card: newUnit });
+
+      // Execute any on-summon effects with the summoned unit as the source
+      if (Array.isArray(effect.onSummoned) && effect.onSummoned.length > 0) {
+        await this.execute(effect.onSummoned, { game, player, card: newUnit });
+      }
     }
   }
 
