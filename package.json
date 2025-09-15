@@ -15,7 +15,8 @@
     "ingest": "node tools/cards-ingest.mjs",
     "lint": "eslint . --ext .js,.mjs && echo ESLint scanned $(git ls-files '*.js' '*.mjs' | wc -l) JS files && htmlhint index.html",
     "train": "node tools/train.mjs",
-    "optim": "node tools/optim.mjs"
+    "optim": "node tools/optim.mjs",
+    "eval": "node tools/eval.mjs"
   },
   "keywords": [],
   "author": "AI Agents",

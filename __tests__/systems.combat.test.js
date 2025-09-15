@@ -1,6 +1,7 @@
 import { jest } from '@jest/globals';
 import Card from '../src/js/entities/card.js';
 import CombatSystem from '../src/js/systems/combat.js';
+import { setDebugLogging } from '../src/js/utils/logger.js';
 import Player from '../src/js/entities/player.js';
 import Equipment from '../src/js/entities/equipment.js';
 
@@ -118,6 +119,8 @@ describe('CombatSystem', () => {
     const a = new Card({ type: 'ally', name: 'A', data: { attack: 3, health: 2 } });
     const b = new Card({ type: 'ally', name: 'B', data: { attack: 2, health: 3 } });
     const c = new CombatSystem();
+    // Enable debug logging so combat logs are emitted
+    setDebugLogging(true);
     const spy = jest.spyOn(console, 'log').mockImplementation(() => {});
     c.declareAttacker(a);
     c.assignBlocker(a.id, b);
@@ -125,5 +128,6 @@ describe('CombatSystem', () => {
     expect(spy).toHaveBeenCalledWith('B took 3 damage from A. Remaining health: 0');
     expect(spy).toHaveBeenCalledWith('A took 2 damage from B. Remaining health: 0');
     spy.mockRestore();
+    setDebugLogging(false);
   });
 });

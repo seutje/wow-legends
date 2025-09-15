@@ -1,4 +1,5 @@
 import { freezeTarget } from './keywords.js';
+import { isDebugLogging } from '../utils/logger.js';
 
 function getStat(card, key, def = 0) {
   if (key === 'attack' && typeof card?.totalAttack === 'function') return card.totalAttack();
@@ -181,7 +182,9 @@ export class CombatSystem {
       const hp = getStat(ev.target, 'health', 0);
       const newHp = Math.max(0, hp - rem);
       setStat(ev.target, 'health', newHp);
-      console.log(`${ev.target.name} took ${rem} damage from ${ev.source?.name ?? 'an unknown source'}. Remaining health: ${getStat(ev.target, 'health', 0)}`);
+      if (isDebugLogging()) {
+        console.log(`${ev.target.name} took ${rem} damage from ${ev.source?.name ?? 'an unknown source'}. Remaining health: ${getStat(ev.target, 'health', 0)}`);
+      }
       if (ev.source?.keywords?.includes?.('Freeze') && newHp > 0) freezeTarget(ev.target, 1);
       if (newHp <= 0) setStat(ev.target, 'dead', true);
     }
