@@ -189,6 +189,7 @@ function syncLogPane(pane, entries = []) {
 }
 
 import { setDebugLogging, isDebugLogging } from '../utils/logger.js';
+import { loadSettings, rehydrateDeck } from '../utils/settings.js';
 
 import { saveDifficulty } from '../utils/settings.js';
 
@@ -342,7 +343,16 @@ export function renderPlay(container, game, { onUpdate, onOpenDeckBuilder } = {}
       dialog = el('div', { class: 'game-over' },
         el('div', {},
           el('p', {}, msg),
-          el('button', { onclick: async () => { await game.reset(); onUpdate?.(); } }, 'Restart')
+          el('button', { onclick: async () => {
+            // Prefer saved deck on restart; fall back to random
+            let deck = null;
+            try {
+              const settings = loadSettings();
+              if (settings?.lastDeck) deck = rehydrateDeck(settings.lastDeck, game.allCards);
+            } catch {}
+            await game.reset(deck || null);
+            onUpdate?.();
+          } }, 'Restart')
         )
       );
       container.append(dialog);
