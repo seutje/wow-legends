@@ -315,7 +315,7 @@ ul.zone-list li {
 }
 
 .card-tooltip.status-stealthed {
-  opacity: 0.8; /* stealth dim */
+  opacity: 0.6; /* stealth dim */
 }
 
 .card-tooltip .status-overlay.status-divine-shield {
