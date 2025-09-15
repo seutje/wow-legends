@@ -40,20 +40,27 @@ export class MCTS_AI {
     this.fullSim = !!fullSim;
     // Prefer offloading search to a Web Worker when available (browser only)
     this._canUseWorker = (typeof window !== 'undefined') && (typeof Worker !== 'undefined');
-    // Attempt GPU acceleration when running in Node; fall back silently on failure
+    // Attempt GPU acceleration when running in Node; report backend choice
     this._gpuKernel = null;
+    this._gpuReady = Promise.resolve();
     if (typeof process !== 'undefined' && process.versions?.node) {
-      import('gpu.js').then(({ GPU }) => {
+      this._gpuReady = import('gpu.js').then(({ GPU }) => {
         try {
           const gpu = new GPU();
           this._gpuKernel = gpu.createKernel(function(totals, visits, parentVisits, c) {
             const v = visits[this.thread.x];
             return v === 0 ? 1e9 : (totals[this.thread.x] / v) + c * Math.sqrt(Math.log(parentVisits + 1) / v);
           });
+          console.log('MCTS AI backend: GPU');
         } catch {
           this._gpuKernel = null;
+          console.log('MCTS AI backend: CPU (GPU init failed)');
         }
-      }).catch(() => { this._gpuKernel = null; });
+      }).catch(() => {
+        console.log('MCTS AI backend: CPU');
+      });
+    } else {
+      console.log('MCTS AI backend: CPU');
     }
   }
 
