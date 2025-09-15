@@ -109,15 +109,20 @@ export class CombatSystem {
     // attackers that hit the hero take that much damage. Applies for both
     // player and AI heroes.
     if (this._defenderHero) {
-      const eqAtk = Array.isArray(this._defenderHero.equipment)
-        ? this._defenderHero.equipment.reduce((s, e) => s + (e?.attack || 0), 0)
-        : 0;
+      const eqList = Array.isArray(this._defenderHero.equipment) ? this._defenderHero.equipment : [];
+      const eqAtk = eqList.reduce((s, e) => s + (e?.attack || 0), 0);
       if (eqAtk > 0) {
         for (const ev of events) {
           if (ev?.target === this._defenderHero && ev?.source) {
+            // Deal reflection damage
             addDmg(ev.source, eqAtk, this._defenderHero);
+            // Consume 1 durability from one attacking-capable equipment
+            const eq = eqList.find(e => (e?.attack || 0) > 0 && typeof e?.durability === 'number');
+            if (eq) eq.durability -= 1;
           }
         }
+        // Remove broken equipment
+        this._defenderHero.equipment = eqList.filter(e => (e?.durability ?? 1) > 0);
       }
     }
 

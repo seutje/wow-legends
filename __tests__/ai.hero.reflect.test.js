@@ -9,7 +9,7 @@ describe('Reflection also applies to AI hero', () => {
     // AI hero with Core Hound Tooth (2 attack)
     const aiHero = new Hero({ id: 'hero-ai', name: 'AI Hero', data: { health: 30, armor: 0 } });
     const ai = new Player({ name: 'AI', hero: aiHero });
-    ai.equip({ id: 'equipment-core-hound-tooth', name: 'Core Hound Tooth', attack: 2, durability: 2 });
+    const weapon = ai.equip({ id: 'equipment-core-hound-tooth', name: 'Core Hound Tooth', attack: 2, durability: 2 });
 
     // Player ally 4/4 attacks AI hero
     const player = new Player({ name: 'You', hero: new Hero({ name: 'Player', data: { health: 30, armor: 0 } }) });
@@ -23,6 +23,7 @@ describe('Reflection also applies to AI hero', () => {
     // AI hero takes 4, attacker takes 2 reflect
     expect(ai.hero.data.health).toBe(26);
     expect(attacker.data.health).toBe(2);
+    // Weapon durability consumed by reflect
+    expect(weapon.durability).toBe(1);
   });
 });
-
