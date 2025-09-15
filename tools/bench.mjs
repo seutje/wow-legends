@@ -261,35 +261,44 @@ async function runBackend({ name, requireGpu }) {
   }
 
   const times = [];
-  let referenceAction = null;
+  const actions = [];
 
   for (const seed of SEEDS) {
     const { elapsed, action } = runIteration(ai, seed);
     times.push(elapsed);
-    if (!referenceAction) {
-      referenceAction = action;
-    } else if (!actionsEqual(referenceAction, action)) {
-      throw new Error('Benchmark produced non-deterministic actions');
-    }
+    actions.push(action);
   }
 
   return {
     name,
     stats: summarize(times),
-    action: describeAction(referenceAction),
+    actions,
     times,
   };
+}
+
+function formatActions(label, actions) {
+  const lines = actions.map((action, idx) => `  run ${idx + 1}: ${describeAction(action)}`);
+  return [
+    `${label} actions:`,
+    ...lines,
+  ].join('\n');
 }
 
 async function main() {
   log(`[bench] Config iterations=${ITERATIONS} rolloutDepth=${ROLLOUT_DEPTH} runs=${SEEDS.length}`);
   const gpu = await runBackend({ name: 'GPU', requireGpu: true });
-  log(`[bench] ${gpu.name} action: ${gpu.action}`);
+  log(formatActions(`[bench] ${gpu.name}`, gpu.actions));
   log(formatStats(`[bench] ${gpu.name} stats`, gpu.stats, SEEDS.length));
 
   const cpu = await runBackend({ name: 'CPU', requireGpu: false });
-  log(`[bench] ${cpu.name} action: ${cpu.action}`);
+  log(formatActions(`[bench] ${cpu.name}`, cpu.actions));
   log(formatStats(`[bench] ${cpu.name} stats`, cpu.stats, SEEDS.length));
+
+  const mismatch = SEEDS.some((_, idx) => !actionsEqual(gpu.actions[idx], cpu.actions[idx]));
+  if (mismatch) {
+    throw new Error('CPU and GPU backends produced different actions for the same seeds');
+  }
 
   const speedup = cpu.stats.mean > 0 ? (cpu.stats.mean / gpu.stats.mean) : Infinity;
   log(`[bench] Relative speedup (CPU/GPU mean): ${speedup.toFixed(2)}x`);
