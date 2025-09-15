@@ -38,6 +38,7 @@ async function main() {
 
   const nn = new NeuralAI({ game, resourceSystem: game.resources, combatSystem: game.combat, model });
   const mcts = new MCTS_AI({ resourceSystem: game.resources, combatSystem: game.combat, game, iterations: 5000, rolloutDepth: 10, fullSim: true });
+  const out = getOriginalConsole().log;
 
   let rounds = 0;
   while (rounds < maxRounds && game.player.hero.data.health > 0 && game.opponent.hero.data.health > 0) {
@@ -59,6 +60,12 @@ async function main() {
     game.resources.startTurn(game.player);
 
     rounds++;
+
+    const pRoundHP = game.player.hero.data.health;
+    const pRoundArmor = game.player.hero.data.armor || 0;
+    const oRoundHP = game.opponent.hero.data.health;
+    const oRoundArmor = game.opponent.hero.data.armor || 0;
+    out(`[eval] Round ${rounds}: NN HP=${pRoundHP} Armor=${pRoundArmor} | MCTS-hard HP=${oRoundHP} Armor=${oRoundArmor}`);
   }
 
   const pHP = game.player.hero.data.health;
@@ -72,7 +79,6 @@ async function main() {
   const oPlays = game.opponent.log.filter(l => l.startsWith('Played ')).length;
 
   // Always print via original console to bypass debug silencing
-  const out = getOriginalConsole().log;
   out(`[eval] Seed=0x${seed.toString(16)} rounds=${summary.rounds}`);
   out(`[eval] Result: ${summary.winner}`);
   out(`[eval] Player (NN) HP=${pHP} Armor=${pArmor} | Plays=${pPlays}`);
