@@ -332,7 +332,7 @@
     "effects": [
       {
         "type": "returnToHand",
-        "target": "enemyAlly",
+        "target": "anyAlly",
         "costIncrease": 1
       }
     ],

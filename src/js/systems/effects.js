@@ -108,7 +108,7 @@ export class EffectSystem {
           this.destroyMinion(effect, context);
           break;
         case 'returnToHand':
-          this.returnToHand(effect, context);
+          await this.returnToHand(effect, context);
           break;
         case 'transform':
           this.transformCharacter(effect, context);
@@ -687,25 +687,51 @@ export class EffectSystem {
     }
   }
 
-  returnToHand(effect, context) {
-    const { target, costIncrease } = effect;
+  async returnToHand(effect, context) {
+    const { target, costIncrease = 0 } = effect;
     const { game, player } = context;
     const opponent = player === game.player ? game.opponent : game.player;
 
-    // Return a random enemy ally (opponent relative to acting player)
-    const candidates = opponent.battlefield.cards
-      .filter(c => c.type === 'ally')
-      .filter(isTargetable);
-
-    if (candidates.length > 0) {
-      const allyToReturn = game.rng.pick(candidates);
-      opponent.battlefield.moveTo(opponent.hand, allyToReturn.id);
-      allyToReturn.cost = (allyToReturn.cost || 0) + (costIncrease || 0);
-      console.log(`Returned ${allyToReturn.name} to hand. New cost: ${allyToReturn.cost}`);
-      game.bus.emit('cardReturned', { player, card: allyToReturn });
-    } else {
-      console.log('No enemy ally found to return to hand.');
+    // Build candidate pool based on target; default to enemy allies
+    let candidates = [];
+    switch (target) {
+      case 'enemyAlly':
+      default:
+        candidates = opponent.battlefield.cards.filter(c => c.type === 'ally');
+        break;
+      case 'ally':
+        candidates = player.battlefield.cards.filter(c => c.type === 'ally');
+        break;
+      case 'anyAlly':
+        candidates = [
+          ...player.battlefield.cards.filter(c => c.type === 'ally'),
+          ...opponent.battlefield.cards.filter(c => c.type === 'ally'),
+        ];
+        break;
     }
+
+    // Respect targetability/taunt rules via selector
+    candidates = selectTargets(candidates).filter(isTargetable);
+
+    if (!candidates.length) {
+      console.log('No valid ally found to return to hand.');
+      return;
+    }
+
+    // Let the acting side pick a target (AI auto-picks via promptTarget)
+    const chosen = await game.promptTarget(candidates);
+    if (chosen === game.CANCEL) throw game.CANCEL;
+    if (!chosen) return;
+
+    const owner = opponent.battlefield.cards.includes(chosen) ? opponent
+                : player.battlefield.cards.includes(chosen) ? player
+                : null;
+    if (!owner) return;
+
+    owner.battlefield.moveTo(owner.hand, chosen.id);
+    chosen.cost = (chosen.cost || 0) + costIncrease;
+    console.log(`Returned ${chosen.name} to hand. New cost: ${chosen.cost}`);
+    game.bus.emit('cardReturned', { player, card: chosen });
   }
 
   transformCharacter(effect, context) {
