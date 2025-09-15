@@ -541,6 +541,16 @@ export default class Game {
   }
 
   async endTurn() {
+    // Tick down end-of-turn freeze for the player before handing control to AI
+    {
+      const p = this.player;
+      const all = [p.hero, ...p.battlefield.cards];
+      for (const c of all) {
+        const ft = c?.data?.freezeTurns || 0;
+        if (ft > 0) c.data.freezeTurns = ft - 1;
+      }
+    }
+
     // AI's turn
     this.turns.setActivePlayer(this.opponent);
     this.turns.startTurn();
