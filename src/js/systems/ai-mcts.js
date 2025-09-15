@@ -41,45 +41,11 @@ export class MCTS_AI {
     this.fullSim = !!fullSim;
     // Prefer offloading search to a Web Worker when available (browser only)
     this._canUseWorker = (typeof window !== 'undefined') && (typeof Worker !== 'undefined');
-    // Attempt GPU acceleration when running in Node; report backend choice
-    this._gpuKernel = null;
-    this._gpuReady = Promise.resolve();
     const { log } = getOriginalConsole();
-    if (typeof process !== 'undefined' && process.versions?.node) {
-      this._gpuReady = import('gpu.js').then(({ GPU }) => {
-        try {
-          const gpu = new GPU();
-          this._gpuKernel = gpu.createKernel(function(totals, visits, parentVisits, c) {
-            const v = visits[this.thread.x];
-            return v === 0 ? 1e9 : (totals[this.thread.x] / v) + c * Math.sqrt(Math.log(parentVisits + 1) / v);
-          }, { dynamicOutput: true });
-          log('MCTS AI backend: GPU');
-        } catch (error) {
-          this._gpuKernel = null;
-          const reason = error?.message ?? String(error);
-          log(`MCTS AI backend: CPU (GPU init failed: ${reason})`);
-        }
-      }).catch((error) => {
-        const reason = error?.message ?? String(error);
-        log(`MCTS AI backend: CPU (GPU unavailable: ${reason})`);
-      });
-    } else {
-      log('MCTS AI backend: CPU');
-    }
+    log('MCTS AI backend: CPU');
   }
 
   _selectChild(node) {
-    if (this._gpuKernel) {
-      const totals = node.children.map(c => c.total);
-      const visits = node.children.map(c => c.visits);
-      this._gpuKernel.setOutput([totals.length]);
-      const scores = this._gpuKernel(totals, visits, node.visits, 1.4);
-      let idx = 0;
-      for (let i = 1; i < scores.length; i++) {
-        if (scores[i] > scores[idx]) idx = i;
-      }
-      return node.children[idx];
-    }
     return node.children.reduce((a, b) => (a.ucb1() > b.ucb1() ? a : b));
   }
 

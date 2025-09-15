@@ -193,16 +193,6 @@ function describeAction(action) {
   return parts.length ? parts.join(' + ') : 'no action';
 }
 
-function actionsEqual(a, b) {
-  if (a === b) return true;
-  if (!a || !b) return false;
-  if (!!a.end !== !!b.end) return false;
-  if (!!a.usePower !== !!b.usePower) return false;
-  const cardA = a.card ? a.card.id : null;
-  const cardB = b.card ? b.card.id : null;
-  return cardA === cardB;
-}
-
 function summarize(times) {
   const sorted = [...times].sort((x, y) => x - y);
   const total = times.reduce((acc, t) => acc + t, 0);
@@ -250,16 +240,8 @@ function runIteration(ai, seed) {
   });
 }
 
-async function runBackend({ name, requireGpu }) {
+function runBenchmark() {
   const ai = new MCTS_AI({ iterations: ITERATIONS, rolloutDepth: ROLLOUT_DEPTH });
-  await ai._gpuReady;
-  if (requireGpu && !ai._gpuKernel) {
-    throw new Error('GPU backend unavailable for MCTS AI (install the optional gpu.js dependency)');
-  }
-  if (!requireGpu) {
-    ai._gpuKernel = null;
-  }
-
   const times = [];
   const actions = [];
 
@@ -270,7 +252,6 @@ async function runBackend({ name, requireGpu }) {
   }
 
   return {
-    name,
     stats: summarize(times),
     actions,
     times,
@@ -285,26 +266,16 @@ function formatActions(label, actions) {
   ].join('\n');
 }
 
-async function main() {
+function main() {
   log(`[bench] Config iterations=${ITERATIONS} rolloutDepth=${ROLLOUT_DEPTH} runs=${SEEDS.length}`);
-  const gpu = await runBackend({ name: 'GPU', requireGpu: true });
-  log(formatActions(`[bench] ${gpu.name}`, gpu.actions));
-  log(formatStats(`[bench] ${gpu.name} stats`, gpu.stats, SEEDS.length));
-
-  const cpu = await runBackend({ name: 'CPU', requireGpu: false });
-  log(formatActions(`[bench] ${cpu.name}`, cpu.actions));
-  log(formatStats(`[bench] ${cpu.name} stats`, cpu.stats, SEEDS.length));
-
-  const mismatch = SEEDS.some((_, idx) => !actionsEqual(gpu.actions[idx], cpu.actions[idx]));
-  if (mismatch) {
-    throw new Error('CPU and GPU backends produced different actions for the same seeds');
-  }
-
-  const speedup = cpu.stats.mean > 0 ? (cpu.stats.mean / gpu.stats.mean) : Infinity;
-  log(`[bench] Relative speedup (CPU/GPU mean): ${speedup.toFixed(2)}x`);
+  const cpu = runBenchmark();
+  log(formatActions('[bench] CPU', cpu.actions));
+  log(formatStats('[bench] CPU stats', cpu.stats, SEEDS.length));
 }
 
-main().catch((err) => {
+try {
+  main();
+} catch (err) {
   error(`[bench] ${err.message}`);
   process.exit(1);
-});
+}
