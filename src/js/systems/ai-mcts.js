@@ -54,12 +54,14 @@ export class MCTS_AI {
             return v === 0 ? 1e9 : (totals[this.thread.x] / v) + c * Math.sqrt(Math.log(parentVisits + 1) / v);
           });
           log('MCTS AI backend: GPU');
-        } catch {
+        } catch (error) {
           this._gpuKernel = null;
-          log('MCTS AI backend: CPU (GPU init failed)');
+          const reason = error?.message ?? String(error);
+          log(`MCTS AI backend: CPU (GPU init failed: ${reason})`);
         }
-      }).catch(() => {
-        log('MCTS AI backend: CPU');
+      }).catch((error) => {
+        const reason = error?.message ?? String(error);
+        log(`MCTS AI backend: CPU (GPU unavailable: ${reason})`);
       });
     } else {
       log('MCTS AI backend: CPU');

@@ -11,5 +11,8 @@ test('MCTS AI reports its backend', async () => {
   const reported = calls.find(msg => msg.includes('MCTS AI backend'));
   expect(reported).toBeDefined();
   expect(reported).toContain(expected);
+  if (typeof process !== 'undefined' && process.versions?.node && !ai._gpuKernel) {
+    expect(reported).toMatch(/CPU \(GPU (init failed|unavailable):[\s\S]+\)/);
+  }
   logSpy.mockRestore();
 });
