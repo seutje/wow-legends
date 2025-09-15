@@ -9,6 +9,8 @@ export class Player {
     this.id = id || `player-${Math.random().toString(36).slice(2, 8)}`;
     this.name = name;
     this.hero = hero || new Hero({ name: `${name}'s Hero` });
+    // Link ownership for downstream systems (e.g., combat side effects)
+    if (this.hero) this.hero.owner = this;
     this.health = 30;
     this.armor = 0;
     this.resources = 0; // legacy numeric; use resourceZone + pool

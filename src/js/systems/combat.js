@@ -105,6 +105,22 @@ export class CombatSystem {
       }
     }
 
+    // Reflective damage: if the defender hero has equipment with attack,
+    // attackers that hit the hero take that much damage. Applies for both
+    // player and AI heroes.
+    if (this._defenderHero) {
+      const eqAtk = Array.isArray(this._defenderHero.equipment)
+        ? this._defenderHero.equipment.reduce((s, e) => s + (e?.attack || 0), 0)
+        : 0;
+      if (eqAtk > 0) {
+        for (const ev of events) {
+          if (ev?.target === this._defenderHero && ev?.source) {
+            addDmg(ev.source, eqAtk, this._defenderHero);
+          }
+        }
+      }
+    }
+
     // Apply damage events sequentially
     for (const ev of events) {
       // Divine Shield absorbs one instance of damage (minions only)

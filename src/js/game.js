@@ -156,6 +156,8 @@ export default class Game {
     if (playerDeck?.hero && playerDeck.cards?.length === 60) {
       validateCardData(playerDeck.hero);
       this.player.hero = new Hero(playerDeck.hero);
+      // Ensure ownership is set for systems that depend on it (e.g., combat reflection)
+      this.player.hero.owner = this.player;
       this.player.library.cards = [];
       for (const cardData of playerDeck.cards) {
         validateCardData(cardData);
@@ -164,6 +166,7 @@ export default class Game {
     } else {
       const playerHeroData = rng.pick(heroes);
       this.player.hero = new Hero(playerHeroData);
+      this.player.hero.owner = this.player;
       const playerLibData = [];
       for (let i = 0; i < 60; i++) {
         playerLibData.push(rng.pick(otherCards));
@@ -181,6 +184,7 @@ export default class Game {
       opponentHeroData = rng.pick(heroes);
     }
     this.opponent.hero = new Hero(opponentHeroData);
+    this.opponent.hero.owner = this.opponent;
     const opponentLibData = [];
     for (let i = 0; i < 60; i++) {
       opponentLibData.push(rng.pick(otherCards));

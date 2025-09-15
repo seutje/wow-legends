@@ -976,6 +976,7 @@
     "name": "Benediction",
     "type": "equipment",
     "cost": 4,
+    "durability": 3,
     "effects": [
       {
         "type": "drawOnHeal",
@@ -996,6 +997,7 @@
     "name": "Stormshield Bulwark",
     "type": "equipment",
     "cost": 3,
+    "durability": 3,
     "effects": [
       {
         "type": "rawText",
@@ -1015,6 +1017,7 @@
     "name": "Wildheart Spaulders",
     "type": "equipment",
     "cost": 2,
+    "durability": 3,
     "effects": [
       {
         "type": "rawText",
@@ -1034,6 +1037,7 @@
     "name": "Arcanist’s Signet",
     "type": "equipment",
     "cost": 2,
+    "durability": 3,
     "effects": [
       {
         "type": "spellDamageNextSpell",
@@ -1054,6 +1058,7 @@
     "name": "Demonheart Grimoire",
     "type": "equipment",
     "cost": 3,
+    "durability": 3,
     "effects": [
       {
         "type": "summonBuff",
@@ -1075,6 +1080,7 @@
     "name": "Masterwork Longbow",
     "type": "equipment",
     "cost": 4,
+    "durability": 3,
     "effects": [
       {
         "type": "rawText",
