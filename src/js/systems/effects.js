@@ -449,9 +449,25 @@ export class EffectSystem {
     const { amount = 2 } = effect;
     const { game, player, card } = context;
 
+    // Track an active secret on the owner's hero for UI
+    player.hero.data = player.hero.data || {};
+    const secrets = (player.hero.data.secrets ||= []);
+    const token = { type: 'explosiveTrap' };
+    secrets.push(token);
+    try { game.bus.emit('secret:added', { player, card }); } catch {}
+    try { game._uiRerender?.(); } catch {}
+
     const handler = async ({ target }) => {
       if (target !== player.hero) return;
       off();
+      // Remove the secret indicator when it triggers
+      const arr = player.hero?.data?.secrets;
+      if (Array.isArray(arr)) {
+        const idx = arr.indexOf(token);
+        if (idx >= 0) arr.splice(idx, 1);
+      }
+      try { game.bus.emit('secret:removed', { player, card }); } catch {}
+      try { game._uiRerender?.(); } catch {}
       await game.effects.dealDamage(
         { target: 'allCharacters', amount },
         { game, player, card }
@@ -464,6 +480,14 @@ export class EffectSystem {
   freezingTrap(effect, context) {
     const { game, player, card } = context;
     const opponent = player === game.player ? game.opponent : game.player;
+
+    // Track an active secret on the owner's hero for UI
+    player.hero.data = player.hero.data || {};
+    const secrets = (player.hero.data.secrets ||= []);
+    const token = { type: 'freezingTrap' };
+    secrets.push(token);
+    try { game.bus.emit('secret:added', { player, card }); } catch {}
+    try { game._uiRerender?.(); } catch {}
 
     const handler = ({ attacker }) => {
       // Trigger only when an enemy ally (not hero/equipment) declares an attack
@@ -483,6 +507,14 @@ export class EffectSystem {
 
       // Secret triggers once
       off();
+      // Remove the secret indicator when it triggers
+      const arr = player.hero?.data?.secrets;
+      if (Array.isArray(arr)) {
+        const idx = arr.indexOf(token);
+        if (idx >= 0) arr.splice(idx, 1);
+      }
+      try { game.bus.emit('secret:removed', { player, card }); } catch {}
+      try { game._uiRerender?.(); } catch {}
     };
 
     const off = game.bus.on('attackDeclared', handler);
@@ -858,19 +890,52 @@ export class EffectSystem {
               if (t.data && t.data.attack != null) t.data.attack -= amount;
               else if (t.attack != null) t.attack -= amount; // For hero
             } else if (property === 'health') {
+              const current = (t?.data?.health ?? t?.health);
+              const hadPositive = typeof current === 'number' && current > 0;
               if (t.data && t.data.health != null) {
-                t.data.health -= amount;
                 if (typeof t.data.maxHealth === 'number') {
-                  t.data.maxHealth -= amount;
-                  if (t.data.maxHealth < 0) t.data.maxHealth = 0;
-                  t.data.health = Math.max(0, Math.min(t.data.health, t.data.maxHealth));
+                  if (amount >= 0) {
+                    // Temporary health buff expiring: lower max, clamp current, never drop below 1 if it was alive
+                    t.data.maxHealth -= amount;
+                    if (t.data.maxHealth < 0) t.data.maxHealth = 0;
+                    t.data.health = Math.min(t.data.health, t.data.maxHealth);
+                    if (hadPositive && t.data.health < 1 && t.data.maxHealth >= 1) t.data.health = 1;
+                  } else {
+                    // Temporary health debuff expiring: restore
+                    t.data.maxHealth -= amount; // amount is negative -> increases max
+                    if (t.data.maxHealth < 0) t.data.maxHealth = 0;
+                    t.data.health = Math.min(t.data.health - amount, t.data.maxHealth);
+                  }
+                } else {
+                  // No tracked maxHealth; fall back to prior behavior with safety for positive buffs
+                  if (amount >= 0) {
+                    if (hadPositive && (t.data.health - amount) < 1) t.data.health = 1;
+                    else t.data.health -= amount;
+                  } else {
+                    t.data.health -= amount;
+                  }
+                  if (t.data.health < 0) t.data.health = 0;
                 }
               } else if (t.health != null) {
-                t.health -= amount; // For hero/non-card
                 if (typeof t.maxHealth === 'number') {
-                  t.maxHealth -= amount;
-                  if (t.maxHealth < 0) t.maxHealth = 0;
-                  t.health = Math.max(0, Math.min(t.health, t.maxHealth));
+                  if (amount >= 0) {
+                    t.maxHealth -= amount;
+                    if (t.maxHealth < 0) t.maxHealth = 0;
+                    t.health = Math.min(t.health, t.maxHealth);
+                    if (hadPositive && t.health < 1 && t.maxHealth >= 1) t.health = 1;
+                  } else {
+                    t.maxHealth -= amount; // amount negative -> increases max
+                    if (t.maxHealth < 0) t.maxHealth = 0;
+                    t.health = Math.min(t.health - amount, t.maxHealth);
+                  }
+                } else {
+                  if (amount >= 0) {
+                    if (hadPositive && (t.health - amount) < 1) t.health = 1;
+                    else t.health -= amount;
+                  } else {
+                    t.health -= amount;
+                  }
+                  if (t.health < 0) t.health = 0;
                 }
               }
       } else if (property === 'armor') {

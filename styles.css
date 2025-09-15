@@ -301,6 +301,14 @@ ul.zone-list li {
   background: #e74c3c;
 }
 
+/* Secret indicator: top-center '?' badges, fanned horizontally */
+.card-tooltip .stat.secret {
+  top: 3%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #f0b429; /* same yellow as attack */
+}
+
 /* Status indicators */
 .card-tooltip .status-overlay {
   position: absolute;

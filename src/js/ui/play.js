@@ -77,6 +77,8 @@ function buildCardEl(card, { owner } = {}) {
       // Track initial health for hit animation
       wrap.dataset.prevHealth = String(heroHp);
     }
+    // Render active secrets as '?' badges near the top center
+    renderSecretBadges(wrap, card);
   }
   // Equipment: show attack and durability similar to ally stats
   if (card.type === 'equipment') {
@@ -192,6 +194,8 @@ function updateCardEl(cardEl, card, { owner } = {}) {
       setTimeout(() => { cardEl.classList.remove('shake-hit'); }, 400);
     }
     if (!Number.isNaN(newHp)) cardEl.dataset.prevHealth = String(newHp);
+    // Keep secret badges in sync
+    renderSecretBadges(cardEl, card);
   }
   if (card.type === 'equipment') {
     let eqAttack = card.attack;
@@ -309,6 +313,22 @@ function applyStatusIndicators(cardEl, card) {
   const hasWindfury = !!(card?.keywords?.includes?.('Windfury'));
   if (hasWindfury) ensureOverlay(cardEl, 'status-windfury');
   else removeOverlay(cardEl, 'status-windfury');
+}
+
+// --- Secrets indicator ---
+function renderSecretBadges(cardEl, card) {
+  // Remove existing secret badges
+  for (const node of Array.from(cardEl.querySelectorAll('.stat.secret'))) node.remove();
+  if (!card || card.type !== 'hero') return;
+  const count = Array.isArray(card?.data?.secrets) ? card.data.secrets.length : 0;
+  if (!count) return;
+  const spacing = 18; // px between badges when fanned
+  const start = -((count - 1) * spacing) / 2;
+  for (let i = 0; i < count; i++) {
+    const off = start + i * spacing;
+    const style = `top: 3%; left: calc(50% + ${off}px);`;
+    cardEl.append(el('div', { class: 'stat secret', style }, '?'));
+  }
 }
 
 import { setDebugLogging, isDebugLogging } from '../utils/logger.js';
