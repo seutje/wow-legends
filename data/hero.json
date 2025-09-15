@@ -1,0 +1,317 @@
+[
+  {
+    "id": "hero-jaina-proudmoore-archmage",
+    "name": "Jaina Proudmoore, Archmage",
+    "type": "hero",
+    "effects": [
+      {
+        "type": "damage",
+        "target": "character",
+        "amount": 1,
+        "freeze": 1
+      }
+    ],
+    "keywords": [
+      "Freeze",
+      "Spell Damage +1 while you control a Water Elemental."
+    ],
+    "data": {},
+    "text": "Frostbolt — Deal 1 damage; if target survives, Freeze it next turn.",
+    "prompt": "A powerful female archmage with white hair and glowing blue eyes, wearing ornate blue and silver robes. She is casting a frost spell, with shards of ice and blue energy erupting from her outstretched hand. Her other hand holds a ball of blue energy. The background is a grey, wintery landscape with hints of a battle."
+  },
+  {
+    "id": "hero-thrall-warchief-of-the-horde",
+    "name": "Thrall, Warchief of the Horde",
+    "type": "hero",
+    "effects": [
+      {
+        "type": "damage",
+        "target": "upToThreeTargets",
+        "amount": 1
+      },
+      {
+        "type": "overload",
+        "amount": 1
+      }
+    ],
+    "keywords": [
+      "Overload +1 the turn after using Power."
+    ],
+    "data": {},
+    "text": "Chain Spark — Deal 1 damage to up to three different targets. Overload (1).",
+    "prompt": "A powerful male warrior with long dark hair and a beard, wearing heavy plate armor. He stands on a rocky outcrop in the middle of a chaotic battle. He is casting a chain lightning spell from his outstretched hand, with blue lightning arcing out to strike multiple targets, including a knight and a small dragon. The sky is dark and stormy, with rain and lightning."
+  },
+  {
+    "id": "hero-varian-wrynn-high-king",
+    "name": "Varian Wrynn, High King",
+    "type": "hero",
+    "effects": [
+      {
+        "type": "buff",
+        "target": "hero",
+        "property": "attack",
+        "amount": 1,
+        "duration": "thisTurn"
+      }
+    ],
+    "keywords": [
+      "Armor — Starts with 2 Armor."
+    ],
+    "data": {
+      "armor": 2
+    },
+    "text": "Heroic Strike — Your hero gains +1 ATK this turn.",
+    "prompt": "A powerful male king and warrior with a beard and a crown, wearing ornate silver and gold plate armor with lion head motifs. He is in a battle stance, shouting, and swinging a glowing magical sword that leaves a blue energy trail. In the background is a large castle under a dramatic sky with a beam of light shining down."
+  },
+  {
+    "id": "hero-valeera-sanguinar-master-assassin",
+    "name": "Valeera Sanguinar, Master Assassin",
+    "type": "hero",
+    "effects": [
+      {
+        "type": "equip",
+        "item": {
+          "name": "Dagger",
+          "attack": 1,
+          "durability": 2
+        }
+      }
+    ],
+    "combo": [
+      {
+        "type": "costReduction",
+        "target": "ability",
+        "amount": 1
+      }
+    ],
+    "keywords": [
+      "Combo — The first Ability you play each turn costs (1) less."
+    ],
+    "data": {},
+    "text": "Dagger Mastery — Equip 1/1 Dagger (Durability 2).",
+    "prompt": "A female elf assassin with long black hair and a golden tiara. She is wearing black and red leather armor with gold trim. She holds a glowing, ornate dagger in one hand. The background is a dark, gothic hall with large archways."
+  },
+  {
+    "id": "hero-tyrande-whisperwind-high-priestess",
+    "name": "Tyrande Whisperwind, High Priestess",
+    "type": "hero",
+    "effects": [
+      {
+        "type": "heal",
+        "target": "character",
+        "amount": 2
+      }
+    ],
+    "keywords": [
+      "When you restore HP to full",
+      "draw a card (once per turn)."
+    ],
+    "data": {},
+    "text": "Mend — Restore 2 HP to a character or remove a debuff.",
+    "prompt": "A female elf high priestess with long, braided silver hair, pointed ears, and glowing green eyes. She wears ornate, dark armor with feather-like pauldrons and a glowing green crescent moon symbol on her chest. She has a horned headpiece. Her hands are outstretched, conjuring swirling green and yellow magical energy. She stands in an enchanted forest at night, with glowing mushrooms and ancient trees with glowing blue markings."
+  },
+  {
+    "id": "hero-uther-the-lightbringer",
+    "name": "Uther the Lightbringer",
+    "type": "hero",
+    "effects": [
+      {
+        "type": "buff",
+        "target": "character",
+        "property": "attack",
+        "amount": 1,
+        "duration": "thisTurn"
+      },
+      {
+        "type": "buff",
+        "target": "character",
+        "property": "health",
+        "amount": 1,
+        "duration": "thisTurn"
+      }
+    ],
+    "keywords": [
+      "Summon a 1/1 Silver Hand Recruit at 10 total mana spent this game."
+    ],
+    "data": {},
+    "text": "Blessing — Give a friendly character +1/+1 until end of turn; if it attacks, keep the buff.",
+    "prompt": "A powerful older male paladin with long white hair and a beard, wearing ornate silver and gold plate armor with lion head motifs. A holy light radiates from behind his head. He holds a large, glowing warhammer in one hand and is bestowing a blessing of light with his other hand onto a kneeling knight in similar armor. The knight holds a shield with a hand and cross symbol. The background is a sunset sky with clouds and a distant castle."
+  },
+  {
+    "id": "hero-malfurion-stormrage-archdruid",
+    "name": "Malfurion Stormrage, Archdruid",
+    "type": "hero",
+    "effects": [
+      {
+        "type": "chooseOne",
+        "options": [
+          {
+            "text": "+1 ATK this turn",
+            "effects": [
+              {
+                "type": "buff",
+                "target": "hero",
+                "property": "attack",
+                "amount": 1,
+                "duration": "thisTurn"
+              }
+            ]
+          },
+          {
+            "text": "Gain 2 Armor",
+            "effects": [
+              {
+                "type": "buff",
+                "target": "hero",
+                "property": "armor",
+                "amount": 2
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "keywords": [
+      "Choose One — your Abilities with Choose One gain both if you spent 3+ nature mana this turn."
+    ],
+    "data": {},
+    "text": "Shapeshift — Choose one: +1 ATK this turn; or gain 2 Armor.",
+    "prompt": "A powerful male night elf archdruid with blue skin, glowing green eyes, and large antlers with glowing yellow symbols. He has a pauldron of leaves and a deer head on his other shoulder. His gauntlet is a wicked-looking claw of wood and magic. He is surrounded by swirling green magical energy with glowing runes. He is walking through a mystical forest with large, ancient trees and shafts of light."
+  },
+  {
+    "id": "hero-rexxar-beastmaster",
+    "name": "Rexxar, Beastmaster",
+    "type": "hero",
+    "effects": [
+      {
+        "type": "damage",
+        "target": "enemyHeroOrMinionWithoutTaunt",
+        "amount": 2,
+        "usesSpellDamage": true
+      }
+    ],
+    "keywords": [
+      "Your Beast allies cost (1) less (minimum 1)."
+    ],
+    "data": {},
+    "text": "Steady Shot — Deal 2 damage to the enemy hero or a minion without Taunt.",
+    "prompt": "A rugged male beastmaster with long dark hair and a beard, wearing leather and fur armor. He is in a dynamic pose, aiming a bow with a glowing magical arrow. He is accompanied by a large bear and two wolves. The setting is a rocky, mountainous landscape with snow-capped peaks and a cloudy sky."
+  },
+  {
+    "id": "hero-gul-dan-dark-conjurer",
+    "name": "Gul’dan, Dark Conjurer",
+    "type": "hero",
+    "effects": [
+      {
+        "type": "draw",
+        "count": 1
+      },
+      {
+        "type": "damage",
+        "target": "selfHero",
+        "amount": 2
+      }
+    ],
+    "keywords": [
+      "Demons you summon have +1 ATK."
+    ],
+    "data": {},
+    "text": "Life Tap — Draw a card; deal 2 damage to your hero.",
+    "prompt": "A powerful orc warlock with green skin, glowing green eyes, and tusks. He is wearing dark, menacing armor with skulls and horns. He holds a staff topped with a flaming skull. Green fel energy swirls around him and his chest. He is surrounded by demonic imps with glowing eyes in a dark, spooky forest with gnarled trees and a stormy, purple sky."
+  },
+  {
+    "id": "hero-anduin-wrynn-high-king-priest",
+    "name": "Anduin Wrynn, High King Priest",
+    "type": "hero",
+    "effects": [
+      {
+        "type": "heal",
+        "target": "character",
+        "amount": 2
+      }
+    ],
+    "keywords": [
+      "Inspiration — The first heal each turn costs (1) less."
+    ],
+    "data": {},
+    "text": "Lesser Heal — Restore 2 HP to a character.",
+    "prompt": "A young human king-priest in ornate white and gold robes raises a radiant staff, golden light pouring over wounded soldiers in Stormwind’s cathedral district."
+  },
+  {
+    "id": "hero-sylvanas-windrunner-banshee-queen",
+    "name": "Sylvanas Windrunner, Banshee Queen",
+    "type": "hero",
+    "effects": [
+      {
+        "type": "damage",
+        "target": "any",
+        "amount": 2
+      }
+    ],
+    "keywords": [
+      "Undead",
+      "Arrows of the Banshee — Your secrets cost (1) less."
+    ],
+    "data": {},
+    "text": "Black Arrow — Deal 2 damage to any target.",
+    "prompt": "An undead ranger-queen with glowing red eyes draws a shadowy bow in the ruins of Lordaeron, purple banshee energy trailing her arrow."
+  },
+  {
+    "id": "hero-garrosh-hellscream-warmonger",
+    "name": "Garrosh Hellscream, Warmonger",
+    "type": "hero",
+    "effects": [
+      {
+        "type": "buff",
+        "target": "hero",
+        "property": "armor",
+        "amount": 2
+      }
+    ],
+    "keywords": [
+      "Berserker — After you gain Armor, your hero has +1 ATK this turn."
+    ],
+    "data": {},
+    "text": "Armor Up! — Gain 2 Armor.",
+    "prompt": "A brutal orc warlord with Gorehowl raised high, red war banners whipping in a dusty Durotar gale as embers rain from a distant siege."
+  },
+  {
+    "id": "hero-illidan-stormrage-the-betrayer",
+    "name": "Illidan Stormrage, The Betrayer",
+    "type": "hero",
+    "effects": [
+      {
+        "type": "damage",
+        "target": "allEnemies",
+        "amount": 1
+      }
+    ],
+    "keywords": [
+      "Demon Hunter",
+      "Fel Rush — Your hero can attack this turn."
+    ],
+    "data": {},
+    "text": "Fel Glaives — Deal 1 damage to all enemies.",
+    "prompt": "A night elf demon hunter with blindfold and fel-green tattoos slashes twin warglaives, waves of green energy ripping through demon ranks."
+  },
+  {
+    "id": "hero-arthas-menethil-deathlord",
+    "name": "Arthas Menethil, Deathlord",
+    "type": "hero",
+    "effects": [
+      {
+        "type": "damage",
+        "target": "any",
+        "amount": 1,
+        "freeze": 1
+      }
+    ],
+    "keywords": [
+      "Undead",
+      "At end of your turn, gain 1 Armor."
+    ],
+    "data": {},
+    "text": "Frostmourne’s Bite — Deal 1 damage and Freeze the target.",
+    "prompt": "A death knight in black-and-ice plate grips a runeblade wreathed in frost, blue soul fire spilling across a frozen battlefield."
+  }
+]

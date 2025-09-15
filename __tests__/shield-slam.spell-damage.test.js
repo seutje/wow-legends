@@ -3,7 +3,15 @@ import Card from '../src/js/entities/card.js';
 import fs from 'fs';
 
 test('Shield Slam gains damage from spell damage bonuses', async () => {
-  const cards = JSON.parse(fs.readFileSync(new URL('../data/cards.json', import.meta.url)));
+  const read = (name) => JSON.parse(fs.readFileSync(new URL(`../data/${name}.json`, import.meta.url)));
+  const cards = [
+    ...read('hero'),
+    ...read('spell'),
+    ...read('ally'),
+    ...read('equipment'),
+    ...read('quest'),
+    ...read('consumable'),
+  ];
   const shieldData = cards.find(c => c.id === 'spell-shield-slam');
 
   const g = new Game();
@@ -29,7 +37,15 @@ test('Shield Slam gains damage from spell damage bonuses', async () => {
 });
 
 test('Shield Slam deals spell damage even with no armor', async () => {
-  const cards = JSON.parse(fs.readFileSync(new URL('../data/cards.json', import.meta.url)));
+  const read = (name) => JSON.parse(fs.readFileSync(new URL(`../data/${name}.json`, import.meta.url)));
+  const cards = [
+    ...read('hero'),
+    ...read('spell'),
+    ...read('ally'),
+    ...read('equipment'),
+    ...read('quest'),
+    ...read('consumable'),
+  ];
   const shieldData = cards.find(c => c.id === 'spell-shield-slam');
 
   const g = new Game();

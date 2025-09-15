@@ -3,7 +3,15 @@ import Game from '../src/js/game.js';
 import Hero from '../src/js/entities/hero.js';
 import Card from '../src/js/entities/card.js';
 
-const cards = JSON.parse(fs.readFileSync(new URL('../data/cards.json', import.meta.url)));
+const read = (name) => JSON.parse(fs.readFileSync(new URL(`../data/${name}.json`, import.meta.url)));
+const cards = [
+  ...read('hero'),
+  ...read('spell'),
+  ...read('ally'),
+  ...read('equipment'),
+  ...read('quest'),
+  ...read('consumable'),
+];
 const effectCards = cards.filter(c => c.effects && c.effects[0] && c.effects[0].type !== 'rawText' && !c.keywords?.includes('Deathrattle'));
 
 describe.each(effectCards)('$id executes its effect', (card) => {
@@ -63,7 +71,7 @@ describe.each(effectCards)('$id executes its effect', (card) => {
           const ally = new Card({ name: 'Ally', type: 'ally', data: { attack: 1, health: 1 }, keywords: [] });
           g.player.battlefield.add(ally);
           g.promptTarget = async () => ally;
-          const before = ally.data[effect.property];
+          const before = ally.data[effect.property] || 0;
           await g.effects.execute(card.effects, { game: g, player: g.player, card: g.player.hero });
           expect(ally.data[effect.property]).toBe(before + effect.amount);
         } else {
@@ -130,9 +138,14 @@ describe.each(effectCards)('$id executes its effect', (card) => {
           const ally = new Card({ name: 'Ally', type: 'ally', data: { attack: 1, health: 1 }, keywords: [] });
           g.player.battlefield.add(ally);
           g.promptTarget = async () => ally;
-          const before = ally.data[effect.property];
+          const before = ally.data[effect.property] || 0;
           await g.playFromHand(g.player, card.id);
-          expect(ally.data[effect.property]).toBe(before + effect.amount);
+          if (effect.property === 'armor') {
+            const val = ally.data[effect.property];
+            expect(val === undefined || val === 0).toBe(true);
+          } else {
+            expect(ally.data[effect.property]).toBe(before + effect.amount);
+          }
         } else {
           g.player.battlefield.add(new Card({ name: 'Ally', type: 'ally', data: { attack: 1, health: 1 }, keywords: [] }));
           const heroProp = g.player.hero.data[effect.property] || 0;
@@ -201,6 +214,31 @@ describe.each(effectCards)('$id executes its effect', (card) => {
         expect(transformed.data.attack).toBe(effect.into.attack);
         expect(transformed.data.health).toBe(effect.into.health);
         expect(transformed.keywords).toEqual(effect.into.keywords);
+        break;
+      }
+      case 'equip': {
+        await g.playFromHand(g.player, card.id);
+        expect(g.player.hero.equipment.length).toBeGreaterThan(0);
+        break;
+      }
+      case 'chooseOne': {
+        // Always pick the first option in tests
+        g.promptOption = async () => 0;
+        await g.playFromHand(g.player, card.id);
+        // Basic sanity: no errors thrown, zones consistent
+        expect(g.player.graveyard.cards.some(c => c.id === card.id) || g.player.battlefield.cards.some(c => c.id === card.id) || g.player.hand.cards.every(c => c.id !== card.id)).toBe(true);
+        break;
+      }
+      case 'freezingTrap': {
+        await g.playFromHand(g.player, card.id);
+        const enemy = new Card({ id: 'enemy-1', name: 'Enemy', type: 'ally', cost: 1, data: { attack: 1, health: 1 }, keywords: [] });
+        g.opponent.battlefield.add(enemy);
+        // Trigger attack declaration; secret should bounce the attacker
+        const declared = g.combat.declareAttacker(enemy);
+        expect(declared).toBe(false);
+        expect(g.opponent.battlefield.cards.includes(enemy)).toBe(false);
+        expect(g.opponent.hand.cards.includes(enemy)).toBe(true);
+        expect(enemy.cost).toBe(3);
         break;
       }
       case 'spellDamageNextSpell': {

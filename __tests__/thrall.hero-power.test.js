@@ -2,7 +2,7 @@ import fs from 'fs';
 import Game from '../src/js/game.js';
 import Hero from '../src/js/entities/hero.js';
 
-const cards = JSON.parse(fs.readFileSync(new URL('../data/cards.json', import.meta.url)));
+const cards = JSON.parse(fs.readFileSync(new URL('../data/hero.json', import.meta.url)));
 const thrallData = cards.find(c => c.id === 'hero-thrall-warchief-of-the-horde');
 
 test("Thrall's hero power applies Overload 1", async () => {

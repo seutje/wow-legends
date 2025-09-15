@@ -1,0 +1,113 @@
+[
+  {
+    "id": "consumable-healing-potion",
+    "name": "Healing Potion",
+    "type": "consumable",
+    "cost": 1,
+    "effects": [
+      {
+        "type": "heal",
+        "target": "character",
+        "amount": 5
+      }
+    ],
+    "keywords": [
+      "Heal"
+    ],
+    "data": {},
+    "text": "Restore 5 HP to a character.",
+    "prompt": "A beautiful, ornate glass potion bottle filled with a swirling, glowing red liquid. The bottle has a crystal stopper and is decorated with silver filigree. It is sitting on a book in a lush, green forest with large, ancient trees and shafts of light."
+  },
+  {
+    "id": "consumable-mana-potion",
+    "name": "Mana Potion",
+    "type": "consumable",
+    "cost": 0,
+    "effects": [
+      {
+        "type": "restore",
+        "amount": 2,
+        "requiresSpent": 2
+      },
+      {
+        "type": "overload",
+        "amount": 1
+      }
+    ],
+    "keywords": [
+      "Resource",
+      "Overload"
+    ],
+    "data": {},
+    "text": "Refresh up to 2 spent resources this turn. Overload (1) next turn.",
+    "prompt": "A cluttered alchemist's laboratory with a large, round-bottomed flask of glowing blue liquid in the center. The flask is steaming and has a magical blue ring of energy swirling around it. The table is covered with other potions, beakers, scrolls, and alchemical equipment. The room is lit by candles and the glow of the potions, and there are shelves of books and ingredients in the background."
+  },
+  {
+    "id": "consumable-scroll-of-fortitude",
+    "name": "Scroll of Fortitude",
+    "type": "consumable",
+    "cost": 1,
+    "effects": [
+      {
+        "type": "draw",
+        "count": 1
+      }
+    ],
+    "keywords": [
+      "Team buff",
+      "Cantrip"
+    ],
+    "data": {},
+    "text": "Give your allies +0/+2 this turn. Draw a card.",
+    "prompt": "A large, magical scroll is unrolled and glowing with golden light. The scroll is covered in glowing runes and is floating in the center of a group of warriors and mages. The warriors are in full plate armor with glowing shields, and the mages are in robes and holding staffs with glowing crystals. The scene is set in a rocky, mountainous landscape at dusk."
+  },
+  {
+    "id": "consumable-savory-deviate-delight",
+    "name": "Savory Deviate Delight",
+    "type": "consumable",
+    "cost": 1,
+    "effects": [
+      {
+        "type": "transform",
+        "target": "randomAlly",
+        "into": {
+          "name": "Pirate",
+          "attack": 3,
+          "health": 3,
+          "keywords": [
+            "Charge"
+          ]
+        },
+        "duration": "endOfTurn"
+      }
+    ],
+    "keywords": [
+      "Transform",
+      "Burst"
+    ],
+    "data": {},
+    "text": "Transform a random ally into a 3/3 Pirate with Charge until end of turn.",
+    "prompt": "A whimsical scene where a large, delicious-looking cake with caramel drizzle and heart-shaped cookies is magically transforming people. A gnome is being pulled into the cake, while a rogue is being transformed into a pirate with a hook hand and a cutlass. A magical swirl of blue and gold energy is rising from the cake. The background is a dark, magical void."
+  },
+  {
+    "id": "consumable-elixir-of-firepower",
+    "name": "Elixir of Firepower",
+    "type": "consumable",
+    "cost": 1,
+    "effects": [
+      {
+        "type": "buff",
+        "target": "hero",
+        "property": "spellDamage",
+        "amount": 1,
+        "duration": "thisTurn"
+      }
+    ],
+    "keywords": [
+      "Spell Damage"
+    ],
+    "data": {},
+    "text": "Your Spells deal +1 damage this turn.",
+    "prompt": "A large, armored hand holds a glowing red potion bottle. The potion is filled with a fiery, bubbling liquid and has a dark, ornate metal casing with glowing orange gems. The bottle is topped with a cork and dark crystals. The background is a desolate, volcanic landscape with rivers of lava, jagged rocks, and a smoky sky with a setting sun."
+  }
+]

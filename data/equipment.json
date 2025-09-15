@@ -1,0 +1,174 @@
+[
+  {
+    "id": "equipment-ashkandi-greatsword-of-the-brotherhood",
+    "name": "Ashkandi, Greatsword of the Brotherhood",
+    "type": "equipment",
+    "cost": 5,
+    "attack": 5,
+    "durability": 1,
+    "effects": [
+      {
+        "type": "rawText",
+        "text": "While equipped, your Taunt allies have +1 ATK."
+      }
+    ],
+    "keywords": [
+      "Weapon",
+      "Loot"
+    ],
+    "data": {},
+    "text": "While equipped, your Taunt allies have +1 ATK.",
+    "prompt": "A massive, ornate greatsword is stuck in the ground of a desolate, fiery landscape. The sword has a dragon's head on the pommel and glowing red runes on the blade. The ground is cracked and glowing with embers. In the background, a dark castle sits on a hill under a stormy sky with rays of light breaking through the clouds."
+  },
+  {
+    "id": "equipment-core-hound-tooth",
+    "name": "Core Hound Tooth",
+    "type": "equipment",
+    "cost": 3,
+    "attack": 2,
+    "durability": 2,
+    "effects": [
+      {
+        "type": "rawText",
+        "text": "Combo Abilities deal +1 damage while equipped."
+      }
+    ],
+    "combo": [
+      {
+        "type": "damageBonus",
+        "amount": 1
+      }
+    ],
+    "keywords": [
+      "Weapon",
+      "Combo"
+    ],
+    "data": {},
+    "text": "Combo Abilities deal +1 damage while equipped.",
+    "prompt": "A large, menacing-looking tooth from a giant beast is floating in a hellish, volcanic landscape. The tooth is cracked and has glowing red energy emanating from it. The landscape is filled with rivers of lava, sharp volcanic rocks, and a fiery, swirling sky. A close-up view shows the detailed texture of the tooth."
+  },
+  {
+    "id": "equipment-benediction",
+    "name": "Benediction",
+    "type": "equipment",
+    "cost": 4,
+    "durability": 3,
+    "effects": [
+      {
+        "type": "drawOnHeal",
+        "count": 1,
+        "threshold": 5
+      }
+    ],
+    "keywords": [
+      "Spell Damage",
+      "Sustain"
+    ],
+    "data": {},
+    "text": "When you restore 5+ HP in a turn, draw a card.",
+    "prompt": "A beautiful, ornate sword is stuck in a mossy rock in an enchanted forest. The sword has a winged guard with blue gems and is glowing with golden light. Golden, magical roots are growing from the rock and wrapping around the sword. The forest is lush and green, with large, ancient trees and shafts of light. In the background are misty mountains and a crescent moon in the sky."
+  },
+  {
+    "id": "equipment-stormshield-bulwark",
+    "name": "Stormshield Bulwark",
+    "type": "equipment",
+    "cost": 3,
+    "durability": 3,
+    "effects": [
+      {
+        "type": "rawText",
+        "text": "After you take damage, gain +1 Armor (once per turn)."
+      }
+    ],
+    "keywords": [
+      "Armor",
+      "Shield"
+    ],
+    "data": {},
+    "text": "After you take damage, gain +1 Armor (once per turn).",
+    "prompt": "A large, ornate wooden and metal shield is standing in a rocky, desolate landscape. The shield has a glowing blue orb in the center that is crackling with lightning. The sky is dark and stormy, with lightning striking the mountains in the background. A lone, gnarled tree is bent by the wind."
+  },
+  {
+    "id": "equipment-wildheart-spaulders",
+    "name": "Wildheart Spaulders",
+    "type": "equipment",
+    "cost": 2,
+    "durability": 3,
+    "effects": [
+      {
+        "type": "rawText",
+        "text": "Your Choose One Abilities cost (1) less this turn after you gain Armor."
+      }
+    ],
+    "keywords": [
+      "Armor",
+      "Choose One synergy"
+    ],
+    "data": {},
+    "text": "Your Choose One Abilities cost (1) less this turn after you gain Armor.",
+    "prompt": "A set of ornate spaulders (shoulder armor) made of leather, metal, and wood. The chest piece has a large, silver wolf's head with glowing green eyes. The shoulders are made of gnarled wood with moss and glowing blue mushrooms growing on them. The background is a dark, misty forest."
+  },
+  {
+    "id": "equipment-arcanist-s-signet",
+    "name": "Arcanist’s Signet",
+    "type": "equipment",
+    "cost": 2,
+    "durability": 3,
+    "effects": [
+      {
+        "type": "spellDamageNextSpell",
+        "amount": 1,
+        "eachTurn": true
+      }
+    ],
+    "keywords": [
+      "Trinket",
+      "Spell Damage"
+    ],
+    "data": {},
+    "text": "Your next Spell each turn has Spell Damage +1.",
+    "prompt": "A beautiful, ornate silver signet ring is resting on a wooden table. The ring has a large, circular face with a glowing blue and purple galaxy-like gem in the center. The gem is surrounded by intricate silver scrollwork and a star-like symbol. The band of the ring is engraved with moons and stars. The background is dark and magical, with glowing particles in the air."
+  },
+  {
+    "id": "equipment-demonheart-grimoire",
+    "name": "Demonheart Grimoire",
+    "type": "equipment",
+    "cost": 3,
+    "durability": 3,
+    "effects": [
+      {
+        "type": "summonBuff",
+        "keyword": "Demon",
+        "attack": 1,
+        "health": 1
+      }
+    ],
+    "keywords": [
+      "Demon",
+      "Summon buff"
+    ],
+    "data": {},
+    "text": "Demons you summon gain +1/+1.",
+    "prompt": "A dark, demonic grimoire rests on a stone pedestal in a dark, gothic chamber. The book has a red, glowing demonic sigil on the cover and is bound in leather and metal with demonic faces. Red smoke and black, shadowy tentacles are emanating from the book. In the background, large, shadowy demons with glowing red eyes are lurking in the darkness."
+  },
+  {
+    "id": "equipment-masterwork-longbow",
+    "name": "Masterwork Longbow",
+    "type": "equipment",
+    "cost": 4,
+    "durability": 3,
+    "effects": [
+      {
+        "type": "rawText",
+        "text": "Your Traps trigger for +1 damage."
+      }
+    ],
+    "keywords": [
+      "Weapon",
+      "Trap synergy"
+    ],
+    "data": {},
+    "text": "Your Traps trigger for +1 damage.",
+    "prompt": "An ornate, masterwork longbow is resting against a mossy stone wall in a dark, misty forest. The bow is made of dark wood with silver inlay and has a glowing blue gem on the tip. Several traps, including a bear trap and tripwires with glowing magical triggers, are scattered on the ground around the bow. The forest is filled with large, ancient trees and has a mysterious, magical atmosphere."
+  }
+]

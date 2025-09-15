@@ -5,7 +5,7 @@ import Hero from '../src/js/entities/hero.js';
 import { renderPlay } from '../src/js/ui/play.js';
 
 const cards = JSON.parse(
-  fs.readFileSync(new URL('../data/cards.json', import.meta.url).pathname)
+  fs.readFileSync(new URL('../data/hero.json', import.meta.url).pathname)
 );
 const thrallData = cards.find(c => c.id === 'hero-thrall-warchief-of-the-horde');
 

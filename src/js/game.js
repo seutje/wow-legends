@@ -102,43 +102,30 @@ export default class Game {
     // Load initial libraries from card data
     if (typeof window === 'undefined') {
       const fs = await import('fs/promises');
-      const path1 = new URL('../../data/cards.json', import.meta.url);
-      const txt1 = await fs.readFile(path1, 'utf8');
-      const baseCards = JSON.parse(txt1);
-      let extraCards = [];
-      let extraCards2 = [];
-      try {
-        const path2 = new URL('../../data/cards-2.json', import.meta.url);
-        const txt2 = await fs.readFile(path2, 'utf8');
-        extraCards = JSON.parse(txt2);
-      } catch (err) {
-        // cards-2.json is optional in some environments; ignore if missing
+      const types = ['hero', 'spell', 'ally', 'equipment', 'quest', 'consumable'];
+      const chunks = [];
+      for (const t of types) {
+        try {
+          const p = new URL(`../../data/${t}.json`, import.meta.url);
+          const txt = await fs.readFile(p, 'utf8');
+          chunks.push(JSON.parse(txt));
+        } catch (err) {
+          // Missing type file is allowed; continue
+        }
       }
-      try {
-        const path3 = new URL('../../data/cards-3.json', import.meta.url);
-        const txt3 = await fs.readFile(path3, 'utf8');
-        extraCards2 = JSON.parse(txt3);
-      } catch (err) {
-        // cards-3.json is optional; ignore if missing
-      }
-      this.allCards = [...baseCards, ...extraCards, ...extraCards2];
+      this.allCards = chunks.flat();
     } else {
-      const [res1, res2, res3] = await Promise.all([
-        fetch(new URL('../../data/cards.json', import.meta.url)),
-        // cards-2.json may not exist in some builds; fetch and ignore errors
-        fetch(new URL('../../data/cards-2.json', import.meta.url)).catch(() => null),
-        fetch(new URL('../../data/cards-3.json', import.meta.url)).catch(() => null)
+      const mk = (name) => fetch(new URL(`../../data/${name}.json`, import.meta.url)).catch(() => null);
+      const [h, s, a, e, q, c] = await Promise.all([
+        mk('hero'), mk('spell'), mk('ally'), mk('equipment'), mk('quest'), mk('consumable')
       ]);
-      const baseCards = await res1.json();
-      let extraCards = [];
-      let extraCards2 = [];
-      if (res2 && res2.ok) {
-        try { extraCards = await res2.json(); } catch {}
+      const parts = [];
+      for (const r of [h, s, a, e, q, c]) {
+        if (r && r.ok) {
+          try { parts.push(await r.json()); } catch {}
+        }
       }
-      if (res3 && res3.ok) {
-        try { extraCards2 = await res3.json(); } catch {}
-      }
-      this.allCards = [...baseCards, ...extraCards, ...extraCards2];
+      this.allCards = parts.flat();
     }
 
     const heroes = this.allCards.filter(c => c.type === 'hero');

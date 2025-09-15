@@ -187,10 +187,20 @@ function main() {
   const mdPath = path.join(root, 'CARDS.md');
   const md = fs.readFileSync(mdPath, 'utf8');
   const cards = parse(md);
-  const outPath = path.join(root, 'data', 'cards.json');
-  fs.mkdirSync(path.dirname(outPath), { recursive: true });
-  fs.writeFileSync(outPath, JSON.stringify(cards, null, 2));
-  console.log(`[cards-ingest] Wrote ${cards.length} cards ->`, path.relative(root, outPath));
+  const byType = cards.reduce((acc, c) => {
+    (acc[c.type] ||= []).push(c);
+    return acc;
+  }, {});
+  const outDir = path.join(root, 'data');
+  fs.mkdirSync(outDir, { recursive: true });
+  let total = 0;
+  for (const [type, list] of Object.entries(byType)) {
+    const outPath = path.join(outDir, `${type}.json`);
+    fs.writeFileSync(outPath, JSON.stringify(list, null, 2));
+    console.log(`[cards-ingest] Wrote ${list.length} ${type} ->`, path.relative(root, outPath));
+    total += list.length;
+  }
+  console.log(`[cards-ingest] Total cards: ${total}`);
 }
 
 if (process.argv[1] && process.argv[1].endsWith('cards-ingest.mjs')) main();

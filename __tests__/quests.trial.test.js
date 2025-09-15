@@ -2,7 +2,15 @@ import fs from 'fs';
 import Game from '../src/js/game.js';
 import Card from '../src/js/entities/card.js';
 
-const cards = JSON.parse(fs.readFileSync(new URL('../data/cards.json', import.meta.url)));
+const read = (name) => JSON.parse(fs.readFileSync(new URL(`../data/${name}.json`, import.meta.url)));
+const cards = [
+  ...read('hero'),
+  ...read('spell'),
+  ...read('ally'),
+  ...read('equipment'),
+  ...read('quest'),
+  ...read('consumable'),
+];
 const questData = cards.find(c => c.id === 'quest-trial-of-the-elements');
 const elementalData = cards.find(c => c.id === 'spell-water-elemental');
 const fillerData = cards.find(c => c.id === 'spell-fireball');

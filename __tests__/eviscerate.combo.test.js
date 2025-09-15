@@ -4,7 +4,7 @@ import Game from '../src/js/game.js';
 import Card from '../src/js/entities/card.js';
 
 const cards = JSON.parse(
-  fs.readFileSync(new URL('../data/cards.json', import.meta.url))
+  fs.readFileSync(new URL('../data/spell.json', import.meta.url))
 );
 const eviscerateData = cards.find(c => c.id === 'spell-eviscerate');
 

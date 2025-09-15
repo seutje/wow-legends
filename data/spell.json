@@ -1,0 +1,935 @@
+[
+  {
+    "id": "spell-fireball",
+    "name": "Fireball",
+    "type": "spell",
+    "cost": 4,
+    "effects": [
+      {
+        "type": "damage",
+        "target": "any",
+        "amount": 6
+      }
+    ],
+    "keywords": [
+      "Burn — Excess damage to hero becomes a Damage‑over‑Time 1 per turn for 2 turns."
+    ],
+    "data": {},
+    "text": "Deal 6 damage to any target. If target is Frozen, deal 8 instead.",
+    "prompt": "A massive fireball spell exploding into a warrior in heavy plate armor. The warrior has white hair and a beard and is screaming in pain as his armor shatters. He is holding a large, spiked mace. The background is a rocky, cavernous environment."
+  },
+  {
+    "id": "spell-water-elemental",
+    "name": "Water Elemental",
+    "type": "spell",
+    "cost": 4,
+    "effects": [
+      {
+        "type": "summon",
+        "unit": {
+          "name": "Water Elemental",
+          "attack": 3,
+          "health": 6,
+          "keywords": [
+            "Freeze"
+          ]
+        },
+        "count": 1
+      }
+    ],
+    "keywords": [
+      "Freeze",
+      "Elemental"
+    ],
+    "data": {},
+    "text": "Summon a 3/6 Water Elemental with “Freeze any target it damages.”",
+    "prompt": "A massive water elemental made of swirling blue water and ice. It has glowing blue eyes and a glowing core in its chest. It is rising from a stormy sea, with large waves crashing around it. One of its hands is forming a ball of ice and water. The sky is dark and stormy with rain and lightning."
+  },
+  {
+    "id": "spell-shield-slam",
+    "name": "Shield Slam",
+    "type": "spell",
+    "cost": 1,
+    "effects": [
+      {
+        "type": "damageArmor",
+        "target": "minion"
+      }
+    ],
+    "keywords": [
+      "Armor scaling"
+    ],
+    "data": {},
+    "text": "Deal damage equal to your Armor to a minion.",
+    "prompt": "A heavily armored warrior with a red-plumed helmet and a lion-crested shield is slamming his shield into a shadowy, monstrous creature. The impact creates a burst of blue magical energy. The creature is being torn apart and is caught in a swirling vortex on the ground. The background is a mountainous landscape with a stormy sky and lightning."
+  },
+  {
+    "id": "spell-whirlwind",
+    "name": "Whirlwind",
+    "type": "spell",
+    "cost": 2,
+    "effects": [
+      {
+        "type": "damage",
+        "target": "allCharacters",
+        "amount": 1
+      }
+    ],
+    "keywords": [
+      "AoE",
+      "Enrage"
+    ],
+    "data": {},
+    "text": "Deal 1 damage to all characters. If any friendly character took damage this turn, Enrage them (+1 ATK).",
+    "prompt": "A chaotic battle scene with a massive whirlwind of blue and green energy at its center. Lightning arcs from the whirlwind, which is sucking up debris. In the foreground, a warrior in plate armor, a rogue, and a mage are running from the whirlwind. In the background, soldiers with banners are fighting. The sky is dark and stormy, and it is raining."
+  },
+  {
+    "id": "spell-eviscerate",
+    "name": "Eviscerate",
+    "type": "spell",
+    "cost": 2,
+    "effects": [
+      {
+        "type": "damage",
+        "target": "any",
+        "amount": 2,
+        "comboAmount": 4
+      }
+    ],
+    "combo": [],
+    "keywords": [
+      "Combo"
+    ],
+    "data": {},
+    "text": "Deal 2 damage. Combo: Deal 4 instead.",
+    "prompt": "A large, muscular demon with red, glowing eyes, horns, and dark, stitched-up skin is smashing the ground with its claws. The impact creates an explosion of rock and green and purple fel energy. In the background, a swirling vortex of blue energy and lightning is forming in the sky above a ruined gothic city."
+  },
+  {
+    "id": "spell-sap",
+    "name": "Sap",
+    "type": "spell",
+    "cost": 2,
+    "effects": [
+      {
+        "type": "returnToHand",
+        "target": "anyAlly",
+        "costIncrease": 1
+      }
+    ],
+    "keywords": [
+      "Tempo"
+    ],
+    "data": {},
+    "text": "Return an enemy ally to its owner’s hand; it costs (1) more next time.",
+    "prompt": "In a dark and spooky swamp, a hooded figure is casting a spell on an orc warrior. The spell is a stream of green, viscous slime that is covering and incapacitating the orc. The orc is wearing heavy plate armor and is struggling against the slime. In the background are gnarled, mossy trees with glowing eyes in their hollows."
+  },
+  {
+    "id": "spell-power-word-shield",
+    "name": "Power Word: Shield",
+    "type": "spell",
+    "cost": 1,
+    "effects": [
+      {
+        "type": "buff",
+        "target": "character",
+        "property": "health",
+        "amount": 3,
+        "duration": "thisTurn"
+      },
+      {
+        "type": "draw",
+        "count": 1
+      }
+    ],
+    "keywords": [
+      "Buff",
+      "Draw"
+    ],
+    "data": {},
+    "text": "Give a character +0/+3 until end of turn; if it survives damage, draw a card.",
+    "prompt": "A handsome male warrior in ornate plate armor with a lion-crested pauldron and a red cape. He is holding a large shield with a glowing sun emblem and a sword. A magical shield of swirling blue and white energy surrounds him, with a ring of glowing golden runes. The background is a rocky, misty landscape with a bright light source from above."
+  },
+  {
+    "id": "spell-shadow-word-pain",
+    "name": "Shadow Word: Pain",
+    "type": "spell",
+    "cost": 2,
+    "effects": [
+      {
+        "type": "destroy",
+        "target": "minion",
+        "condition": {
+          "type": "attackLessThan",
+          "amount": 3
+        }
+      }
+    ],
+    "keywords": [
+      "Removal"
+    ],
+    "data": {},
+    "text": "Destroy a minion with 3 or less ATK.",
+    "prompt": "A terrifying, large shadow monster with glowing green eyes and a gaping maw is attacking a small, horned humanoid figure. The monster is made of swirling black and purple shadows and has long, sharp claws. The smaller figure is being lifted off the ground and enveloped by shadowy tendrils. The setting is a dark, spooky forest with gnarled trees and floating rocks."
+  },
+  {
+    "id": "spell-consecration",
+    "name": "Consecration",
+    "type": "spell",
+    "cost": 4,
+    "effects": [
+      {
+        "type": "damage",
+        "target": "allEnemies",
+        "amount": 2
+      }
+    ],
+    "keywords": [
+      "AoE",
+      "Recruit synergy"
+    ],
+    "data": {},
+    "text": "Deal 2 damage to all enemies. If you have a Silver Hand Recruit, deal 3 instead.",
+    "prompt": "Inside a grand cathedral with high ceilings, stone pillars, and stained glass windows, a paladin in full plate armor with a shield is watching as a group of ghoulish, monstrous humanoids are being destroyed by a burst of holy light. The light is emanating from the center of a glowing, circular rune on the floor. The ghouls are recoiling and disintegrating from the holy energy."
+  },
+  {
+    "id": "spell-blessing-of-kings",
+    "name": "Blessing of Kings",
+    "type": "spell",
+    "cost": 4,
+    "effects": [
+      {
+        "type": "buff",
+        "target": "character",
+        "property": "attack",
+        "amount": 4
+      },
+      {
+        "type": "buff",
+        "target": "character",
+        "property": "health",
+        "amount": 4
+      }
+    ],
+    "keywords": [
+      "Buff"
+    ],
+    "data": {},
+    "text": "Give a friendly character +4/+4 until it dies.",
+    "prompt": "A powerful king with a long white beard and a crown, wearing ornate plate armor and a flowing red cape. He is standing in a grand hall with large pillars and stained glass windows. He is casting a spell, with balls of golden fire in his hands and a swirling ring of golden energy and magical runes around him."
+  },
+  {
+    "id": "spell-lightning-bolt",
+    "name": "Lightning Bolt",
+    "type": "spell",
+    "cost": 1,
+    "effects": [
+      {
+        "type": "damage",
+        "amount": 3,
+        "target": "any"
+      },
+      {
+        "type": "overload",
+        "amount": 1
+      }
+    ],
+    "keywords": [
+      "Overload"
+    ],
+    "data": {},
+    "text": "Deal 3 damage. Overload (1).",
+    "prompt": "A massive bolt of lightning is striking a mountain peak, causing it to explode in a shower of rocks. The lightning originates from a swirling vortex of storm clouds. The sky is dark and dramatic, with multiple forks of lightning."
+  },
+  {
+    "id": "spell-feral-spirit",
+    "name": "Feral Spirit",
+    "type": "spell",
+    "cost": 3,
+    "effects": [
+      {
+        "type": "summon",
+        "unit": {
+          "name": "Spirit Wolf",
+          "attack": 2,
+          "health": 3,
+          "keywords": []
+        },
+        "count": 2
+      },
+      {
+        "type": "overload",
+        "amount": 2
+      }
+    ],
+    "keywords": [
+      "Summon",
+      "Taunt",
+      "Overload"
+    ],
+    "data": {},
+    "text": "Summon two 2/3 Spirit Wolves with Taunt. Overload (2).",
+    "prompt": "Three spectral wolves made of blue and white energy are being summoned from a swirling portal of blue and purple light. One wolf is howling at the crescent moon in the night sky. The other two are in aggressive stances. The ground is rocky and barren, and there are mountains in the background."
+  },
+  {
+    "id": "spell-starfire",
+    "name": "Starfire",
+    "type": "spell",
+    "cost": 5,
+    "effects": [
+      {
+        "type": "damage",
+        "target": "any",
+        "amount": 5
+      },
+      {
+        "type": "draw",
+        "count": 1
+      }
+    ],
+    "keywords": [
+      "Draw",
+      "Choose One synergy"
+    ],
+    "data": {},
+    "text": "Deal 5 damage. Draw a card. If you chose both options on a card this turn, this costs (2) less.",
+    "prompt": "A mystical scene set in outer space. A robed figure is standing on a swirling nebula, reaching up to a glowing blue star. From the star, energy flows to a giant, fiery phoenix made of golden and orange flames. The phoenix is surrounded by stars and constellations. A comet is streaking across the sky."
+  },
+  {
+    "id": "spell-savage-roar",
+    "name": "Savage Roar",
+    "type": "spell",
+    "cost": 3,
+    "effects": [
+      {
+        "type": "buff",
+        "target": "allies",
+        "property": "attack",
+        "amount": 2,
+        "duration": "thisTurn"
+      }
+    ],
+    "keywords": [
+      "Burst"
+    ],
+    "data": {},
+    "text": "Give your hero and allies +2 ATK this turn.",
+    "prompt": "A monstrous, roaring creature with glowing blue eyes and sharp teeth is emerging from a swirling vortex of blue energy. The creature has its arms outstretched and is screaming. Below, a battle is raging on a desolate plain, with soldiers and strange, bladed objects scattered across the landscape."
+  },
+  {
+    "id": "spell-kill-command",
+    "name": "Kill Command",
+    "type": "spell",
+    "cost": 3,
+    "effects": [
+      {
+        "type": "damage",
+        "target": "any",
+        "amount": 3,
+        "beastBonus": 2
+      }
+    ],
+    "keywords": [
+      "Beast synergy"
+    ],
+    "data": {},
+    "text": "Deal 3 damage; if you control a Beast, deal 5 instead.",
+    "prompt": "A glowing red, runic symbol is floating in the center of a dark and stormy landscape. The rune is pulsing with red energy and has thorny, root-like structures growing from it. In the background, a giant, shadowy beast with glowing red eyes and sharp teeth is roaring. Red lightning arcs across the sky."
+  },
+  {
+    "id": "spell-explosive-trap",
+    "name": "Explosive Trap",
+    "type": "spell",
+    "cost": 2,
+    "effects": [
+      {
+        "type": "explosiveTrap",
+        "amount": 2
+      }
+    ],
+    "keywords": [
+      "Secret",
+      "AoE"
+    ],
+    "data": {},
+    "text": "Secret — When your hero takes damage, deal 2 damage to all characters.",
+    "prompt": "A large, metal bear trap with sharp teeth is sitting on the ground in a dark and spooky forest. The trap is glowing with red-hot energy and emitting smoke and sparks. The forest is filled with gnarled, ancient trees and has a misty, mysterious atmosphere."
+  },
+  {
+    "id": "spell-hellfire",
+    "name": "Hellfire",
+    "type": "spell",
+    "cost": 4,
+    "effects": [
+      {
+        "type": "damage",
+        "target": "allCharacters",
+        "amount": 3
+      }
+    ],
+    "keywords": [
+      "AoE",
+      "Self‑damage"
+    ],
+    "data": {},
+    "text": "Deal 3 damage to ALL characters.",
+    "prompt": "A hellish landscape with a gothic castle being consumed by a massive fire. Rivers of lava flow around the castle, and the sky is filled with smoke and fire. In the foreground, large, curved, demonic-looking rock formations with lava flowing through them frame the scene."
+  },
+  {
+    "id": "spell-summon-infernal",
+    "name": "Summon Infernal",
+    "type": "spell",
+    "cost": 6,
+    "effects": [
+      {
+        "type": "summon",
+        "unit": {
+          "name": "Infernal",
+          "attack": 6,
+          "health": 6,
+          "keywords": []
+        },
+        "count": 1,
+        "onSummoned": [
+          {
+            "type": "damage",
+            "target": "allOtherCharacters",
+            "amount": 1
+          }
+        ]
+      }
+    ],
+    "keywords": [
+      "Demon",
+      "AoE"
+    ],
+    "data": {},
+    "text": "Summon a 6/6 Infernal that deals 1 damage to all other characters.",
+    "prompt": "A giant, muscular demon made of fire and rock is being summoned from a swirling portal of fire. The demon has large horns, glowing red eyes, and sharp claws. Floating rocks and lightning surround the portal. In the foreground, several humanoid figures are cowering in fear in a desolate landscape with cracked, glowing ground and dead trees."
+  },
+  {
+    "id": "spell-arcane-barrage",
+    "name": "Arcane Barrage",
+    "type": "spell",
+    "cost": 3,
+    "effects": [
+      {
+        "type": "damage",
+        "target": "allEnemies",
+        "amount": 2
+      }
+    ],
+    "keywords": [
+      "AoE"
+    ],
+    "data": {},
+    "text": "Deal 2 damage to all enemies.",
+    "prompt": "Ribbons of blue arcane missiles streak from a mage’s hands, detonating among a cluster of charging gnolls in Elwynn."
+  },
+  {
+    "id": "spell-renew",
+    "name": "Renew",
+    "type": "spell",
+    "cost": 1,
+    "effects": [
+      {
+        "type": "heal",
+        "target": "character",
+        "amount": 3
+      }
+    ],
+    "keywords": [
+      "Heal"
+    ],
+    "data": {},
+    "text": "Restore 3 HP to a character.",
+    "prompt": "Golden prayer sigils wrap a wounded knight, torn tabard mending under warm cathedral light."
+  },
+  {
+    "id": "spell-windfury-totem",
+    "name": "Windfury Totem",
+    "type": "spell",
+    "cost": 2,
+    "effects": [
+      {
+        "type": "summon",
+        "unit": {
+          "name": "Windfury Totem",
+          "attack": 0,
+          "health": 3,
+          "keywords": [
+            "Totem",
+            "Windfury"
+          ]
+        },
+        "count": 1
+      }
+    ],
+    "keywords": [
+      "Totem",
+      "Windfury"
+    ],
+    "data": {},
+    "text": "Summon a 0/3 Windfury Totem.",
+    "prompt": "A carved shamanic totem crackles with whirling gusts, banners snapping as dust devils spiral outward."
+  },
+  {
+    "id": "spell-freezing-trap",
+    "name": "Freezing Trap",
+    "type": "spell",
+    "cost": 2,
+    "effects": [
+      {
+        "type": "freezingTrap"
+      }
+    ],
+    "keywords": [
+      "Secret",
+      "Tempo"
+    ],
+    "data": {},
+    "text": "Secret — When an enemy attacks, return it to its owner’s hand; it costs (2) more.",
+    "prompt": "Frosty glyphs bloom across a forest floor as a leaping beast is hurled back in a surge of ice."
+  },
+  {
+    "id": "spell-snake-trap",
+    "name": "Snake Trap",
+    "type": "spell",
+    "cost": 2,
+    "effects": [
+      {
+        "type": "rawText",
+        "text": "Secret — When one of your allies is attacked, summon three 1/1 Snakes with Rush."
+      }
+    ],
+    "keywords": [
+      "Secret",
+      "Summon"
+    ],
+    "data": {},
+    "text": "Secret — When one of your allies is attacked, summon three 1/1 Snakes with Rush.",
+    "prompt": "A sprung hunter’s trap erupts into a writhing mass of serpents in a jungle clearing."
+  },
+  {
+    "id": "spell-counter-shot",
+    "name": "Counter Shot",
+    "type": "spell",
+    "cost": 3,
+    "effects": [
+      {
+        "type": "rawText",
+        "text": "Secret — When your opponent casts a spell, counter it."
+      }
+    ],
+    "keywords": [
+      "Secret",
+      "Counter"
+    ],
+    "data": {},
+    "text": "Secret — When your opponent casts a spell, counter it.",
+    "prompt": "An arrow of pure silence shatters a mage’s spell mid-cast, ripples of null energy scattering runes."
+  },
+  {
+    "id": "spell-retaliation-runes",
+    "name": "Retaliation Runes",
+    "type": "spell",
+    "cost": 2,
+    "effects": [
+      {
+        "type": "rawText",
+        "text": "Secret — When a friendly character takes damage, deal 2 damage to the source."
+      }
+    ],
+    "keywords": [
+      "Secret",
+      "Reflect"
+    ],
+    "data": {},
+    "text": "Secret — When a friendly character takes damage, deal 2 damage to the source.",
+    "prompt": "Blue runes flare across the ground; a striking foe recoils as the blow rebounds with icy force."
+  },
+  {
+    "id": "spell-vengeful-spirit",
+    "name": "Vengeful Spirit",
+    "type": "spell",
+    "cost": 2,
+    "effects": [
+      {
+        "type": "rawText",
+        "text": "Secret — After a friendly ally dies, deal 3 damage to a random enemy."
+      }
+    ],
+    "keywords": [
+      "Secret",
+      "Undead"
+    ],
+    "data": {},
+    "text": "Secret — After a friendly ally dies, deal 3 damage to a random enemy.",
+    "prompt": "A tormented banshee streaks from a fallen ranger, shrieking toward an enemy line."
+  },
+  {
+    "id": "spell-heroic-leap",
+    "name": "Heroic Leap",
+    "type": "spell",
+    "cost": 2,
+    "effects": [
+      {
+        "type": "damage",
+        "target": "allEnemies",
+        "amount": 1
+      },
+      {
+        "type": "buff",
+        "target": "hero",
+        "property": "armor",
+        "amount": 2
+      }
+    ],
+    "keywords": [
+      "Armor",
+      "AoE"
+    ],
+    "data": {},
+    "text": "Deal 1 damage to all enemies. Gain 2 Armor.",
+    "prompt": "A warrior crashes down from a mighty leap, shockwaves rippling through a crowd of kobolds."
+  },
+  {
+    "id": "spell-blade-flurry",
+    "name": "Blade Flurry",
+    "type": "spell",
+    "cost": 3,
+    "effects": [
+      {
+        "type": "damage",
+        "target": "allEnemies",
+        "amount": 2
+      }
+    ],
+    "keywords": [
+      "AoE",
+      "Combo"
+    ],
+    "data": {},
+    "text": "Deal 2 damage to all enemies.",
+    "prompt": "A rogue becomes a blur of steel, arcs of slash-marks trailing through a bandit camp."
+  },
+  {
+    "id": "spell-bloodlust",
+    "name": "Bloodlust",
+    "type": "spell",
+    "cost": 5,
+    "effects": [
+      {
+        "type": "buff",
+        "target": "allies",
+        "property": "attack",
+        "amount": 3,
+        "duration": "thisTurn"
+      }
+    ],
+    "keywords": [
+      "Burst"
+    ],
+    "data": {},
+    "text": "Give your hero and allies +3 ATK this turn.",
+    "prompt": "Orcish drums thunder as red rage magic surges across a warband charging into battle."
+  },
+  {
+    "id": "spell-mark-of-the-wild",
+    "name": "Mark of the Wild",
+    "type": "spell",
+    "cost": 2,
+    "effects": [
+      {
+        "type": "buff",
+        "target": "character",
+        "property": "attack",
+        "amount": 2
+      },
+      {
+        "type": "buff",
+        "target": "character",
+        "property": "health",
+        "amount": 2
+      }
+    ],
+    "keywords": [
+      "Buff"
+    ],
+    "data": {},
+    "text": "Give a friendly character +2/+2.",
+    "prompt": "Emerald vines and antlered spirit energy wrap a warrior beneath towering night elven trees."
+  },
+  {
+    "id": "spell-savage-strike",
+    "name": "Savage Strike",
+    "type": "spell",
+    "cost": 1,
+    "effects": [
+      {
+        "type": "damage",
+        "target": "any",
+        "amount": 2
+      }
+    ],
+    "keywords": [
+      "Burst"
+    ],
+    "data": {},
+    "text": "Deal 2 damage.",
+    "prompt": "A feral druid lunges with clawed hands, a single target engulfed by a crescent slash."
+  },
+  {
+    "id": "spell-ancestral-knowledge",
+    "name": "Ancestral Knowledge",
+    "type": "spell",
+    "cost": 2,
+    "effects": [
+      {
+        "type": "draw",
+        "count": 2
+      },
+      {
+        "type": "overload",
+        "amount": 1
+      }
+    ],
+    "keywords": [
+      "Draw",
+      "Overload"
+    ],
+    "data": {},
+    "text": "Draw 2 cards. Overload (1).",
+    "prompt": "A shaman communes with stone-carved spirits, glowing glyphs pouring into a scroll."
+  },
+  {
+    "id": "spell-ice-lance",
+    "name": "Ice Lance",
+    "type": "spell",
+    "cost": 1,
+    "effects": [
+      {
+        "type": "damage",
+        "target": "any",
+        "amount": 1,
+        "freeze": 1
+      }
+    ],
+    "keywords": [
+      "Freeze"
+    ],
+    "data": {},
+    "text": "Deal 1 damage and Freeze the target.",
+    "prompt": "A razor of blue ice pierces a charging gnoll, frost racing across its fur."
+  },
+  {
+    "id": "spell-flamestrike",
+    "name": "Flamestrike",
+    "type": "spell",
+    "cost": 7,
+    "effects": [
+      {
+        "type": "damage",
+        "target": "allEnemies",
+        "amount": 4
+      }
+    ],
+    "keywords": [
+      "AoE"
+    ],
+    "data": {},
+    "text": "Deal 4 damage to all enemies.",
+    "prompt": "Columns of fire roar across a battlefield, molten cobblestones and ash swirling in a gale."
+  },
+  {
+    "id": "spell-holy-smite",
+    "name": "Holy Smite",
+    "type": "spell",
+    "cost": 1,
+    "effects": [
+      {
+        "type": "damage",
+        "target": "any",
+        "amount": 3
+      }
+    ],
+    "keywords": [
+      "Burst"
+    ],
+    "data": {},
+    "text": "Deal 3 damage.",
+    "prompt": "A spear of golden light lances down from a stained-glass sky, blasting a ghoul."
+  },
+  {
+    "id": "spell-nature-s-grasp",
+    "name": "Nature’s Grasp",
+    "type": "spell",
+    "cost": 3,
+    "effects": [
+      {
+        "type": "transform",
+        "target": "randomAlly",
+        "into": {
+          "name": "Treant",
+          "attack": 3,
+          "health": 3,
+          "keywords": [
+            "Beast"
+          ]
+        },
+        "duration": "endOfTurn"
+      }
+    ],
+    "keywords": [
+      "Choose One synergy"
+    ],
+    "data": {},
+    "text": "Transform a random friendly ally into a 3/3 Treant until end of turn.",
+    "prompt": "Vines whip around a druid’s companion, reshaping into a bark-skinned treant mid-roar."
+  },
+  {
+    "id": "spell-rallying-cry",
+    "name": "Rallying Cry",
+    "type": "spell",
+    "cost": 2,
+    "effects": [
+      {
+        "type": "buff",
+        "target": "allies",
+        "property": "health",
+        "amount": 1
+      }
+    ],
+    "keywords": [
+      "Buff"
+    ],
+    "data": {},
+    "text": "Give your hero and allies +1 Health.",
+    "prompt": "A commander raises a banner; a surge of courage steels the line."
+  },
+  {
+    "id": "spell-warglaive-training",
+    "name": "Warglaive Training",
+    "type": "spell",
+    "cost": 2,
+    "effects": [
+      {
+        "type": "equip",
+        "item": {
+          "name": "Azzinoth Warglaive",
+          "attack": 2,
+          "durability": 2
+        }
+      }
+    ],
+    "keywords": [
+      "Equipment"
+    ],
+    "data": {},
+    "text": "Equip a 2/2 Warglaive.",
+    "prompt": "Fel-green etched blades hum as a demon hunter grips twin warglaives."
+  },
+  {
+    "id": "spell-mind-vision",
+    "name": "Mind Vision",
+    "type": "spell",
+    "cost": 1,
+    "effects": [
+      {
+        "type": "draw",
+        "count": 1
+      }
+    ],
+    "keywords": [
+      "Discover"
+    ],
+    "data": {},
+    "text": "Draw a card.",
+    "prompt": "A priest peers into an enemy’s mind, reflections of their secrets rippling across an orb."
+  },
+  {
+    "id": "spell-ferocious-bite",
+    "name": "Ferocious Bite",
+    "type": "spell",
+    "cost": 3,
+    "effects": [
+      {
+        "type": "damage",
+        "target": "any",
+        "amount": 4
+      }
+    ],
+    "keywords": [
+      "Beast synergy"
+    ],
+    "data": {},
+    "text": "Deal 4 damage.",
+    "prompt": "A spectral bear jaw snaps shut around a target, glowing fangs crunching magic wards."
+  },
+  {
+    "id": "spell-sunder-armor",
+    "name": "Sunder Armor",
+    "type": "spell",
+    "cost": 2,
+    "effects": [
+      {
+        "type": "buff",
+        "target": "character",
+        "property": "armor",
+        "amount": -2
+      }
+    ],
+    "keywords": [
+      "Debuff"
+    ],
+    "data": {},
+    "text": "Give a character -2 Armor.",
+    "prompt": "A warrior’s hammer shatters a shield crest, metal shards spraying."
+  },
+  {
+    "id": "spell-call-of-the-wild",
+    "name": "Call of the Wild",
+    "type": "spell",
+    "cost": 6,
+    "effects": [
+      {
+        "type": "summon",
+        "unit": {
+          "name": "Great Wolf",
+          "attack": 4,
+          "health": 4,
+          "keywords": [
+            "Beast",
+            "Rush"
+          ]
+        },
+        "count": 2
+      }
+    ],
+    "keywords": [
+      "Summon",
+      "Beast"
+    ],
+    "data": {},
+    "text": "Summon two 4/4 Great Wolves with Rush.",
+    "prompt": "Two massive spectral wolves bound from a green portal, snow spraying."
+  },
+  {
+    "id": "spell-thorns",
+    "name": "Thorns",
+    "type": "spell",
+    "cost": 1,
+    "effects": [
+      {
+        "type": "rawText",
+        "text": "Give a character ‘Damage Reflect (1) this turn.’"
+      }
+    ],
+    "keywords": [
+      "Reflect",
+      "Buff"
+    ],
+    "data": {},
+    "text": "Give a character ‘Damage Reflect (1) this turn.’",
+    "prompt": "Barbed vines coil around a guardian, spikes poised to lash at attackers."
+  }
+]

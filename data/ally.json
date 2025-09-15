@@ -1,5 +1,306 @@
 [
   {
+    "id": "ally-water-elemental-guardian",
+    "name": "Water Elemental Guardian",
+    "type": "ally",
+    "cost": 4,
+    "effects": [],
+    "keywords": [
+      "Freeze",
+      "Elemental"
+    ],
+    "data": {
+      "attack": 3,
+      "health": 6
+    },
+    "text": "Freeze any target this damages.",
+    "prompt": "A massive, armored elemental made of sharp, blue ice. It has glowing blue eyes and a glowing core in its chest. It stands in a churning, icy sea in a snowy, mountainous landscape. A ring of water and ice shards is swirling around it. A large moon is in the sky behind it."
+  },
+  {
+    "id": "ally-silver-hand-lieutenant",
+    "name": "Silver Hand Lieutenant",
+    "type": "ally",
+    "cost": 3,
+    "effects": [
+      {
+        "type": "rawText",
+        "text": "Your Recruits have +1 ATK."
+      }
+    ],
+    "keywords": [
+      "Aura"
+    ],
+    "data": {
+      "attack": 2,
+      "health": 3
+    },
+    "text": "Your Recruits have +1 ATK.",
+    "prompt": "A handsome male knight with a beard, wearing shining plate armor with gold trim and a red cape. His armor bears the symbol of a silver hand. He is standing proudly on a cliff, resting his hand on the pommel of a large greatsword. Below him, an army of knights in similar armor stands at attention, holding shields and spears. The background is a green, hilly landscape with mountains in the distance, under a dramatic, cloudy sky with rays of light."
+  },
+  {
+    "id": "ally-orgrimmar-grunt",
+    "name": "Orgrimmar Grunt",
+    "type": "ally",
+    "cost": 2,
+    "effects": [],
+    "keywords": [
+      "Taunt"
+    ],
+    "data": {
+      "attack": 2,
+      "health": 2
+    },
+    "text": "Taunt.",
+    "prompt": "A large, muscular orc warrior with green skin, tusks, and a beard. He is wearing heavy, spiked armor with fur trim and skull decorations. He is holding a large, ornate axe and has one hand outstretched. He is standing on a rocky outcrop with a dark, foreboding castle in the background under a cloudy sky."
+  },
+  {
+    "id": "ally-jungle-stalker",
+    "name": "Jungle Stalker",
+    "type": "ally",
+    "cost": 4,
+    "effects": [],
+    "keywords": [
+      "Stealth",
+      "Beast"
+    ],
+    "data": {
+      "attack": 5,
+      "health": 3
+    },
+    "text": "Stealth (loses Stealth when it attacks).",
+    "prompt": "A large, muscular jungle cat with striped and spotted fur is stalking through a dense, misty jungle. It has glowing green eyes and is in a low, predatory stance. The jungle is filled with gnarled trees, vines, and lush foliage, with shafts of light breaking through the canopy."
+  },
+  {
+    "id": "ally-northshire-acolyte",
+    "name": "Northshire Acolyte",
+    "type": "ally",
+    "cost": 2,
+    "effects": [
+      {
+        "type": "drawOnHeal",
+        "count": 1
+      }
+    ],
+    "keywords": [
+      "Draw"
+    ],
+    "data": {
+      "attack": 1,
+      "health": 3
+    },
+    "text": "Whenever a character is healed, draw a card (once per turn).",
+    "prompt": "A female priestess in a white and gold hooded robe stands on a stone balcony overlooking a beautiful valley. A golden halo glows behind her head. She holds a ball of golden fire in one hand. The valley is filled with a winding river, misty forests with autumn-colored trees, and is surrounded by mountains. The sun is setting, casting golden rays of light."
+  },
+  {
+    "id": "ally-imp-swarm-caller",
+    "name": "Imp Swarm Caller",
+    "type": "ally",
+    "cost": 3,
+    "effects": [
+      {
+        "type": "summon",
+        "unit": {
+          "name": "Imp",
+          "attack": 1,
+          "health": 1,
+          "keywords": []
+        },
+        "count": 2
+      }
+    ],
+    "keywords": [
+      "Demon",
+      "Deathrattle"
+    ],
+    "data": {
+      "attack": 3,
+      "health": 2
+    },
+    "text": "Deathrattle — Summon two 1/1 Imps.",
+    "prompt": "A menacing warlock in a dark, hooded robe and spiked armor is surrounded by a massive swarm of demonic imps. The imps have horns, glowing green eyes, and some have bat-like wings. The scene is chaotic and dark, with a swirling, cloudy background and embers floating in the air."
+  },
+  {
+    "id": "ally-darnassian-huntress",
+    "name": "Darnassian Huntress",
+    "type": "ally",
+    "cost": 3,
+    "effects": [
+      {
+        "type": "rawText",
+        "text": "Battlecry — Give a Beast +1/+1 and Rush this turn."
+      }
+    ],
+    "keywords": [
+      "Battlecry",
+      "Rush"
+    ],
+    "data": {
+      "attack": 2,
+      "health": 4
+    },
+    "text": "Battlecry — Give a Beast +1/+1 and Rush this turn.",
+    "prompt": "A female elf huntress with long, braided silver hair and a wooden circlet is standing in an enchanted forest. She is wearing leather armor with green and gold details and a cape with pink roses. She holds a bow in one hand and a ball of golden magical energy in the other. Behind her is a large, spectral lynx with antlers and glowing blue eyes. The forest is filled with gnarled, mossy trees, glowing blue mushrooms, and other magical flora."
+  },
+  {
+    "id": "ally-stormforged-totemic",
+    "name": "Stormforged Totemic",
+    "type": "ally",
+    "cost": 2,
+    "effects": [
+      {
+        "type": "buffAtEndOfTurn",
+        "target": "randomFriendlyAlly",
+        "property": "attack",
+        "amount": 1
+      }
+    ],
+    "keywords": [
+      "Totem",
+      "Buff"
+    ],
+    "data": {
+      "attack": 0,
+      "health": 3
+    },
+    "text": "End of your turn: Give a random ally +1 ATK.",
+    "prompt": "A massive, dark stone totem carved with a demonic face and wings is being struck by lightning from a stormy sky. The totem has glowing blue cracks all over it and is firing a beam of golden energy from its mouth at a group of warriors below. The warriors are in a desolate landscape with gnarled, dead trees."
+  },
+  {
+    "id": "ally-gnomish-tinkerer",
+    "name": "Gnomish Tinkerer",
+    "type": "ally",
+    "cost": 2,
+    "effects": [
+      {
+        "type": "playRandomConsumableFromLibrary"
+      }
+    ],
+    "keywords": [
+      "Tutor"
+    ],
+    "data": {
+      "attack": 2,
+      "health": 1
+    },
+    "text": "Battlecry — Play a random Consumable from your deck.",
+    "prompt": "A cheerful gnome tinkerer with a large mustache, a beard braided with gears, and goggles on his head. He is in a cluttered workshop filled with strange gadgets, tools, and potions. He is holding up two small, glowing mechanical devices. He is wearing a leather apron with many tools and has a magnifying glass attached to his shoulder pauldron."
+  },
+  {
+    "id": "ally-argent-healer",
+    "name": "Argent Healer",
+    "type": "ally",
+    "cost": 4,
+    "effects": [
+      {
+        "type": "healAtEndOfTurn",
+        "target": "randomCharacter",
+        "amount": 3
+      }
+    ],
+    "keywords": [
+      "Heal"
+    ],
+    "data": {
+      "attack": 3,
+      "health": 4
+    },
+    "text": "Restore 3 HP to a character at end of your turn.",
+    "prompt": "A beautiful female healer in a white and gold hooded robe stands in a lush, green forest next to a small stream. A silver halo glows behind her head. She holds a glowing blue and white orb of healing energy in one hand and has her other hand outstretched. In the background, there are large, ancient trees with shafts of light filtering through them, and a beautiful white city is visible in the distance."
+  },
+  {
+    "id": "ally-warsong-raider",
+    "name": "Warsong Raider",
+    "type": "ally",
+    "cost": 3,
+    "effects": [
+      {
+        "type": "buffOnSurviveDamage",
+        "attack": 2
+      }
+    ],
+    "keywords": [
+      "Enrage"
+    ],
+    "data": {
+      "attack": 3,
+      "health": 3
+    },
+    "text": "Enrage — Whenever this survives damage, gain +2 ATK.",
+    "prompt": "A large, muscular warrior in heavy, spiked plate armor stands in the middle of a brutal battlefield. He is covered in blood and has glowing red eyes, giving him an enraged look. He holds a massive, double-bladed axe. The battlefield is littered with broken weapons and burning debris, and a battle rages in the background under a dark, smoky sky."
+  },
+  {
+    "id": "ally-scarlet-sorcerer",
+    "name": "Scarlet Sorcerer",
+    "type": "ally",
+    "cost": 3,
+    "effects": [],
+    "keywords": [
+      "Aura"
+    ],
+    "data": {
+      "attack": 3,
+      "health": 3,
+      "spellDamage": 1
+    },
+    "text": "Spell Damage +1.",
+    "prompt": "A powerful female sorceress with long red hair, glowing red eyes, and demonic horns. She is wearing ornate red and gold robes and armor. She is floating in the air, holding balls of red fire in her hands. She is surrounded by fire elementals and demonic creatures, some of which are trapped in magical circles with glowing red runes. In the background is a dark, gothic castle under a stormy sky with lightning."
+  },
+  {
+    "id": "ally-stone-bark-treant",
+    "name": "Stone Bark Treant",
+    "type": "ally",
+    "cost": 5,
+    "effects": [
+      {
+        "type": "buffOnArmorGain",
+        "attack": 0,
+        "health": 2
+      }
+    ],
+    "keywords": [
+      "Taunt",
+      "Treant",
+      "Elemental"
+    ],
+    "data": {
+      "attack": 4,
+      "health": 6
+    },
+    "text": "Taunt. Whenever your hero gains Armor, gain +0/+2.",
+    "prompt": "A massive, ancient treant made of gnarled wood and stone. It has glowing yellow eyes and is covered in moss and glowing green veins. It is in a menacing pose in a dark, misty swamp with gnarled trees and roots all around."
+  },
+  {
+    "id": "ally-defias-footpad",
+    "name": "Defias Footpad",
+    "type": "ally",
+    "cost": 1,
+    "effects": [],
+    "combo": [
+      {
+        "type": "summon",
+        "unit": {
+          "name": "Defias Footpad",
+          "attack": 1,
+          "health": 1,
+          "keywords": [
+            "Token"
+          ]
+        },
+        "count": 1
+      }
+    ],
+    "keywords": [
+      "Combo",
+      "Token"
+    ],
+    "data": {
+      "attack": 1,
+      "health": 1
+    },
+    "text": "Combo — Summon another 1/1 Footpad.",
+    "prompt": "Two menacing rogues in a dark, rainy alleyway. They are wearing black and red outfits with hoods and ragged capes. They have a red symbol on their armor. The rogue in the foreground is in a dynamic leaping pose, holding a dagger in each hand and has a sinister grin. The other rogue is running in the background. The alley is paved with cobblestones and lined with old, timber-framed buildings."
+  },
+  {
     "id": "ally-horde-grunt",
     "name": "Horde Grunt",
     "type": "ally",
@@ -1214,5 +1515,590 @@
     },
     "text": "Taunt.",
     "prompt": "An armored sentinel guards a moonlit bough-bridge on the great world tree, glowing lanterns swaying in the night breeze."
+  },
+  {
+    "id": "ally-windfury-harpy",
+    "name": "Windfury Harpy",
+    "type": "ally",
+    "cost": 5,
+    "effects": [],
+    "keywords": [
+      "Windfury",
+      "Beast"
+    ],
+    "data": {
+      "attack": 4,
+      "health": 5
+    },
+    "text": "Windfury.",
+    "prompt": "A shrieking harpy rides a raging gale over Thousand Needles, twin talons outstretched."
+  },
+  {
+    "id": "ally-stormheim-vrykul-berserker",
+    "name": "Stormheim Vrykul Berserker",
+    "type": "ally",
+    "cost": 3,
+    "effects": [
+      {
+        "type": "buffOnSurviveDamage",
+        "attack": 2
+      }
+    ],
+    "keywords": [
+      "Enrage",
+      "Human"
+    ],
+    "data": {
+      "attack": 3,
+      "health": 3
+    },
+    "text": "Enrage — Whenever this survives damage, gain +2 ATK.",
+    "prompt": "A towering vrykul howls, frost winds whipping his braids as arrows splinter on his shield."
+  },
+  {
+    "id": "ally-sunfury-archer",
+    "name": "Sunfury Archer",
+    "type": "ally",
+    "cost": 2,
+    "effects": [
+      {
+        "type": "damage",
+        "target": "any",
+        "amount": 1
+      }
+    ],
+    "keywords": [
+      "Blood Elf",
+      "Battlecry"
+    ],
+    "data": {
+      "attack": 2,
+      "health": 2
+    },
+    "text": "Battlecry — Deal 1 damage.",
+    "prompt": "A blood elf archer looses a radiant arrow from a gilded balcony in Silvermoon."
+  },
+  {
+    "id": "ally-warsong-outrider",
+    "name": "Warsong Outrider",
+    "type": "ally",
+    "cost": 4,
+    "effects": [],
+    "keywords": [
+      "Charge",
+      "Orc"
+    ],
+    "data": {
+      "attack": 4,
+      "health": 3
+    },
+    "text": "Charge.",
+    "prompt": "An orc outrider spurs a wolf mount across the Barrens, red war banners snapping in the wind."
+  },
+  {
+    "id": "ally-draenei-vindicator",
+    "name": "Draenei Vindicator",
+    "type": "ally",
+    "cost": 3,
+    "effects": [
+      {
+        "type": "heal",
+        "target": "character",
+        "amount": 2
+      }
+    ],
+    "keywords": [
+      "Battlecry",
+      "Draenei"
+    ],
+    "data": {
+      "attack": 3,
+      "health": 3
+    },
+    "text": "Battlecry — Restore 2 HP to a character.",
+    "prompt": "A crystal-wreathed draenei paladin raises a glowing hammer, holy light spilling outward."
+  },
+  {
+    "id": "ally-nightblade-assassin",
+    "name": "Nightblade Assassin",
+    "type": "ally",
+    "cost": 3,
+    "effects": [],
+    "keywords": [
+      "Stealth",
+      "Night Elf"
+    ],
+    "data": {
+      "attack": 4,
+      "health": 2
+    },
+    "text": "Stealth.",
+    "prompt": "A shadowy night elf with crescent blades perches in moonlit branches."
+  },
+  {
+    "id": "ally-grizzly-protector",
+    "name": "Grizzly Protector",
+    "type": "ally",
+    "cost": 3,
+    "effects": [],
+    "keywords": [
+      "Taunt",
+      "Beast"
+    ],
+    "data": {
+      "attack": 3,
+      "health": 4
+    },
+    "text": "Taunt.",
+    "prompt": "A massive brown bear rears, interposing itself between hunters and their charge."
+  },
+  {
+    "id": "ally-felstalker-hound",
+    "name": "Felstalker Hound",
+    "type": "ally",
+    "cost": 2,
+    "effects": [],
+    "keywords": [
+      "Demon"
+    ],
+    "data": {
+      "attack": 3,
+      "health": 1
+    },
+    "text": "Demon.",
+    "prompt": "A lean felhound prowls, green runes pulsing along its spines."
+  },
+  {
+    "id": "ally-tirisfal-shadow-priest",
+    "name": "Tirisfal Shadow Priest",
+    "type": "ally",
+    "cost": 3,
+    "effects": [
+      {
+        "type": "damage",
+        "target": "any",
+        "amount": 2
+      }
+    ],
+    "keywords": [
+      "Undead",
+      "Battlecry"
+    ],
+    "data": {
+      "attack": 3,
+      "health": 2
+    },
+    "text": "Battlecry — Deal 2 damage.",
+    "prompt": "An undead priest in dark vestments channels void bolts in a ruined crypt."
+  },
+  {
+    "id": "ally-reef-crawler",
+    "name": "Reef Crawler",
+    "type": "ally",
+    "cost": 1,
+    "effects": [],
+    "keywords": [
+      "Beast"
+    ],
+    "data": {
+      "attack": 1,
+      "health": 3
+    },
+    "text": "Beast.",
+    "prompt": "A chitinous crustacean scuttles along a tidepool, spines bristling."
+  },
+  {
+    "id": "ally-nagrand-talonwind",
+    "name": "Nagrand Talonwind",
+    "type": "ally",
+    "cost": 4,
+    "effects": [],
+    "keywords": [
+      "Windfury",
+      "Beast"
+    ],
+    "data": {
+      "attack": 3,
+      "health": 5
+    },
+    "text": "Windfury.",
+    "prompt": "A great bird of prey dives and wheels over the green plains of Nagrand."
+  },
+  {
+    "id": "ally-thalassian-ranger",
+    "name": "Thalassian Ranger",
+    "type": "ally",
+    "cost": 2,
+    "effects": [
+      {
+        "type": "damage",
+        "target": "any",
+        "amount": 1
+      }
+    ],
+    "keywords": [
+      "Blood Elf",
+      "Battlecry"
+    ],
+    "data": {
+      "attack": 2,
+      "health": 2
+    },
+    "text": "Battlecry — Deal 1 damage.",
+    "prompt": "A crimson-clad archer strings a luminous arrow along the Sunfury Spire."
+  },
+  {
+    "id": "ally-stonetalon-sentry",
+    "name": "Stonetalon Sentry",
+    "type": "ally",
+    "cost": 2,
+    "effects": [],
+    "keywords": [
+      "Taunt"
+    ],
+    "data": {
+      "attack": 2,
+      "health": 3
+    },
+    "text": "Taunt.",
+    "prompt": "A sentinel braces a wooden shield among sharp pine ridges and rope bridges."
+  },
+  {
+    "id": "ally-argent-medic",
+    "name": "Argent Medic",
+    "type": "ally",
+    "cost": 2,
+    "effects": [
+      {
+        "type": "heal",
+        "target": "character",
+        "amount": 2
+      }
+    ],
+    "keywords": [
+      "Battlecry",
+      "Human"
+    ],
+    "data": {
+      "attack": 2,
+      "health": 2
+    },
+    "text": "Battlecry — Restore 2 HP to a character.",
+    "prompt": "A tabarded medic binds wounds under a fluttering Argent Crusade banner."
+  },
+  {
+    "id": "ally-thunder-bluff-brave",
+    "name": "Thunder Bluff Brave",
+    "type": "ally",
+    "cost": 3,
+    "effects": [],
+    "keywords": [
+      "Taunt",
+      "Tauren"
+    ],
+    "data": {
+      "attack": 2,
+      "health": 5
+    },
+    "text": "Taunt.",
+    "prompt": "A tauren shieldbearer stands resolute atop the mesas of Thunder Bluff."
+  },
+  {
+    "id": "ally-scourge-thorncaller",
+    "name": "Scourge Thorncaller",
+    "type": "ally",
+    "cost": 3,
+    "effects": [],
+    "keywords": [
+      "Undead",
+      "Reflect"
+    ],
+    "data": {
+      "attack": 3,
+      "health": 3
+    },
+    "text": "Damage Reflect (1).",
+    "prompt": "Barbed bone spikes jut from a skeletal knight’s armor, dripping necrotic sap."
+  },
+  {
+    "id": "ally-darkspear-witch-doctor",
+    "name": "Darkspear Witch Doctor",
+    "type": "ally",
+    "cost": 4,
+    "effects": [
+      {
+        "type": "summon",
+        "unit": {
+          "name": "Loa Spirit",
+          "attack": 1,
+          "health": 1,
+          "keywords": [
+            "Spirit",
+            "Rush",
+            "Token"
+          ]
+        },
+        "count": 2
+      }
+    ],
+    "keywords": [
+      "Troll",
+      "Battlecry"
+    ],
+    "data": {
+      "attack": 3,
+      "health": 4
+    },
+    "text": "Battlecry — Summon two 1/1 Loa Spirits with Rush.",
+    "prompt": "A troll witch doctor rattles bone charms as spectral loa spirits bound from a mask-lined hut."
+  },
+  {
+    "id": "ally-stormwind-captain",
+    "name": "Stormwind Captain",
+    "type": "ally",
+    "cost": 4,
+    "effects": [
+      {
+        "type": "buffAtEndOfTurn",
+        "target": "randomFriendlyAlly",
+        "property": "attack",
+        "amount": 1
+      }
+    ],
+    "keywords": [
+      "Human"
+    ],
+    "data": {
+      "attack": 4,
+      "health": 4
+    },
+    "text": "End of your turn: Give a random ally +1 ATK.",
+    "prompt": "A stern captain rallies footmen along Stormwind’s battlements."
+  },
+  {
+    "id": "ally-gadgetzan-sapper",
+    "name": "Gadgetzan Sapper",
+    "type": "ally",
+    "cost": 3,
+    "effects": [
+      {
+        "type": "damage",
+        "target": "enemyHeroOrMinionWithoutTaunt",
+        "amount": 2
+      }
+    ],
+    "keywords": [
+      "Goblin",
+      "Battlecry"
+    ],
+    "data": {
+      "attack": 2,
+      "health": 3
+    },
+    "text": "Battlecry — Deal 2 damage to the enemy hero or a minion without Taunt.",
+    "prompt": "A grinning goblin hefts a bundle of dynamite in a back-alley bazaar."
+  },
+  {
+    "id": "ally-obsidian-destroyer",
+    "name": "Obsidian Destroyer",
+    "type": "ally",
+    "cost": 7,
+    "effects": [],
+    "keywords": [
+      "Elemental"
+    ],
+    "data": {
+      "attack": 7,
+      "health": 7
+    },
+    "text": "Elemental.",
+    "prompt": "A hulking obsidian golem cracks with inner magma light."
+  },
+  {
+    "id": "ally-riverpaw-marauder",
+    "name": "Riverpaw Marauder",
+    "type": "ally",
+    "cost": 2,
+    "effects": [],
+    "keywords": [
+      "Gnoll"
+    ],
+    "data": {
+      "attack": 3,
+      "health": 2
+    },
+    "text": "Gnoll.",
+    "prompt": "A snarling gnoll brandishes a jagged cleaver along a riverside camp."
+  },
+  {
+    "id": "ally-twilight-drake",
+    "name": "Twilight Drake",
+    "type": "ally",
+    "cost": 4,
+    "effects": [],
+    "keywords": [
+      "Dragon"
+    ],
+    "data": {
+      "attack": 4,
+      "health": 5
+    },
+    "text": "Dragon.",
+    "prompt": "A dark-scaled dragon coils in a crystalline cavern lit by violet flame."
+  },
+  {
+    "id": "ally-bloodhoof-protector",
+    "name": "Bloodhoof Protector",
+    "type": "ally",
+    "cost": 4,
+    "effects": [],
+    "keywords": [
+      "Tauren",
+      "Taunt"
+    ],
+    "data": {
+      "attack": 3,
+      "health": 6
+    },
+    "text": "Taunt.",
+    "prompt": "A tauren in totemic armor braces under a rain of arrows."
+  },
+  {
+    "id": "ally-redridge-hunter",
+    "name": "Redridge Hunter",
+    "type": "ally",
+    "cost": 3,
+    "effects": [
+      {
+        "type": "summon",
+        "unit": {
+          "name": "Hound",
+          "attack": 1,
+          "health": 1,
+          "keywords": [
+            "Beast",
+            "Rush",
+            "Token"
+          ]
+        },
+        "count": 1
+      }
+    ],
+    "keywords": [
+      "Human",
+      "Battlecry"
+    ],
+    "data": {
+      "attack": 3,
+      "health": 2
+    },
+    "text": "Battlecry — Summon a 1/1 Hound with Rush.",
+    "prompt": "A ranger whistles as a lean hound darts from the brush in Redridge."
+  },
+  {
+    "id": "ally-cenarion-warder",
+    "name": "Cenarion Warder",
+    "type": "ally",
+    "cost": 3,
+    "effects": [
+      {
+        "type": "healAtEndOfTurn",
+        "target": "randomFriendlyCharacter",
+        "amount": 2
+      }
+    ],
+    "keywords": [
+      "Night Elf"
+    ],
+    "data": {
+      "attack": 2,
+      "health": 4
+    },
+    "text": "End of your turn: Restore 2 HP to a random friendly character.",
+    "prompt": "A druid tends a moonwell as silver ripples radiate healing."
+  },
+  {
+    "id": "ally-frostwolf-grunt",
+    "name": "Frostwolf Grunt",
+    "type": "ally",
+    "cost": 2,
+    "effects": [],
+    "keywords": [
+      "Orc",
+      "Taunt"
+    ],
+    "data": {
+      "attack": 2,
+      "health": 3
+    },
+    "text": "Taunt.",
+    "prompt": "A fur-clad orc braces a shield amid a snowy pass."
+  },
+  {
+    "id": "ally-gilnean-sprinter",
+    "name": "Gilnean Sprinter",
+    "type": "ally",
+    "cost": 4,
+    "effects": [],
+    "keywords": [
+      "Worgen",
+      "Rush"
+    ],
+    "data": {
+      "attack": 4,
+      "health": 3
+    },
+    "text": "Rush.",
+    "prompt": "A worgen dashes on all fours through rain-slick cobbles under gas lamps."
+  },
+  {
+    "id": "ally-bloodsail-buccaneer",
+    "name": "Bloodsail Buccaneer",
+    "type": "ally",
+    "cost": 1,
+    "effects": [],
+    "keywords": [
+      "Pirate"
+    ],
+    "data": {
+      "attack": 2,
+      "health": 1
+    },
+    "text": "Pirate.",
+    "prompt": "A laughing pirate swings from rigging over a cannon-blasted deck."
+  },
+  {
+    "id": "ally-kul-tiran-deckhand",
+    "name": "Kul Tiran Deckhand",
+    "type": "ally",
+    "cost": 2,
+    "effects": [],
+    "keywords": [
+      "Pirate",
+      "Rush"
+    ],
+    "data": {
+      "attack": 3,
+      "health": 2
+    },
+    "text": "Rush.",
+    "prompt": "A burly sailor in blue coat barrels down a gangplank with a boarding axe."
+  },
+  {
+    "id": "ally-ashenvale-protector",
+    "name": "Ashenvale Protector",
+    "type": "ally",
+    "cost": 3,
+    "effects": [],
+    "keywords": [
+      "Beast",
+      "Taunt"
+    ],
+    "data": {
+      "attack": 3,
+      "health": 3
+    },
+    "text": "Taunt.",
+    "prompt": "A massive guardian beast stands firm beneath Ashenvale boughs, bark-like fur bristling."
   }
 ]

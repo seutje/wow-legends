@@ -2,9 +2,15 @@ import fs from 'fs';
 import Game from '../src/js/game.js';
 import Card from '../src/js/entities/card.js';
 
-const cards = JSON.parse(
-  fs.readFileSync(new URL('../data/cards.json', import.meta.url))
-);
+const read = (name) => JSON.parse(fs.readFileSync(new URL(`../data/${name}.json`, import.meta.url)));
+const cards = [
+  ...read('hero'),
+  ...read('spell'),
+  ...read('ally'),
+  ...read('equipment'),
+  ...read('quest'),
+  ...read('consumable'),
+];
 const footpadData = cards.find(c => c.id === 'ally-defias-footpad');
 
 describe('Defias Footpad combo', () => {

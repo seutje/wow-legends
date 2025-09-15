@@ -1,7 +1,7 @@
 import Game from '../src/js/game.js';
 
 describe('Game Card Loading', () => {
-  test('loads cards from cards.json and cards-2.json', async () => {
+  test('loads cards from per-type JSON files', async () => {
     const g = new Game();
     await g.setupMatch();
     // A known ID from cards.json
@@ -10,4 +10,3 @@ describe('Game Card Loading', () => {
     expect(g.allCards.some(c => c.id === 'ally-horde-grunt')).toBe(true);
   });
 });
-

@@ -1,0 +1,173 @@
+[
+  {
+    "id": "quest-purge-the-scourge",
+    "name": "Purge the Scourge",
+    "type": "quest",
+    "cost": 1,
+    "effects": [],
+    "requirement": {
+      "event": "allyDefeated",
+      "filter": {
+        "keyword": "Undead"
+      },
+      "count": 3
+    },
+    "reward": [
+      {
+        "type": "draw",
+        "count": 2
+      }
+    ],
+    "keywords": [],
+    "data": {},
+    "text": "Objective: Defeat 3 Undead allies. Reward: Draw 2 cards.",
+    "prompt": "A knight in full plate armor with a glowing green sword stands in a desolate, misty graveyard. He is surrounded by a horde of undead creatures, including skeletons with glowing green eyes, zombies, and a ghostly wraith. The ground is littered with bones and broken weapons. In the background are jagged, rocky spires and dead trees."
+  },
+  {
+    "id": "quest-trial-of-the-elements",
+    "name": "Trial of the Elements",
+    "type": "quest",
+    "cost": 1,
+    "effects": [],
+    "requirement": {
+      "event": "cardPlayed",
+      "filter": {
+        "keyword": "Elemental"
+      },
+      "count": 3
+    },
+    "reward": [
+      {
+        "type": "draw",
+        "count": 1
+      }
+    ],
+    "keywords": [],
+    "data": {},
+    "text": "Objective: Play 3 Elemental cards. Reward: Draw a card.",
+    "prompt": "A shaman in ornate armor with glowing blue runes stands on a cliff overlooking a powerful elemental landscape. He holds a staff with a glowing blue crystal. The landscape is divided into four elemental quadrants. On the left, a stormy sea with lightning. In the center, a large waterfall with water elementals and air elementals. On the right, a volcano erupts with rivers of lava, and earth elementals are emerging from the ground."
+  },
+  {
+    "id": "quest-bounty-the-defias-kingpin",
+    "name": "Bounty: The Defias Kingpin",
+    "type": "quest",
+    "cost": 1,
+    "effects": [],
+    "requirement": {
+      "event": "cardReturned",
+      "filter": {
+        "type": "ally"
+      },
+      "count": 2
+    },
+    "reward": [
+      {
+        "type": "equip",
+        "item": {
+          "name": "Kingpin's Cutlass",
+          "attack": 2,
+          "durability": 2
+        }
+      }
+    ],
+    "keywords": [],
+    "data": {},
+    "text": "Objective: Return 2 enemy allies to hand. Reward: Equip Kingpin's Cutlass (2/2).",
+    "prompt": "A powerful warrior in ornate, red and black plate armor with a menacing helmet and skull motifs is in a battle stance. He is holding a large, curved scimitar. He is using a magical ability that is pushing back a pirate and an orc, who are both being thrown backwards by a blast of white energy. The scene is set in a cobblestone street in a dark city, with a crowd of people and soldiers in the background."
+  },
+  {
+    "id": "quest-hunt-the-great-kodo",
+    "name": "Hunt the Great Kodo",
+    "type": "quest",
+    "cost": 1,
+    "effects": [],
+    "requirement": {
+      "event": "damageDealt",
+      "filter": {
+        "keyword": "Beast"
+      },
+      "amount": 10
+    },
+    "reward": [
+      {
+        "type": "summon",
+        "unit": {
+          "name": "Kodo Companion",
+          "attack": 3,
+          "health": 3,
+          "keywords": [
+            "Rush",
+            "Beast"
+          ]
+        },
+        "count": 1
+      }
+    ],
+    "keywords": [],
+    "data": {},
+    "text": "Objective: Deal 10 damage with Beasts. Reward: Summon a 3/3 Kodo with Rush.",
+    "prompt": "A massive, white-furred kodo beast with huge tusks is charging through a snowy, mountainous landscape. The kodo is wearing a leather harness. A group of hunters on horseback are surrounding and attacking the kodo with bows and arrows. The scene is action-packed, with snow flying and a dramatic, cloudy sky."
+  },
+  {
+    "id": "quest-forge-the-relic",
+    "name": "Forge the Relic",
+    "type": "quest",
+    "cost": 1,
+    "effects": [],
+    "requirement": {
+      "event": "cardPlayed",
+      "filter": {
+        "type": "equipment"
+      },
+      "count": 3
+    },
+    "reward": [
+      {
+        "type": "draw",
+        "count": 1
+      }
+    ],
+    "keywords": [],
+    "data": {},
+    "text": "Objective: Play 3 Equipment cards. Reward: Draw a card.",
+    "prompt": "A dwarven blacksmith with a long, braided beard is forging a glowing, magical sword on an anvil. He is in a dark, stone forge with a large furnace in the background. The forge is filled with tools, weapons, and armor. The blacksmith is holding a hammer and is surrounded by sparks and smoke."
+  },
+  {
+    "id": "quest-call-to-arms",
+    "name": "Call to Arms",
+    "type": "quest",
+    "cost": 1,
+    "effects": [],
+    "requirement": {
+      "event": "turnEnd",
+      "filter": {
+        "keyword": "Taunt"
+      },
+      "count": 3
+    },
+    "reward": [
+      {
+        "type": "buff",
+        "target": "allies",
+        "property": "attack",
+        "amount": 1,
+        "duration": "thisTurn"
+      },
+      {
+        "type": "buff",
+        "target": "allies",
+        "property": "health",
+        "amount": 1,
+        "duration": "thisTurn"
+      },
+      {
+        "type": "draw",
+        "count": 1
+      }
+    ],
+    "keywords": [],
+    "data": {},
+    "text": "Objective: Control 3 units with Taunt for a turn. Reward: All allies gain +1/+1 this turn; draw a card.",
+    "prompt": "A massive army of diverse fantasy races stands on a cliff's edge, ready for battle. In the foreground, a female elf archer takes aim, a dwarf warrior with a glowing axe stands ready, and a large minotaur warrior holds a shield. In the background, knights on horseback and foot soldiers with banners stand under a dramatic, cloudy sky with rays of light."
+  }
+]
