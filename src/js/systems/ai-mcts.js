@@ -40,6 +40,36 @@ export class MCTS_AI {
     this.fullSim = !!fullSim;
     // Prefer offloading search to a Web Worker when available (browser only)
     this._canUseWorker = (typeof window !== 'undefined') && (typeof Worker !== 'undefined');
+    // Attempt GPU acceleration when running in Node; fall back silently on failure
+    this._gpuKernel = null;
+    if (typeof process !== 'undefined' && process.versions?.node) {
+      import('gpu.js').then(({ GPU }) => {
+        try {
+          const gpu = new GPU();
+          this._gpuKernel = gpu.createKernel(function(totals, visits, parentVisits, c) {
+            const v = visits[this.thread.x];
+            return v === 0 ? 1e9 : (totals[this.thread.x] / v) + c * Math.sqrt(Math.log(parentVisits + 1) / v);
+          });
+        } catch {
+          this._gpuKernel = null;
+        }
+      }).catch(() => { this._gpuKernel = null; });
+    }
+  }
+
+  _selectChild(node) {
+    if (this._gpuKernel) {
+      const totals = node.children.map(c => c.total);
+      const visits = node.children.map(c => c.visits);
+      this._gpuKernel.setOutput([totals.length]);
+      const scores = this._gpuKernel(totals, visits, node.visits, 1.4);
+      let idx = 0;
+      for (let i = 1; i < scores.length; i++) {
+        if (scores[i] > scores[idx]) idx = i;
+      }
+      return node.children[idx];
+    }
+    return node.children.reduce((a, b) => (a.ucb1() > b.ucb1() ? a : b));
   }
 
   // Heuristic: skip actions that have no effect for common types
@@ -464,7 +494,7 @@ export class MCTS_AI {
       let node = root;
       // Selection
       while (node.untried === null ? false : node.untried.length === 0 && node.children.length) {
-        node = node.children.reduce((a, b) => (a.ucb1() > b.ucb1() ? a : b));
+        node = this._selectChild(node);
       }
       // Expansion
       if (node.untried === null) node.untried = this._legalActionsSim(node.state, node.state.player);
@@ -502,7 +532,7 @@ export class MCTS_AI {
       // Selection
       let node = root;
       while (node.untried === null ? false : node.untried.length === 0 && node.children.length) {
-        node = node.children.reduce((a, b) => (a.ucb1() > b.ucb1() ? a : b));
+        node = this._selectChild(node);
       }
       // Expansion
       if (node.untried === null) node.untried = this._legalActions(node.state);
@@ -546,7 +576,7 @@ export class MCTS_AI {
         // Selection
         let node = root;
         while (node.untried === null ? false : node.untried.length === 0 && node.children.length) {
-          node = node.children.reduce((a, b) => (a.ucb1() > b.ucb1() ? a : b));
+          node = this._selectChild(node);
         }
         // Expansion
         if (node.untried === null) node.untried = this._legalActions(node.state);
