@@ -21,4 +21,21 @@ describe('deckbuilder UI', () => {
     rerender();
     expect(container.textContent).toContain('Cards: 60/60');
   });
+
+  test('only allows a single quest', () => {
+    const hero = { id: 'h1', name: 'Hero', type: 'hero', text: '', data: { armor: 0 } };
+    const quest1 = { id: 'q1', name: 'Quest1', type: 'quest', text: '' };
+    const quest2 = { id: 'q2', name: 'Quest2', type: 'quest', text: '' };
+    const allCards = [hero, quest1, quest2];
+    const state = { hero: null, cards: [] };
+    const container = document.createElement('div');
+    const rerender = () => renderDeckBuilder(container, { state, allCards, onChange: rerender });
+    rerender();
+    const tips = container.querySelectorAll('.card-tooltip');
+    // add first quest
+    tips[1].dispatchEvent(new window.Event('click'));
+    // attempt to add second quest
+    tips[2].dispatchEvent(new window.Event('click'));
+    expect(state.cards.filter(c => c.type === 'quest')).toHaveLength(1);
+  });
 });
