@@ -18,6 +18,8 @@ function el(tag, attrs = {}, ...children) {
 function buildCardEl(card, { owner } = {}) {
   const tooltipCard = card.summonedBy || card;
   const wrap = el('div', { class: 'card-tooltip' });
+  // Track card type for removal animations, etc.
+  wrap.dataset.type = card.type;
 
   const art = new Image();
   art.className = 'card-art';
@@ -127,6 +129,8 @@ function logPane(title, entries = []) {
 function updateCardEl(cardEl, card, { owner } = {}) {
   if (!cardEl) return;
   const tooltipCard = card.summonedBy || card;
+  // Keep dataset type in sync for this node
+  cardEl.dataset.type = card.type;
   // Update images if needed
   const art = cardEl.querySelector('img.card-art');
   if (art) {
@@ -256,7 +260,19 @@ function syncCardsSection(sectionEl, cards, { clickCard, owner } = {}) {
     lastNode = node;
   }
   // Remove any remaining nodes (cards no longer present)
-  for (const [k, node] of byKey) { if (!seen.has(k)) node.remove(); }
+  const isBattlefield = sectionEl.classList?.contains('ai-field') || sectionEl.classList?.contains('p-field');
+  for (const [k, node] of byKey) {
+    if (seen.has(k)) continue;
+    // If this is a battlefield ally, fade out before removing
+    if (isBattlefield && node?.dataset?.type === 'ally') {
+      if (node.dataset.removing === '1') continue; // already animating out
+      node.dataset.removing = '1';
+      node.classList.add('fade-out');
+      setTimeout(() => { node.remove(); }, 400);
+    } else {
+      node.remove();
+    }
+  }
 }
 
 function syncLogPane(pane, entries = []) {

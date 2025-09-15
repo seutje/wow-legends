@@ -384,3 +384,9 @@ ul.zone-list li {
   animation: shake-hit 0.35s ease;
   box-shadow: 0 0 0 2px rgba(255, 64, 64, 0.6);
 }
+
+/* Fade-out when a battlefield ally is removed */
+.card-tooltip.fade-out {
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
