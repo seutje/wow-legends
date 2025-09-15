@@ -46,6 +46,9 @@ export function renderDeckBuilder(container, { state, allCards, onChange }) {
       if (card.type === 'hero') {
         state.hero = card;
       } else if (state.cards.length < 60) {
+        if (card.type === 'quest' && state.cards.some(c => c.type === 'quest')) {
+          return;
+        }
         state.cards.push(card);
       }
       // Ask the host to update surrounding UI (buttons, etc.)
