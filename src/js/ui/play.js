@@ -61,14 +61,22 @@ function buildCardEl(card, { owner } = {}) {
   // Allies: attack/health from data
   if (card.type === 'ally') {
     if (card.data?.attack != null) wrap.append(el('div', { class: 'stat attack' }, card.data.attack));
-    if (card.data?.health != null) wrap.append(el('div', { class: 'stat health' }, card.data.health));
+    if (card.data?.health != null) {
+      wrap.append(el('div', { class: 'stat health' }, card.data.health));
+      // Track initial health for hit animation
+      wrap.dataset.prevHealth = String(card.data.health);
+    }
   }
   // Hero: show current total attack and HP
   if (card.type === 'hero') {
     const heroAtk = (typeof card.totalAttack === 'function') ? card.totalAttack() : (card.data?.attack ?? 0);
     const heroHp = card.data?.health;
     if (heroAtk != null) wrap.append(el('div', { class: 'stat attack' }, heroAtk));
-    if (heroHp != null) wrap.append(el('div', { class: 'stat health' }, heroHp));
+    if (heroHp != null) {
+      wrap.append(el('div', { class: 'stat health' }, heroHp));
+      // Track initial health for hit animation
+      wrap.dataset.prevHealth = String(heroHp);
+    }
   }
   // Equipment: show attack and durability similar to ally stats
   if (card.type === 'equipment') {
@@ -158,6 +166,14 @@ function updateCardEl(cardEl, card, { owner } = {}) {
   if (card.type === 'ally') {
     if (atkEl && card.data?.attack != null) atkEl.textContent = String(card.data.attack);
     if (hpEl && card.data?.health != null) hpEl.textContent = String(card.data.health);
+    // Shake animation when health decreased
+    const prev = Number(cardEl.dataset.prevHealth);
+    const newHp = (typeof card?.data?.health === 'number') ? card.data.health : NaN;
+    if (!Number.isNaN(prev) && !Number.isNaN(newHp) && newHp < prev) {
+      cardEl.classList.add('shake-hit');
+      setTimeout(() => { cardEl.classList.remove('shake-hit'); }, 400);
+    }
+    if (!Number.isNaN(newHp)) cardEl.dataset.prevHealth = String(newHp);
   }
   if (card.type === 'hero') {
     const heroAtk = (typeof card.totalAttack === 'function') ? card.totalAttack() : (card.data?.attack ?? 0);
@@ -166,6 +182,14 @@ function updateCardEl(cardEl, card, { owner } = {}) {
     else if (heroAtk != null) cardEl.append(el('div', { class: 'stat attack' }, String(heroAtk)));
     if (hpEl) hpEl.textContent = String(heroHp ?? '');
     else if (heroHp != null) cardEl.append(el('div', { class: 'stat health' }, String(heroHp)));
+    // Shake animation when hero health decreased
+    const prev = Number(cardEl.dataset.prevHealth);
+    const newHp = (typeof heroHp === 'number') ? heroHp : NaN;
+    if (!Number.isNaN(prev) && !Number.isNaN(newHp) && newHp < prev) {
+      cardEl.classList.add('shake-hit');
+      setTimeout(() => { cardEl.classList.remove('shake-hit'); }, 400);
+    }
+    if (!Number.isNaN(newHp)) cardEl.dataset.prevHealth = String(newHp);
   }
   if (card.type === 'equipment') {
     let eqAttack = card.attack;
