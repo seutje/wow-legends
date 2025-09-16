@@ -49,6 +49,13 @@
     "cost": 1,
     "effects": [
       {
+        "type": "buff",
+        "target": "allies",
+        "property": "health",
+        "amount": 2,
+        "duration": "untilYourNextTurn"
+      },
+      {
         "type": "draw",
         "count": 1
       }
@@ -58,7 +65,7 @@
       "Cantrip"
     ],
     "data": {},
-    "text": "Give your allies +0/+2 this turn. Draw a card.",
+    "text": "Give your allies +0/+2 until your next turn. Draw a card.",
     "prompt": "A large, magical scroll is unrolled and glowing with golden light. The scroll is covered in glowing runes and is floating in the center of a group of warriors and mages. The warriors are in full plate armor with glowing shields, and the mages are in robes and holding staffs with glowing crystals. The scene is set in a rocky, mountainous landscape at dusk."
   },
   {

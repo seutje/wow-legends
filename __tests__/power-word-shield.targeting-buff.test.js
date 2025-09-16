@@ -3,7 +3,7 @@ import Game from '../src/js/game.js';
 import Card from '../src/js/entities/card.js';
 
 describe('Power Word: Shield', () => {
-  test('prompts for a target, grants +0/+3 this turn, and draws a card', async () => {
+  test('prompts for a target, grants +0/+2 until next turn, and draws a card', async () => {
     const g = new Game();
     await g.setupMatch();
 
@@ -38,16 +38,25 @@ describe('Power Word: Shield', () => {
 
     // Target UI invoked and buff applied
     expect(promptSpy).toHaveBeenCalled();
-    expect(ally.data.health).toBe(beforeHp + 3);
+    expect(ally.data.health).toBe(beforeHp + 2);
 
     // Draw a card (net +1 relative to initial hand size)
     expect(g.player.hand.cards.length).toBe(initialHand + 1);
 
-    // Advance phases through End to trigger temporary buff cleanup
-    while (g.turns.current !== 'End') g.turns.nextPhase();
-    g.turns.nextPhase(); // End -> Start (emits phase:end for End)
+    const finishTurnAndPassTo = (nextPlayer) => {
+      while (g.turns.current !== 'End') g.turns.nextPhase();
+      g.turns.nextPhase(); // End -> Start
+      g.turns.setActivePlayer(nextPlayer);
+      g.turns.startTurn();
+      g.resources.startTurn(nextPlayer);
+    };
 
-    // Buff should expire at end of turn
+    // End player's turn -> start opponent's: buff should persist through their turn
+    finishTurnAndPassTo(g.opponent);
+    expect(ally.data.health).toBe(beforeHp + 2);
+
+    // End opponent's turn -> start player's next turn: buff should now expire
+    finishTurnAndPassTo(g.player);
     expect(ally.data.health).toBe(beforeHp);
   });
 });
