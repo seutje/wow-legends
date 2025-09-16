@@ -46,34 +46,78 @@ export class MCTS_AI {
     return node.children.reduce((a, b) => (a.ucb1() > b.ucb1() ? a : b));
   }
 
+  _isCharacterInjured(entity) {
+    if (!entity) return false;
+    const cur = entity?.data?.health ?? entity?.health;
+    if (typeof cur !== 'number') return false;
+    let max = entity?.data?.maxHealth;
+    if (typeof max !== 'number') max = entity?.maxHealth;
+    if (typeof max !== 'number' && entity?.type === 'hero') max = 30;
+    if (typeof max !== 'number') return false;
+    return cur < max;
+  }
+
+  _estimateSpellDamage(player) {
+    if (!player) return 0;
+    let bonus = 0;
+    const hero = player.hero;
+    if (hero?.data && typeof hero.data.spellDamage === 'number') bonus += hero.data.spellDamage;
+    if (Array.isArray(hero?.equipment)) {
+      for (const eq of hero.equipment) {
+        const val = typeof eq?.spellDamage === 'number'
+          ? eq.spellDamage
+          : (typeof eq?.data?.spellDamage === 'number' ? eq.data.spellDamage : 0);
+        bonus += val;
+      }
+    }
+    if (Array.isArray(player?.battlefield?.cards)) {
+      for (const card of player.battlefield.cards) {
+        const val = typeof card?.data?.spellDamage === 'number'
+          ? card.data.spellDamage
+          : (typeof card?.spellDamage === 'number' ? card.spellDamage : 0);
+        bonus += val;
+      }
+    }
+    return bonus;
+  }
+
   // Heuristic: skip actions that have no effect for common types
-  _effectsAreUseless(effects = [], player) {
+  _effectsAreUseless(effects = [], player, context = {}) {
     if (!effects?.length) return false;
-    let useful = false;
+    const rawTurn = typeof context.turn === 'number'
+      ? context.turn
+      : (typeof this.resources?.turns?.turn === 'number' ? this.resources.turns.turn : 0);
+    const avail = Math.min(Math.max(rawTurn, 0), 10);
+    let poolRemaining = avail;
+    if (typeof context.pool === 'number') poolRemaining = context.pool;
+    else if (typeof player?.__mctsPool === 'number') poolRemaining = player.__mctsPool;
+    const spent = Math.max(0, avail - poolRemaining);
+    const armor = player?.hero?.data?.armor || 0;
+    const spellDamage = this._estimateSpellDamage(player);
+
     for (const e of effects) {
       switch (e.type) {
         case 'heal': {
-          const chars = [player.hero, ...player.battlefield.cards];
-          const injured = chars.some(c => {
-            const cur = c.data?.health ?? c.health;
-            const max = c.data?.maxHealth ?? c.maxHealth ?? cur;
-            return cur < max;
-          });
-          if (injured) useful = true;
+          const chars = [player?.hero, ...(player?.battlefield?.cards || [])];
+          if (chars.some(c => this._isCharacterInjured(c))) return false;
           break;
         }
         case 'restore': {
-          const avail = Math.min(this.resources.turns.turn, 10);
-          const used = avail - (player.__mctsPool ?? avail);
-          if (used > 0 && (!e.requiresSpent || used >= e.requiresSpent)) useful = true;
+          if (spent > 0 && (!e.requiresSpent || spent >= e.requiresSpent)) return false;
           break;
         }
+        case 'damageArmor': {
+          if ((armor + spellDamage) > 0) return false;
+          break;
+        }
+        case 'overload':
+          // Overload is a drawback; ignore when deciding usefulness
+          break;
         default:
-          useful = true;
+          return false;
       }
-      if (useful) break;
     }
-    return !useful;
+    return true;
   }
 
   _applySimpleEffects(effects = [], player, opponent, pool) {
@@ -153,12 +197,13 @@ export class MCTS_AI {
     const actions = [];
     const p = state.player;
     const pool = state.pool;
-    const canPower = p.hero?.active?.length && state.powerAvailable && pool >= 2 && !this._effectsAreUseless(p.hero.active, p);
+    const canPower = p.hero?.active?.length && state.powerAvailable && pool >= 2
+      && !this._effectsAreUseless(p.hero.active, p, { pool, turn: state.turn });
     if (canPower) actions.push({ card: null, usePower: true, end: false });
     for (const c of p.hand.cards) {
       const cost = c.cost || 0;
       if (pool < cost) continue;
-      if (this._effectsAreUseless(c.effects, p)) continue;
+      if (this._effectsAreUseless(c.effects, p, { pool, turn: state.turn })) continue;
       actions.push({ card: c, usePower: false, end: false });
       if (canPower && pool - cost >= 2) actions.push({ card: c, usePower: true, end: false });
     }
