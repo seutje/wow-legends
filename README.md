@@ -54,7 +54,7 @@ Developer Notes
   - Game orchestrator: `src/js/game.js`
   - Browser entry: `src/js/main.js`
 - Tests: `__tests__/*`, run with `npm test` or `npm run test:coverage`.
-- Train Nightmare AI: `npm run train -- <population> <generations> <reset>` — evolutionary RL saves best model to `data/model.json`. Example: `npm run train -- 200 15 true`.
+- Train Nightmare AI: `npm run train -- <population> <generations> <reset>` — evolutionary RL saves best model to `data/models/best.json`. Example: `npm run train -- 200 15 true`.
 - Evaluate NN vs hard MCTS: `npm run eval` — runs a single game with NN as player vs hard MCTS as opponent (max 20 rounds) and prints result summary. Provide a model path to pit two neural AIs: `npm run eval -- data/other-model.json`.
 - Simulation CLI: `npm run simulate` (quick AI turns). Balance sampling: `node tools/balance.mjs`.
 - Content pipeline: `node tools/cards-ingest.mjs` parses `CARDS.md` and writes per-type JSON under `data/` (e.g., `data/hero.json`, `data/spell.json`, `data/ally.json`, etc.).
@@ -65,4 +65,4 @@ Nightmare AI
 - Uses a small MLP (two hidden layers of 64) to score Q(s,a).
 - Inputs include normalized state features (health, armor, resources, board/hand metrics) and action features (type, cost, stats, keywords).
 - Output is a scalar score per candidate action; picks the highest.
-- Training runs population=500 for 10 generations vs an MCTS baseline and saves the best model to `data/model.json`.
+- Training runs population=500 for 10 generations vs an MCTS baseline and saves the best model to `data/models/best.json`.

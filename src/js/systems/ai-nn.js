@@ -1,6 +1,6 @@
 // Neural network driven AI for "nightmare" difficulty.
 // Uses a small MLP to score Q(s,a) and pick the best action.
-// Training uses population-based mutation in tools/train.mjs and stores model at data/model.json
+// Training uses population-based mutation in tools/train.mjs and stores model at data/models/best.json
 
 import CombatSystem from './combat.js';
 import { selectTargets } from './targeting.js';
@@ -15,13 +15,13 @@ export async function loadModelFromDiskOrFetch() {
   try {
     if (typeof window === 'undefined') {
       const fs = await import('fs/promises');
-      const path = new URL('../../../data/model.json', import.meta.url);
+      const path = new URL('../../../data/models/best.json', import.meta.url);
       const txt = await fs.readFile(path, 'utf8');
       const obj = JSON.parse(txt);
       ActiveModel = MLP.fromJSON(obj);
       return ActiveModel;
     } else {
-      const res = await fetch(new URL('../../../data/model.json', import.meta.url));
+      const res = await fetch(new URL('../../../data/models/best.json', import.meta.url));
       const obj = await res.json();
       ActiveModel = MLP.fromJSON(obj);
       return ActiveModel;
