@@ -912,48 +912,6 @@
     "prompt": "Two massive spectral wolves bound from a green portal, snow spraying."
   },
   {
-    "id": "spell-tidal-chorus",
-    "name": "Tidal Chorus",
-    "type": "spell",
-    "cost": 3,
-    "effects": [
-      {
-        "type": "buffTribe",
-        "tribe": "Murloc",
-        "attack": 1,
-        "health": 1,
-        "duration": "thisTurn"
-      }
-    ],
-    "keywords": [
-      "Murloc",
-      "Buff"
-    ],
-    "data": {},
-    "text": "Give all Murlocs +1/+1 this turn.",
-    "prompt": "A ring of murlocs sing atop coral pillars as waves of aqua magic surge outward across the surf."
-  },
-  {
-    "id": "spell-shoal-blessing",
-    "name": "Shoal Blessing",
-    "type": "spell",
-    "cost": 2,
-    "effects": [
-      {
-        "type": "buffTribe",
-        "tribe": "Murloc",
-        "health": 2
-      }
-    ],
-    "keywords": [
-      "Murloc",
-      "Buff"
-    ],
-    "data": {},
-    "text": "Give all Murlocs +0/+2.",
-    "prompt": "A murloc oracle lifts a pearl staff, shimmering tides wrapping every nearby murloc in a protective water veil."
-  },
-  {
     "id": "spell-thorns",
     "name": "Thorns",
     "type": "spell",
