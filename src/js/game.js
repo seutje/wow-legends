@@ -17,6 +17,13 @@ export default class Game {
   constructor(rootEl, opts = {}) {
     this.rootEl = rootEl;
     this.opts = opts;
+    const aiHint = opts?.aiPlayers;
+    let aiList;
+    if (Array.isArray(aiHint)) aiList = aiHint;
+    else if (aiHint instanceof Set) aiList = Array.from(aiHint);
+    else if (typeof aiHint === 'string') aiList = [aiHint];
+    else aiList = (typeof window === 'undefined') ? ['player', 'opponent'] : ['opponent'];
+    this.aiPlayers = new Set(aiList.filter((p) => p === 'player' || p === 'opponent'));
     this.running = false;
     this._raf = 0;
     this._lastTs = 0;
@@ -130,8 +137,28 @@ export default class Game {
 
     const heroes = this.allCards.filter(c => c.type === 'hero');
     const otherCards = this.allCards.filter(c => c.type !== 'hero');
+    const nonQuestCards = otherCards.filter(c => c.type !== 'quest');
 
     const rng = this.rng;
+    const aiPlayers = this.aiPlayers instanceof Set ? this.aiPlayers : new Set();
+    const playerIsAI = aiPlayers.has('player');
+    const opponentIsAI = aiPlayers.has('opponent');
+    const buildLibraryData = (cards, allowQuest) => {
+      const sanitized = [];
+      if (Array.isArray(cards)) {
+        for (const cardData of cards) {
+          if (!cardData) continue;
+          if (!allowQuest && cardData.type === 'quest') continue;
+          sanitized.push(cardData);
+        }
+      }
+      const pool = allowQuest ? otherCards : nonQuestCards;
+      while (sanitized.length < 60 && pool.length > 0) {
+        sanitized.push(rng.pick(pool));
+      }
+      if (sanitized.length > 60) sanitized.length = 60;
+      return sanitized;
+    };
 
     // Clear previous zones
     this.player.hand.cards = [];
@@ -145,8 +172,9 @@ export default class Game {
       this.player.hero = new Hero(playerDeck.hero);
       // Ensure ownership is set for systems that depend on it (e.g., combat reflection)
       this.player.hero.owner = this.player;
+      const playerLibData = buildLibraryData(playerDeck.cards, !playerIsAI);
       this.player.library.cards = [];
-      for (const cardData of playerDeck.cards) {
+      for (const cardData of playerLibData) {
         validateCardData(cardData);
         this.player.library.add(new Card(cardData));
       }
@@ -154,10 +182,7 @@ export default class Game {
       const playerHeroData = rng.pick(heroes);
       this.player.hero = new Hero(playerHeroData);
       this.player.hero.owner = this.player;
-      const playerLibData = [];
-      for (let i = 0; i < 60; i++) {
-        playerLibData.push(rng.pick(otherCards));
-      }
+      const playerLibData = buildLibraryData(null, !playerIsAI);
       this.player.library.cards = [];
       for (const cardData of playerLibData) {
         validateCardData(cardData);
@@ -172,10 +197,7 @@ export default class Game {
     }
     this.opponent.hero = new Hero(opponentHeroData);
     this.opponent.hero.owner = this.opponent;
-    const opponentLibData = [];
-    for (let i = 0; i < 60; i++) {
-      opponentLibData.push(rng.pick(otherCards));
-    }
+    const opponentLibData = buildLibraryData(null, !opponentIsAI);
     this.opponent.library.cards = [];
     for (const cardData of opponentLibData) {
       validateCardData(cardData);

@@ -17,7 +17,7 @@ async function evalCandidate(model, { games = 5, maxRounds = 20, opponentMode = 
     : null;
   let total = 0;
   for (let g = 0; g < games; g++) {
-    const game = new Game(null);
+    const game = new Game(null, { aiPlayers: ['player', 'opponent'] });
     // Randomize RNG seed per evaluation to diversify matchups
     const seed = (Math.floor(Math.random() * 0xFFFFFFFF)) >>> 0;
     game.rng = new RNG(seed);

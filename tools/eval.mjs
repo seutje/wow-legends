@@ -32,7 +32,7 @@ async function main() {
   const maxRounds = Number(process.env.MAX_ROUNDS || 20);
   const modelArg = process.argv.slice(2).find(a => !a.startsWith('--'));
 
-  const game = new Game(null);
+  const game = new Game(null, { aiPlayers: ['player', 'opponent'] });
   game.rng = new RNG(seed);
   await game.setupMatch();
 
