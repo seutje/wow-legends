@@ -30,6 +30,7 @@ async function evalCandidate(model, { games = 5, maxRounds = 20, opponentMode = 
       : new MCTS_AI({ resourceSystem: game.resources, combatSystem: game.combat, game, iterations: 5000, rolloutDepth: 10, fullSim: true });
 
     let rounds = 0;
+    let opponentTurns = 0;
     while (rounds < maxRounds && game.player.hero.data.health > 0 && game.opponent.hero.data.health > 0) {
       await playerAI.takeTurn(game.player, game.opponent);
       if (game.opponent.hero.data.health <= 0 || game.player.hero.data.health <= 0) break;
@@ -38,6 +39,7 @@ async function evalCandidate(model, { games = 5, maxRounds = 20, opponentMode = 
       game.turns.startTurn();
       game.resources.startTurn(game.opponent);
       await aiOpp.takeTurn(game.opponent, game.player);
+      opponentTurns++;
 
       while (game.turns.current !== 'End') game.turns.nextPhase();
       game.turns.nextPhase();
@@ -52,7 +54,12 @@ async function evalCandidate(model, { games = 5, maxRounds = 20, opponentMode = 
     const neuralWon = (eHP > 0 && pHP <= 0);
     const neuralLost = (eHP <= 0 && pHP > 0);
     const hpDiff = (eHP - pHP) / 40;
-    if (neuralWon) total += 2.0;
+    if (neuralWon) {
+      const turnsUsed = opponentTurns > 0 ? opponentTurns : rounds;
+      const maxTurns = Math.max(1, maxRounds);
+      const speedBonus = Math.max(0, (maxRounds - turnsUsed) / maxTurns);
+      total += 2.0 + speedBonus;
+    }
     else if (neuralLost) total += 0.0;
     else total += 0.5 + hpDiff;
   }
