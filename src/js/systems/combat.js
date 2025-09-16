@@ -172,6 +172,9 @@ export class CombatSystem {
       const shielded = !!(ev.target?.data?.divineShield);
       if (shielded) {
         ev.target.data.divineShield = false;
+        if (ev.target?.keywords?.includes?.('Divine Shield')) {
+          ev.target.keywords = ev.target.keywords.filter(k => k !== 'Divine Shield');
+        }
         ev.amount = 0;
         // No damage applied; skip armor, logging, freeze, and death marking
         continue;

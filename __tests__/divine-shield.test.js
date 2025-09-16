@@ -17,6 +17,7 @@ describe('Divine Shield', () => {
     await g.effects.dealDamage({ target: 'minion', amount: 5 }, { game: g, player: p, card: null });
     expect(target.data.health).toBe(3);
     expect(target.data.divineShield).toBe(false);
+    expect(target.keywords?.includes('Divine Shield')).toBe(false);
 
     // Next damage reduces health normally
     await g.effects.dealDamage({ target: 'minion', amount: 2 }, { game: g, player: p, card: null });
@@ -36,6 +37,7 @@ describe('Divine Shield', () => {
     // First strike: shield consumed, no health loss
     expect(defender.data.divineShield).toBe(false);
     expect(defender.data.health).toBe(5);
+    expect(defender.keywords?.includes('Divine Shield')).toBe(false);
 
     // Second strike applies damage
     c.declareAttacker(attacker);
