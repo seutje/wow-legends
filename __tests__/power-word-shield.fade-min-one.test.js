@@ -24,22 +24,32 @@ describe('Power Word: Shield fade safety', () => {
     // Force target to ally for PWS
     g.promptTarget = jest.fn(async (cands) => ally);
 
-    await g.playFromHand(g.player, pws.id); // ally becomes 5 HP this turn
-    expect(ally.data.health).toBe(5);
+    await g.playFromHand(g.player, pws.id); // ally becomes 4 HP until next turn
+    expect(ally.data.health).toBe(4);
 
-    // Now deal 4 damage to the ally (leaves it at 1 while shield is active)
+    // Now deal 3 damage to the ally (leaves it at 1 while shield is active)
     await g.effects.dealDamage(
-      { target: 'character', amount: 4 },
+      { target: 'character', amount: 3 },
       { game: g, player: g.player, card: null, comboActive: false }
     );
     expect(ally.data.health).toBe(1);
 
-    // Advance to End -> cleanup temp effects
-    while (g.turns.current !== 'End') g.turns.nextPhase();
-    g.turns.nextPhase();
+    const finishTurnAndPassTo = (nextPlayer) => {
+      while (g.turns.current !== 'End') g.turns.nextPhase();
+      g.turns.nextPhase();
+      g.turns.setActivePlayer(nextPlayer);
+      g.turns.startTurn();
+      g.resources.startTurn(nextPlayer);
+    };
 
-    // Health should NOT drop below 1 on fade
+    // Opponent's turn shouldn't change the HP
+    finishTurnAndPassTo(g.opponent);
     expect(ally.data.health).toBe(1);
+
+    // Fade occurs at the start of player's next turn
+    finishTurnAndPassTo(g.player);
+    expect(ally.data.health).toBe(1);
+    expect(ally.data.maxHealth).toBe(2);
     expect(ally.data.dead).not.toBe(true);
   });
 });

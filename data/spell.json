@@ -133,8 +133,8 @@
         "type": "buff",
         "target": "character",
         "property": "health",
-        "amount": 3,
-        "duration": "thisTurn"
+        "amount": 2,
+        "duration": "untilYourNextTurn"
       },
       {
         "type": "draw",
@@ -146,7 +146,7 @@
       "Draw"
     ],
     "data": {},
-    "text": "Give a character +0/+3 until end of turn; if it survives damage, draw a card.",
+    "text": "Give a friendly character +0/+2 until your next turn. Draw a card.",
     "prompt": "A handsome male warrior in ornate plate armor with a lion-crested pauldron and a red cape. He is holding a large shield with a glowing sun emblem and a sword. A magical shield of swirling blue and white energy surrounds him, with a ring of glowing golden runes. The background is a rocky, misty landscape with a bright light source from above."
   },
   {

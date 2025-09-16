@@ -1081,78 +1081,93 @@ export class EffectSystem {
     }
 
     for (const t of actualTargets) {
-      if (duration === 'thisTurn') {
-        const revertEffect = {
-          revert: () => {
-            if (property === 'attack') {
-              if (t.data && t.data.attack != null) t.data.attack -= amount;
-              else if (t.attack != null) t.attack -= amount; // For hero
-            } else if (property === 'health') {
-              const current = (t?.data?.health ?? t?.health);
-              const hadPositive = typeof current === 'number' && current > 0;
-              if (t.data && t.data.health != null) {
-                if (typeof t.data.maxHealth === 'number') {
-                  if (amount >= 0) {
-                    // Temporary health buff expiring: lower max, clamp current, never drop below 1 if it was alive
-                    t.data.maxHealth -= amount;
-                    if (t.data.maxHealth < 0) t.data.maxHealth = 0;
-                    t.data.health = Math.min(t.data.health, t.data.maxHealth);
-                    if (hadPositive && t.data.health < 1 && t.data.maxHealth >= 1) t.data.health = 1;
-                  } else {
-                    // Temporary health debuff expiring: restore
-                    t.data.maxHealth -= amount; // amount is negative -> increases max
-                    if (t.data.maxHealth < 0) t.data.maxHealth = 0;
-                    t.data.health = Math.min(t.data.health - amount, t.data.maxHealth);
-                  }
-                } else {
-                  // No tracked maxHealth; fall back to prior behavior with safety for positive buffs
-                  if (amount >= 0) {
-                    if (hadPositive && (t.data.health - amount) < 1) t.data.health = 1;
-                    else t.data.health -= amount;
-                  } else {
-                    t.data.health -= amount;
-                  }
-                  if (t.data.health < 0) t.data.health = 0;
-                }
-              } else if (t.health != null) {
-                if (typeof t.maxHealth === 'number') {
-                  if (amount >= 0) {
-                    t.maxHealth -= amount;
-                    if (t.maxHealth < 0) t.maxHealth = 0;
-                    t.health = Math.min(t.health, t.maxHealth);
-                    if (hadPositive && t.health < 1 && t.maxHealth >= 1) t.health = 1;
-                  } else {
-                    t.maxHealth -= amount; // amount negative -> increases max
-                    if (t.maxHealth < 0) t.maxHealth = 0;
-                    t.health = Math.min(t.health - amount, t.maxHealth);
-                  }
-                } else {
-                  if (amount >= 0) {
-                    if (hadPositive && (t.health - amount) < 1) t.health = 1;
-                    else t.health -= amount;
-                  } else {
-                    t.health -= amount;
-                  }
-                  if (t.health < 0) t.health = 0;
-                }
-              }
-      } else if (property === 'armor') {
-        if (t.data && t.data.armor != null) {
-          t.data.armor -= amount;
-          if (t.data.armor < 0) t.data.armor = 0;
-        } else if (t.armor != null) {
-          t.armor -= amount; // For hero
-          if (t.armor < 0) t.armor = 0;
+      const scheduleRevert = (revertFn) => {
+        if (!duration) return;
+        if (duration === 'thisTurn') {
+          this.temporaryEffects.push({ revert: revertFn });
+        } else if (duration === 'untilYourNextTurn') {
+          const handler = ({ player: turnPlayer }) => {
+            if (turnPlayer !== player) return;
+            try {
+              revertFn();
+            } finally {
+              off();
+            }
+          };
+          const off = game.turns.bus.on('turn:start', handler);
         }
-            } else if (property === 'spellDamage') {
-              if (t.data && typeof t.data.spellDamage === 'number') {
-                t.data.spellDamage -= amount;
-                if (t.data.spellDamage < 0) t.data.spellDamage = 0;
+      };
+
+      if (duration === 'thisTurn' || duration === 'untilYourNextTurn') {
+        const revertEffect = () => {
+          if (property === 'attack') {
+            if (t.data && t.data.attack != null) t.data.attack -= amount;
+            else if (t.attack != null) t.attack -= amount; // For hero
+          } else if (property === 'health') {
+            const current = (t?.data?.health ?? t?.health);
+            const hadPositive = typeof current === 'number' && current > 0;
+            if (t.data && t.data.health != null) {
+              if (typeof t.data.maxHealth === 'number') {
+                if (amount >= 0) {
+                  // Temporary health buff expiring: lower max, clamp current, never drop below 1 if it was alive
+                  t.data.maxHealth -= amount;
+                  if (t.data.maxHealth < 0) t.data.maxHealth = 0;
+                  t.data.health = Math.min(t.data.health, t.data.maxHealth);
+                  if (hadPositive && t.data.health < 1 && t.data.maxHealth >= 1) t.data.health = 1;
+                } else {
+                  // Temporary health debuff expiring: restore
+                  t.data.maxHealth -= amount; // amount is negative -> increases max
+                  if (t.data.maxHealth < 0) t.data.maxHealth = 0;
+                  t.data.health = Math.min(t.data.health - amount, t.data.maxHealth);
+                }
+              } else {
+                // No tracked maxHealth; fall back to prior behavior with safety for positive buffs
+                if (amount >= 0) {
+                  if (hadPositive && (t.data.health - amount) < 1) t.data.health = 1;
+                  else t.data.health -= amount;
+                } else {
+                  t.data.health -= amount;
+                }
+                if (t.data.health < 0) t.data.health = 0;
               }
+            } else if (t.health != null) {
+              if (typeof t.maxHealth === 'number') {
+                if (amount >= 0) {
+                  t.maxHealth -= amount;
+                  if (t.maxHealth < 0) t.maxHealth = 0;
+                  t.health = Math.min(t.health, t.maxHealth);
+                  if (hadPositive && t.health < 1 && t.maxHealth >= 1) t.health = 1;
+                } else {
+                  t.maxHealth -= amount; // amount negative -> increases max
+                  if (t.maxHealth < 0) t.maxHealth = 0;
+                  t.health = Math.min(t.health - amount, t.maxHealth);
+                }
+              } else {
+                if (amount >= 0) {
+                  if (hadPositive && (t.health - amount) < 1) t.health = 1;
+                  else t.health -= amount;
+                } else {
+                  t.health -= amount;
+                }
+                if (t.health < 0) t.health = 0;
+              }
+            }
+          } else if (property === 'armor') {
+            if (t.data && t.data.armor != null) {
+              t.data.armor -= amount;
+              if (t.data.armor < 0) t.data.armor = 0;
+            } else if (t.armor != null) {
+              t.armor -= amount; // For hero
+              if (t.armor < 0) t.armor = 0;
+            }
+          } else if (property === 'spellDamage') {
+            if (t.data && typeof t.data.spellDamage === 'number') {
+              t.data.spellDamage -= amount;
+              if (t.data.spellDamage < 0) t.data.spellDamage = 0;
             }
           }
         };
-        this.temporaryEffects.push(revertEffect);
+        scheduleRevert(revertEffect);
       }
 
       if (property === 'attack') {
