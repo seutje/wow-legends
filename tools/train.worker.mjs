@@ -11,7 +11,10 @@ import { RNG } from '../src/js/utils/rng.js';
 // Disable debug logging inside the worker as well
 setDebugLogging(false);
 
-async function evalCandidate(model, { games = 5, maxRounds = 20 } = {}) {
+async function evalCandidate(model, { games = 5, maxRounds = 20, opponentMode = 'mcts', opponentModelJSON = null } = {}) {
+  const baselineModel = (opponentMode === 'best' && opponentModelJSON)
+    ? MLP.fromJSON(opponentModelJSON)
+    : null;
   let total = 0;
   for (let g = 0; g < games; g++) {
     const game = new Game(null);
@@ -22,8 +25,9 @@ async function evalCandidate(model, { games = 5, maxRounds = 20 } = {}) {
     setActiveModel(model);
 
     const aiOpp = new NeuralAI({ game, resourceSystem: game.resources, combatSystem: game.combat, model });
-    // Use "hard" difficulty MCTS settings with full-effect simulation during search
-    const playerAI = new MCTS_AI({ resourceSystem: game.resources, combatSystem: game.combat, game, iterations: 5000, rolloutDepth: 10, fullSim: true });
+    const playerAI = (baselineModel)
+      ? new NeuralAI({ game, resourceSystem: game.resources, combatSystem: game.combat, model: baselineModel })
+      : new MCTS_AI({ resourceSystem: game.resources, combatSystem: game.combat, game, iterations: 5000, rolloutDepth: 10, fullSim: true });
 
     let rounds = 0;
     while (rounds < maxRounds && game.player.hero.data.health > 0 && game.opponent.hero.data.health > 0) {
@@ -59,9 +63,9 @@ parentPort.on('message', async (msg) => {
   const { id, cmd, payload } = msg || {};
   try {
     if (cmd === 'eval') {
-      const { modelJSON, games, maxRounds } = payload;
+      const { modelJSON, games, maxRounds, opponentMode, opponentModelJSON } = payload;
       const model = MLP.fromJSON(modelJSON);
-      const score = await evalCandidate(model, { games, maxRounds });
+      const score = await evalCandidate(model, { games, maxRounds, opponentMode, opponentModelJSON });
       parentPort.postMessage({ id, ok: true, result: score });
     } else {
       parentPort.postMessage({ id, ok: false, error: `Unknown cmd: ${cmd}` });

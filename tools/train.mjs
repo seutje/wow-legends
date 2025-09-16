@@ -1,7 +1,7 @@
 // Train the neural network AI with simple evolutionary RL.
 // - Loads best model from data/model.json if present (unless reset)
 // - Runs population and generations provided via CLI args
-// - Evaluates vs a baseline MCTS opponent with capped steps
+// - Evaluates vs a baseline MCTS opponent with capped steps (or saved NN when requested)
 // - Saves best to data/model.json
 
 import fs from 'fs/promises';
@@ -51,13 +51,13 @@ function now() {
   return `${y}-${mo}-${da}T${h}:${mi}:${s}${sign}${tzH}:${tzM}`;
 }
 
-async function loadBestOrRandom() {
+async function loadSavedBest() {
   try {
     const txt = await fs.readFile(MODEL_PATH, 'utf8');
     const obj = JSON.parse(txt);
     return MLP.fromJSON(obj);
   } catch {
-    return new MLP([38,64,64,1]);
+    return null;
   }
 }
 
@@ -67,7 +67,10 @@ function cloneAndMutate(base, sigma = 0.1) {
   return m;
 }
 
-async function evalCandidate(model, { games = 5, maxRounds = 20, opponentMode = 'mcts' } = {}) {
+async function evalCandidate(model, { games = 5, maxRounds = 20, opponentMode = 'mcts', opponentModelJSON = null } = {}) {
+  const baselineModel = (opponentMode === 'best' && opponentModelJSON)
+    ? MLP.fromJSON(opponentModelJSON)
+    : null;
   let total = 0;
   for (let g = 0; g < games; g++) {
     const game = new Game(null);
@@ -77,10 +80,11 @@ async function evalCandidate(model, { games = 5, maxRounds = 20, opponentMode = 
     await game.setupMatch();
     setActiveModel(model); // ensure endTurn or direct AI uses this model
 
-    // Opponent is the nightmare AI (we control it directly), player uses MCTS baseline
+    // Opponent is the candidate NN (controlled directly); player baseline varies by opponent mode
     const aiOpp = new NeuralAI({ game, resourceSystem: game.resources, combatSystem: game.combat, model });
-    // Use "hard" difficulty MCTS settings with full-effect simulation during search
-    const playerAI = new MCTS_AI({ resourceSystem: game.resources, combatSystem: game.combat, game, iterations: 5000, rolloutDepth: 10, fullSim: true });
+    const playerAI = (baselineModel)
+      ? new NeuralAI({ game, resourceSystem: game.resources, combatSystem: game.combat, model: baselineModel })
+      : new MCTS_AI({ resourceSystem: game.resources, combatSystem: game.combat, game, iterations: 5000, rolloutDepth: 10, fullSim: true });
 
     // Ensure start is player's turn (Game.setupMatch sets player start)
     let rounds = 0;
@@ -118,7 +122,7 @@ async function evalCandidate(model, { games = 5, maxRounds = 20, opponentMode = 
 }
 
 // Parallel evaluation with worker pool
-async function evalPopulationParallel(population, { games = 1, maxRounds = 16, concurrency = Math.max(1, (os.cpus()?.length || 2) - 1) } = {}) {
+async function evalPopulationParallel(population, { games = 1, maxRounds = 16, concurrency = Math.max(1, (os.cpus()?.length || 2) - 1), opponentMode = 'mcts', opponentModelJSON = null } = {}) {
   const workerURL = new URL('./train.worker.mjs', import.meta.url);
   const poolSize = Math.max(1, Number(process.env.TRAIN_WORKERS) || concurrency);
   const workers = Array.from({ length: poolSize }, () => new Worker(workerURL, { type: 'module' }));
@@ -138,7 +142,7 @@ async function evalPopulationParallel(population, { games = 1, maxRounds = 16, c
       worker.postMessage({
         id,
         cmd: 'eval',
-        payload: { modelJSON: population[idx].toJSON(), games, maxRounds }
+        payload: { modelJSON: population[idx].toJSON(), games, maxRounds, opponentMode, opponentModelJSON }
       });
     });
   }
@@ -161,13 +165,25 @@ async function evalPopulationParallel(population, { games = 1, maxRounds = 16, c
 }
 
 async function main() {
-  const { pop: POP, gens: GENS, reset } = parseTrainArgs();
-  const base = reset ? new MLP([38,64,64,1]) : await loadBestOrRandom();
+  const { pop: POP, gens: GENS, reset, opponent } = parseTrainArgs();
+  const savedBest = await loadSavedBest();
+  const base = (reset || !savedBest) ? new MLP([38,64,64,1]) : savedBest.clone();
   const KEEP = Math.max(5, Math.floor(POP * 0.1));
   let best = base.clone();
   let bestScore = -Infinity;
 
-  progress(`[${now()}] Starting training: pop=${POP}, gens=${GENS}, reset=${Boolean(reset)}`);
+  let opponentMode = opponent;
+  let opponentModelJSON = null;
+  if (opponent === 'best') {
+    if (savedBest) {
+      opponentModelJSON = savedBest.toJSON();
+    } else {
+      progress(`[${now()}] Requested saved-model opponent but ${MODEL_PATH} missing; using MCTS baseline.`);
+      opponentMode = 'mcts';
+    }
+  }
+
+  progress(`[${now()}] Starting training: pop=${POP}, gens=${GENS}, reset=${Boolean(reset)}, opponent=${opponentMode}`);
 
   for (let gen = 0; gen < GENS; gen++) {
     const population = [];
@@ -177,7 +193,7 @@ async function main() {
       population.push(cloneAndMutate(best, sigma));
     }
     // Evaluate in parallel using worker threads
-    const scores = await evalPopulationParallel(population, { games: 5, maxRounds: 16 });
+    const scores = await evalPopulationParallel(population, { games: 5, maxRounds: 16, opponentMode, opponentModelJSON });
     scores.sort((a,b)=> b.score - a.score);
     const top = scores.slice(0, KEEP);
     const genBest = population[top[0].idx];
