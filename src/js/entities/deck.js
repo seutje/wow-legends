@@ -4,8 +4,17 @@ import { RNG } from '../utils/rng.js';
 export class Deck extends Zone {
   constructor(name = 'deck') { super(name); }
 
-  shuffle(seed = Date.now()) {
-    const r = new RNG(seed);
+  shuffle(seedOrRng) {
+    let r;
+    if (seedOrRng instanceof RNG) {
+      r = seedOrRng;
+    } else if (seedOrRng && typeof seedOrRng.randomInt === 'function') {
+      r = seedOrRng;
+    } else if (typeof seedOrRng === 'number') {
+      r = new RNG(seedOrRng);
+    } else {
+      r = new RNG(Date.now());
+    }
     // Fisher–Yates in place
     for (let i = this.cards.length - 1; i > 0; i--) {
       const j = r.randomInt(0, i + 1);
