@@ -12,6 +12,7 @@ import { renderBoard } from './ui/board.js';
 import QuestSystem from './systems/quests.js';
 import { EventBus } from './utils/events.js';
 import { selectTargets } from './systems/targeting.js';
+import { logSecretTriggered } from './utils/combatLog.js';
 
 export default class Game {
   constructor(rootEl, opts = {}) {
@@ -277,7 +278,18 @@ export default class Game {
     const counterIdx = (card.type === 'spell') ? oppSecrets.findIndex(s => s?.type === 'counterShot') : -1;
     if (counterIdx >= 0) {
       // Consume the counter secret and fizzle the spell
-      const tok = oppSecrets.splice(counterIdx, 1)[0];
+      const tok = oppSecrets.splice(counterIdx, 1)[0] || null;
+      const searchZones = [
+        defender.hand,
+        defender.graveyard,
+        defender.battlefield,
+        defender.library,
+        defender.removed,
+      ];
+      const secretCard = tok?.cardId
+        ? searchZones.map((zone) => zone?.cards?.find?.((c) => c.id === tok.cardId)).find(Boolean) || null
+        : null;
+      logSecretTriggered(this, defender, { card: secretCard, token: tok });
       try { this.bus.emit('secret:removed', { player: defender, card: null }); } catch {}
       try { this._uiRerender?.(); } catch {}
       // Move spell straight to graveyard without resolving effects
