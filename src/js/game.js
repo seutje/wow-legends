@@ -205,8 +205,8 @@ export default class Game {
       this.opponent.library.add(new Card(cardData));
     }
 
-    this.player.library.shuffle();
-    this.opponent.library.shuffle();
+    this.player.library.shuffle(rng);
+    this.opponent.library.shuffle(rng);
 
     
 
