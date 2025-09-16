@@ -288,6 +288,9 @@ export class EffectSystem {
       // Divine Shield absorbs one instance of damage (for shielded minions)
       if (t?.data?.divineShield) {
         t.data.divineShield = false;
+        if (t?.keywords?.includes?.('Divine Shield')) {
+          t.keywords = t.keywords.filter(k => k !== 'Divine Shield');
+        }
         // Emit zero-damage event for consistency with combat events
         game.bus.emit('damageDealt', { player, source: card, amount: 0, target: t });
         continue;
