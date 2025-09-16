@@ -81,6 +81,9 @@ export class EffectSystem {
         case 'buffBeast':
           await this.buffBeast(effect, context);
           break;
+        case 'buffTribe':
+          await this.buffTribe(effect, context);
+          break;
         case 'buffOnArmorGain':
           this.buffOnArmorGain(effect, context);
           break;
@@ -128,6 +131,9 @@ export class EffectSystem {
           break;
         case 'buffOnSurviveDamage':
           this.buffOnSurviveDamage(effect, context);
+          break;
+        case 'gainStatsPerTribe':
+          await this.gainStatsPerTribe(effect, context);
           break;
         case 'explosiveTrap':
           this.explosiveTrap(effect, context);
@@ -1005,6 +1011,113 @@ export class EffectSystem {
           this.temporaryEffects.push(revertEffect);
         }
       }
+    }
+  }
+
+  async buffTribe(effect, context) {
+    const {
+      tribe,
+      attack = 0,
+      health = 0,
+      armor = 0,
+      spellDamage = 0,
+      duration,
+      includeSource = false,
+      excludeSource = false,
+    } = effect;
+
+    if (!tribe) return;
+
+    const { game, player, card } = context;
+    const opponent = player === game.player ? game.opponent : game.player;
+
+    const battlefieldMembers = [
+      ...player.battlefield.cards,
+      ...opponent.battlefield.cards,
+    ].filter(c => c.type !== 'quest' && c.keywords?.includes(tribe));
+
+    const targets = new Set(battlefieldMembers);
+
+    if (includeSource && card?.keywords?.includes(tribe)) {
+      targets.add(card);
+    }
+
+    if (excludeSource && card) {
+      targets.delete(card);
+    }
+
+    if (!targets.size) return;
+
+    const properties = [
+      ['attack', attack],
+      ['health', health],
+      ['armor', armor],
+      ['spellDamage', spellDamage],
+    ];
+
+    for (const target of targets) {
+      for (const [property, value] of properties) {
+        if (typeof value !== 'number' || value === 0) continue;
+        await this.applyBuff(
+          { target: 'character', property, amount: value, duration },
+          context,
+          target
+        );
+      }
+    }
+  }
+
+  async gainStatsPerTribe(effect, context) {
+    const {
+      tribe,
+      attackPer = 0,
+      healthPer = 0,
+      includeSource = false,
+      excludeSource = false,
+    } = effect;
+
+    if (!tribe) return;
+
+    const { game, player, card } = context;
+    if (!card) return;
+
+    const opponent = player === game.player ? game.opponent : game.player;
+
+    const battlefieldMembers = [
+      ...player.battlefield.cards,
+      ...opponent.battlefield.cards,
+    ].filter(c => c.type !== 'quest' && c.keywords?.includes(tribe));
+
+    const targets = new Set(battlefieldMembers);
+    const sourceIsTribe = !!card?.keywords?.includes(tribe);
+
+    if (includeSource && sourceIsTribe) {
+      targets.add(card);
+    }
+
+    if (excludeSource && card) {
+      targets.delete(card);
+    }
+
+    const count = targets.size;
+
+    const attackGain = attackPer * count;
+    const healthGain = healthPer * count;
+
+    if (typeof attackGain === 'number' && attackGain !== 0) {
+      await this.applyBuff(
+        { target: 'character', property: 'attack', amount: attackGain },
+        context,
+        card
+      );
+    }
+
+    if (typeof healthGain === 'number' && healthGain !== 0) {
+      await this.applyBuff(
+        { target: 'character', property: 'health', amount: healthGain },
+        context,
+        card
+      );
     }
   }
 
