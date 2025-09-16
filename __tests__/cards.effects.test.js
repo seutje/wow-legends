@@ -398,6 +398,143 @@ describe.each(effectCards)('$id executes its effect', (card) => {
         if (effect.keywords?.includes('Rush')) expect(beast.keywords).toContain('Rush');
         break;
       }
+      case 'buffTribe': {
+        const tribe = effect.tribe || 'Murloc';
+        const friendly = new Card({
+          name: 'Friendly Tribe',
+          type: 'ally',
+          data: { attack: 2, health: 3 },
+          keywords: [tribe],
+        });
+        const enemy = new Card({
+          name: 'Enemy Tribe',
+          type: 'ally',
+          data: { attack: 1, health: 4 },
+          keywords: [tribe],
+        });
+        const other = new Card({
+          name: 'Non-Tribe',
+          type: 'ally',
+          data: { attack: 3, health: 3 },
+          keywords: [],
+        });
+        g.player.battlefield.add(friendly);
+        g.opponent.battlefield.add(enemy);
+        g.player.battlefield.add(other);
+
+        const includeSource = !!effect.includeSource;
+        const excludeSource = !!effect.excludeSource;
+
+        const friendlyBefore = { attack: friendly.data.attack, health: friendly.data.health };
+        const enemyBefore = { attack: enemy.data.attack, health: enemy.data.health };
+
+        let sourceBefore = null;
+        if (card.type === 'ally') {
+          const handCopy = g.player.hand.cards.find(c => c.id === card.id);
+          sourceBefore = handCopy ? { attack: handCopy.data.attack, health: handCopy.data.health } : null;
+        }
+
+        await g.playFromHand(g.player, card.id);
+
+        if (typeof effect.attack === 'number' && effect.attack !== 0) {
+          expect(friendly.data.attack).toBe(friendlyBefore.attack + effect.attack);
+          expect(enemy.data.attack).toBe(enemyBefore.attack + effect.attack);
+        }
+        if (typeof effect.health === 'number' && effect.health !== 0) {
+          expect(friendly.data.health).toBe(friendlyBefore.health + effect.health);
+          expect(enemy.data.health).toBe(enemyBefore.health + effect.health);
+        }
+        if (typeof effect.armor === 'number' && effect.armor !== 0) {
+          expect(friendly.data.armor || 0).toBe((friendlyBefore.armor || 0) + effect.armor);
+          expect(enemy.data.armor || 0).toBe((enemyBefore.armor || 0) + effect.armor);
+        }
+        if (typeof effect.spellDamage === 'number' && effect.spellDamage !== 0) {
+          expect(friendly.data.spellDamage || 0).toBe((friendlyBefore.spellDamage || 0) + effect.spellDamage);
+          expect(enemy.data.spellDamage || 0).toBe((enemyBefore.spellDamage || 0) + effect.spellDamage);
+        }
+
+        if (card.type === 'ally' && card.keywords?.includes(tribe)) {
+          const played = g.player.battlefield.cards.find(c => c.name === card.name);
+          if (played) {
+            if (includeSource && !excludeSource && sourceBefore) {
+              if (typeof effect.attack === 'number' && effect.attack !== 0) {
+                expect(played.data.attack).toBe(sourceBefore.attack + effect.attack);
+              }
+              if (typeof effect.health === 'number' && effect.health !== 0) {
+                expect(played.data.health).toBe(sourceBefore.health + effect.health);
+              }
+            }
+            if (excludeSource && sourceBefore) {
+              if (typeof effect.attack === 'number' && effect.attack !== 0) {
+                expect(played.data.attack).toBe(sourceBefore.attack);
+              }
+              if (typeof effect.health === 'number' && effect.health !== 0) {
+                expect(played.data.health).toBe(sourceBefore.health);
+              }
+            }
+          }
+        }
+
+        expect(other.data.attack).toBe(3);
+        expect(other.data.health).toBe(3);
+        break;
+      }
+      case 'gainStatsPerTribe': {
+        const tribe = effect.tribe || 'Murloc';
+        const friendlyOne = new Card({
+          name: 'Friendly One',
+          type: 'ally',
+          data: { attack: 1, health: 1 },
+          keywords: [tribe],
+        });
+        const friendlyTwo = new Card({
+          name: 'Friendly Two',
+          type: 'ally',
+          data: { attack: 2, health: 2 },
+          keywords: [tribe],
+        });
+        const enemy = new Card({
+          name: 'Enemy Tribe',
+          type: 'ally',
+          data: { attack: 1, health: 2 },
+          keywords: [tribe],
+        });
+
+        g.player.battlefield.add(friendlyOne);
+        g.player.battlefield.add(friendlyTwo);
+        g.opponent.battlefield.add(enemy);
+
+        const sourceCard = g.player.hand.cards.find(c => c.id === card.id);
+        const beforeStats = sourceCard ? { attack: sourceCard.data.attack, health: sourceCard.data.health } : { attack: 0, health: 0 };
+
+        const simulatedTargets = new Set([
+          ...g.player.battlefield.cards,
+          ...g.opponent.battlefield.cards,
+        ].filter(c => c.keywords?.includes(tribe)));
+
+        const sourceIsTribe = card.keywords?.includes(tribe);
+        if (effect.includeSource && sourceIsTribe) {
+          simulatedTargets.add(card);
+        }
+        if (effect.excludeSource) {
+          simulatedTargets.delete(card);
+        }
+
+        const tribeCount = simulatedTargets.size;
+
+        await g.playFromHand(g.player, card.id);
+
+        const played = g.player.battlefield.cards.find(c => c.name === card.name);
+        if (played) {
+          if (typeof effect.attackPer === 'number' && effect.attackPer !== 0) {
+            expect(played.data.attack).toBe(beforeStats.attack + tribeCount * effect.attackPer);
+          }
+          if (typeof effect.healthPer === 'number' && effect.healthPer !== 0) {
+            expect(played.data.health).toBe(beforeStats.health + tribeCount * effect.healthPer);
+          }
+        }
+        break;
+      }
       default:
         throw new Error('Unhandled effect type: ' + effect.type);
     }

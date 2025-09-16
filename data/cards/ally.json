@@ -522,6 +522,134 @@
     "prompt": "A small green murloc shrieks and charges across a sandy beach with a crude spear, surf spraying behind under a dramatic dawn."
   },
   {
+    "id": "ally-shoal-shieldbearer",
+    "name": "Shoal Shieldbearer",
+    "type": "ally",
+    "cost": 4,
+    "effects": [
+      {
+        "type": "buffTribe",
+        "tribe": "Murloc",
+        "health": 2,
+        "includeSource": true
+      }
+    ],
+    "keywords": [
+      "Murloc",
+      "Battlecry"
+    ],
+    "data": {
+      "attack": 2,
+      "health": 4
+    },
+    "text": "Battlecry — Give all Murlocs +0/+2.",
+    "prompt": "A sturdy blue murloc braces behind an enormous coral shield amid swaying kelp, sunlight filtering down through turquoise water as bubbles drift upward."
+  },
+  {
+    "id": "ally-gillrush-captain",
+    "name": "Gillrush Captain",
+    "type": "ally",
+    "cost": 2,
+    "effects": [
+      {
+        "type": "buffTribe",
+        "tribe": "Murloc",
+        "attack": 1,
+        "duration": "thisTurn",
+        "excludeSource": true
+      }
+    ],
+    "keywords": [
+      "Murloc",
+      "Battlecry"
+    ],
+    "data": {
+      "attack": 3,
+      "health": 2
+    },
+    "text": "Battlecry — Give other Murlocs +1 Attack this turn.",
+    "prompt": "An orange-crested murloc beats a shell drum while charging across tide pools, spray arcing around a rushing school behind him."
+  },
+  {
+    "id": "ally-deepfin-tidecaller",
+    "name": "Deepfin Tidecaller",
+    "type": "ally",
+    "cost": 3,
+    "effects": [
+      {
+        "type": "gainStatsPerTribe",
+        "tribe": "Murloc",
+        "attackPer": 1,
+        "healthPer": 1,
+        "excludeSource": true
+      }
+    ],
+    "keywords": [
+      "Murloc",
+      "Battlecry"
+    ],
+    "data": {
+      "attack": 2,
+      "health": 2
+    },
+    "text": "Battlecry — Gain +1/+1 for every other Murloc in play.",
+    "prompt": "A violet murloc shaman raises a tide-crystal staff as concentric ripples of magic surge outward through a moonlit cove crowded with allies."
+  },
+  {
+    "id": "ally-reefheart-chorister",
+    "name": "Reefheart Chorister",
+    "type": "ally",
+    "cost": 3,
+    "effects": [
+      {
+        "type": "buffTribe",
+        "tribe": "Murloc",
+        "attack": 1,
+        "health": 1,
+        "duration": "thisTurn",
+        "includeSource": true
+      },
+      {
+        "type": "draw",
+        "count": 1
+      }
+    ],
+    "keywords": [
+      "Murloc",
+      "Battlecry"
+    ],
+    "data": {
+      "attack": 3,
+      "health": 3
+    },
+    "text": "Battlecry — Give all Murlocs +1/+1 this turn. Draw a card.",
+    "prompt": "A teal murloc bard sings through a conch horn as glowing musical runes swirl around a coral amphitheater filled with cheering murlocs."
+  },
+  {
+    "id": "ally-tidemender-sage",
+    "name": "Tidemender Sage",
+    "type": "ally",
+    "cost": 4,
+    "effects": [
+      {
+        "type": "buffTribe",
+        "tribe": "Murloc",
+        "health": 1,
+        "excludeSource": true
+      }
+    ],
+    "keywords": [
+      "Murloc",
+      "Battlecry"
+    ],
+    "data": {
+      "attack": 2,
+      "health": 5
+    },
+    "text": "Battlecry — Give other Murlocs +0/+1.",
+    "prompt": "An elderly murloc with a seashell staff releases soothing light that washes over younger warriors amid bioluminescent reefs."
+  },
+  {
     "id": "ally-voidwalker",
     "name": "Voidwalker",
     "type": "ally",
