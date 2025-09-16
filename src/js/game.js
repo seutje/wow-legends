@@ -321,6 +321,50 @@ export default class Game {
       comboEffects = null;
     }
 
+    const isAlly = card.type === 'ally';
+    const capturePresence = (data, key) => ({
+      value: data[key],
+      present: Object.prototype.hasOwnProperty.call(data, key),
+    });
+    let movedAllyBeforeEffects = false;
+    let allyDataSnapshot = null;
+
+    if (isAlly) {
+      player.hand.moveTo(player.battlefield, card);
+      movedAllyBeforeEffects = true;
+      const data = card.data || (card.data = {});
+      allyDataSnapshot = {
+        attacked: capturePresence(data, 'attacked'),
+        summoningSick: capturePresence(data, 'summoningSick'),
+        enteredTurn: capturePresence(data, 'enteredTurn'),
+        divineShield: capturePresence(data, 'divineShield'),
+      };
+      data.enteredTurn = this.turns.turn;
+      if (!(card.keywords?.includes('Rush') || card.keywords?.includes('Charge'))) {
+        data.attacked = true;
+        data.summoningSick = true;
+      }
+      if (card.keywords?.includes('Divine Shield')) {
+        data.divineShield = true;
+      }
+    }
+
+    const restoreAllyPlacement = () => {
+      if (!movedAllyBeforeEffects) return;
+      const dest = player.battlefield.moveTo(player.hand, card);
+      if (!dest && !player.hand.cards.includes(card)) player.hand.add(card);
+      const data = card.data || (card.data = {});
+      const restore = (key, info) => {
+        if (!info || !info.present) delete data[key];
+        else data[key] = info.value;
+      };
+      restore('attacked', allyDataSnapshot?.attacked);
+      restore('summoningSick', allyDataSnapshot?.summoningSick);
+      restore('enteredTurn', allyDataSnapshot?.enteredTurn);
+      restore('divineShield', allyDataSnapshot?.divineShield);
+      movedAllyBeforeEffects = false;
+    };
+
     try {
       if (primaryEffects && primaryEffects.length > 0) {
         const hasDeathrattle = card.keywords?.includes('Deathrattle');
@@ -337,6 +381,7 @@ export default class Game {
       }
     } catch (err) {
       if (err === this.CANCEL) {
+        restoreAllyPlacement();
         // Refund cost and revert temporary spell damage bonus consumption
         if (typeof this.resources.refund === 'function') this.resources.refund(player, cost);
         else this.resources.restore(player, cost);
@@ -346,6 +391,7 @@ export default class Game {
         }
         return false;
       }
+      restoreAllyPlacement();
       throw err;
     }
 
@@ -379,23 +425,21 @@ export default class Game {
       player.hero.data.spellDamage -= tempSpellDamage;
     }
 
-    if (card.type === 'ally' || card.type === 'equipment') {
+    if (card.type === 'equipment') {
       player.hand.moveTo(player.battlefield, card);
-      if (card.type === 'equipment') player.equip(card);
-      if (card.type === 'ally') {
-        // Track the turn the ally entered play to reason about Rush/Charge
-        card.data = card.data || {};
-        card.data.enteredTurn = this.turns.turn;
-      }
-      if (card.type === 'ally' && !(card.keywords?.includes('Rush') || card.keywords?.includes('Charge'))) {
-        card.data = card.data || {};
-        card.data.attacked = true;
-        card.data.summoningSick = true;
-      }
-      // Initialize Divine Shield on allies that have the keyword when entering play
-      if (card.type === 'ally' && card.keywords?.includes('Divine Shield')) {
-        card.data = card.data || {};
-        card.data.divineShield = true;
+      player.equip(card);
+    } else if (card.type === 'ally') {
+      if (!movedAllyBeforeEffects) {
+        player.hand.moveTo(player.battlefield, card);
+        const data = card.data || (card.data = {});
+        data.enteredTurn = this.turns.turn;
+        if (!(card.keywords?.includes('Rush') || card.keywords?.includes('Charge'))) {
+          data.attacked = true;
+          data.summoningSick = true;
+        }
+        if (card.keywords?.includes('Divine Shield')) {
+          data.divineShield = true;
+        }
       }
     } else if (card.type === 'quest') {
       player.hand.moveTo(player.battlefield, card);

@@ -127,6 +127,38 @@ describe('EffectSystem', () => {
     expect(ally.data.health).toBe(1);
   });
 
+  test('battlecry damage triggers explosive trap after ally enters play', async () => {
+    const game = new Game();
+    const player = game.player;
+    const opponent = game.opponent;
+
+    player.hero.data.health = 30;
+    opponent.hero.data.health = 30;
+
+    const secret = new Card({ type: 'spell', name: 'Explosive Trap', effects: [{ type: 'explosiveTrap', amount: 2 }] });
+    await game.effects.execute(secret.effects, { game, player: opponent, card: secret });
+
+    const battlecry = new Card({
+      type: 'ally',
+      name: 'Flamecaller Adept',
+      cost: 0,
+      data: { attack: 1, health: 3 },
+      keywords: ['Battlecry'],
+      effects: [{ type: 'damage', target: 'any', amount: 1 }],
+    });
+
+    player.hand.add(battlecry);
+    game.promptTarget = jest.fn(async () => opponent.hero);
+
+    await game.playFromHand(player, battlecry.id);
+    await new Promise(r => setTimeout(r, 0));
+
+    expect(opponent.hero.data.health).toBe(27);
+    expect(player.hero.data.health).toBe(28);
+    expect(player.battlefield.cards).toContain(battlecry);
+    expect(battlecry.data.health).toBe(1);
+  });
+
   test('area damage hits stealth allies and removes stealth', async () => {
     const game = new Game();
     const stealth = new Card({ type: 'ally', name: 'S', data: { attack: 1, health: 2 }, keywords: ['Stealth'] });
