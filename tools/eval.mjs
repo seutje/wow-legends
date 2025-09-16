@@ -25,6 +25,16 @@ function fmtResult({ rounds, pHP, pArmor, oHP, oArmor }, pName, oName) {
   return { winner, rounds, player: { hp: pHP, armor: pArmor }, opponent: { hp: oHP, armor: oArmor } };
 }
 
+function printCombatLog(outFn, label, entries) {
+  if (!Array.isArray(entries) || entries.length === 0) {
+    outFn(`[eval] ${label} log: <empty>`);
+    return;
+  }
+  for (const entry of entries) {
+    outFn(`[eval] ${label} log: ${entry}`);
+  }
+}
+
 async function main() {
   // Optional seed via env or arg; else randomize
   const argSeed = process.env.SEED || process.argv.find(a => a.startsWith('--seed='))?.split('=')[1];
@@ -103,6 +113,8 @@ async function main() {
   out(`[eval] Result: ${summary.winner}`);
   out(`[eval] Player (${playerName}) HP=${pHP} Armor=${pArmor} | Plays=${pPlays}`);
   out(`[eval] Opponent (${opponentName}) HP=${oHP} Armor=${oArmor} | Plays=${oPlays}`);
+  printCombatLog(out, `Player (${playerName})`, game.player.log);
+  printCombatLog(out, `Opponent (${opponentName})`, game.opponent.log);
 }
 
 main().catch(err => { console.error(err); process.exit(1); });
