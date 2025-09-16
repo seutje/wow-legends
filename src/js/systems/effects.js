@@ -1347,8 +1347,14 @@ export class EffectSystem {
 
   spellDamageNextSpell(effect, context) {
     const { amount = 1, eachTurn = false } = effect;
-    const { player } = context;
-    player.hero.data.nextSpellDamageBonus = { amount, used: false, eachTurn };
+    const { player, card } = context;
+    const sourceCardId = card?.type === 'equipment' ? card.id : null;
+    player.hero.data.nextSpellDamageBonus = {
+      amount,
+      used: false,
+      eachTurn,
+      sourceCardId,
+    };
   }
 
   applyOverload(effect, context) {

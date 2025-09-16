@@ -289,10 +289,12 @@ export default class Game {
     }
     let tempSpellDamage = 0;
     const bonus = player.hero.data.nextSpellDamageBonus;
+    let bonusSourceId = null;
     if (card.type === 'spell' && bonus && !bonus.used) {
       player.hero.data.spellDamage = (player.hero.data.spellDamage || 0) + bonus.amount;
       bonus.used = true;
       tempSpellDamage = bonus.amount;
+      bonusSourceId = bonus.sourceCardId || null;
     }
 
     const comboActive = player.cardsPlayedThisTurn > 0;
@@ -336,6 +338,32 @@ export default class Game {
     }
 
     if (tempSpellDamage) {
+      if (bonusSourceId) {
+        const eqList = Array.isArray(player.hero.equipment) ? player.hero.equipment : [];
+        const eq = eqList.find(e => e?.id === bonusSourceId);
+        if (eq && typeof eq.durability === 'number') {
+          eq.durability -= 1;
+          if (player?.log) player.log.push(`${eq.name} empowered a spell (-1 durability).`);
+          if (eq.durability <= 0) {
+            if (player?.log) player.log.push(`${eq.name} broke and was destroyed.`);
+            let moved = false;
+            if (player?.battlefield && player?.graveyard) {
+              const res = player.battlefield.moveTo(player.graveyard, eq);
+              moved = !!res;
+            }
+            if (!moved && player?.graveyard?.add) {
+              player.graveyard.add(eq);
+            }
+            if (player?.hero?.data?.nextSpellDamageBonus?.sourceCardId === bonusSourceId) {
+              delete player.hero.data.nextSpellDamageBonus;
+            }
+          }
+          player.hero.equipment = eqList.filter(e => (e?.durability ?? 1) > 0);
+        } else if (player?.hero?.data?.nextSpellDamageBonus?.sourceCardId === bonusSourceId) {
+          delete player.hero.data.nextSpellDamageBonus;
+        }
+      }
+
       player.hero.data.spellDamage -= tempSpellDamage;
     }
 
