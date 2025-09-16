@@ -15,10 +15,13 @@ test("Arcanist's Signet grants +1 Spell Damage to the first spell each turn", as
     name: "Arcanist's Signet",
     type: 'equipment',
     cost: 0,
+    durability: 3,
     effects: [{ type: 'spellDamageNextSpell', amount: 1, eachTurn: true }],
   });
   g.player.hand.add(signet);
   await g.playFromHand(g.player, signet.id);
+  const equipped = g.player.hero.equipment[0];
+  expect(equipped?.durability).toBe(3);
 
   const makeSpell = () => new Card({
     id: 'spell-test-' + Math.random(),
@@ -32,11 +35,13 @@ test("Arcanist's Signet grants +1 Spell Damage to the first spell each turn", as
   g.player.hand.add(spell1);
   await g.playFromHand(g.player, spell1.id);
   expect(g.opponent.hero.data.health).toBe(28);
+  expect(equipped?.durability).toBe(2);
 
   const spell2 = makeSpell();
   g.player.hand.add(spell2);
   await g.playFromHand(g.player, spell2.id);
   expect(g.opponent.hero.data.health).toBe(27);
+  expect(equipped?.durability).toBe(2);
 
   g.turns.setActivePlayer(g.opponent);
   g.turns.startTurn();
@@ -47,4 +52,5 @@ test("Arcanist's Signet grants +1 Spell Damage to the first spell each turn", as
   g.player.hand.add(spell3);
   await g.playFromHand(g.player, spell3.id);
   expect(g.opponent.hero.data.health).toBe(25);
+  expect(equipped?.durability).toBe(1);
 });
