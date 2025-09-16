@@ -25,14 +25,35 @@ function fmtResult({ rounds, pHP, pArmor, oHP, oArmor }, pName, oName) {
   return { winner, rounds, player: { hp: pHP, armor: pArmor }, opponent: { hp: oHP, armor: oArmor } };
 }
 
-function printCombatLog(outFn, label, entries) {
-  if (!Array.isArray(entries) || entries.length === 0) {
-    outFn(`[eval] ${label} log: <empty>`);
-    return;
+function attachCombatLogPrinter(outFn, label, entries) {
+  if (!Array.isArray(entries)) {
+    return () => {};
   }
-  for (const entry of entries) {
+
+  let printedAny = false;
+  const originalPush = entries.push.bind(entries);
+
+  const printEntry = (entry) => {
     outFn(`[eval] ${label} log: ${entry}`);
+    printedAny = true;
+  };
+
+  for (const entry of entries) {
+    printEntry(entry);
   }
+
+  entries.push = function pushWithLogging(...items) {
+    for (const entry of items) {
+      printEntry(entry);
+    }
+    return originalPush(...items);
+  };
+
+  return () => {
+    if (!printedAny) {
+      outFn(`[eval] ${label} log: <empty>`);
+    }
+  };
 }
 
 async function main() {
@@ -69,6 +90,15 @@ async function main() {
   }
 
   const out = getOriginalConsole().log;
+
+  const playerHeroName = game.player?.hero?.name || 'Unknown Hero';
+  const opponentHeroName = game.opponent?.hero?.name || 'Unknown Hero';
+
+  out(`[eval] Player AI ${playerName} controls hero ${playerHeroName}`);
+  out(`[eval] Opponent AI ${opponentName} controls hero ${opponentHeroName}`);
+
+  const finalizePlayerLog = attachCombatLogPrinter(out, `Player (${playerName})`, game.player.log);
+  const finalizeOpponentLog = attachCombatLogPrinter(out, `Opponent (${opponentName})`, game.opponent.log);
 
   let rounds = 0;
   while (rounds < maxRounds && game.player.hero.data.health > 0 && game.opponent.hero.data.health > 0) {
@@ -113,8 +143,8 @@ async function main() {
   out(`[eval] Result: ${summary.winner}`);
   out(`[eval] Player (${playerName}) HP=${pHP} Armor=${pArmor} | Plays=${pPlays}`);
   out(`[eval] Opponent (${opponentName}) HP=${oHP} Armor=${oArmor} | Plays=${oPlays}`);
-  printCombatLog(out, `Player (${playerName})`, game.player.log);
-  printCombatLog(out, `Opponent (${opponentName})`, game.opponent.log);
+  finalizePlayerLog();
+  finalizeOpponentLog();
 }
 
 main().catch(err => { console.error(err); process.exit(1); });
