@@ -10,7 +10,7 @@ export default class Hero {
       health = data.health ?? health;
       armor = data.armor ?? armor;
     }
-    this.data = { attack, health, armor };
+    this.data = { ...(data || {}), attack, health, armor };
     this.keywords = keywords;
     this.active = active; // hero power (active ability)
     this.passive = passive; // passive effects applied automatically

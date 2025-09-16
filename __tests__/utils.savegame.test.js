@@ -1,4 +1,5 @@
 import Game from '../src/js/game.js';
+import Card from '../src/js/entities/card.js';
 import { captureGameState, restoreCapturedState } from '../src/js/utils/savegame.js';
 
 describe('savegame utilities', () => {
@@ -27,5 +28,40 @@ describe('savegame utilities', () => {
     expect(clone.turns.current).toBe('Main');
     expect(clone.resources.pool(clone.player)).toBe(2);
     expect(clone.state.debug).toBe(true);
+  });
+
+  test('secrets persist across save and restore', async () => {
+    const game = new Game(null);
+    await game.init();
+
+    const secretCard = new Card({
+      id: 'spell-test-explosive-trap',
+      name: 'Explosive Trap',
+      type: 'spell',
+      effects: [{ type: 'explosiveTrap', amount: 2 }],
+    });
+
+    // Simulate the secret being played this match.
+    game.player.graveyard.cards.push(secretCard);
+    game.effects.explosiveTrap(secretCard.effects[0], {
+      game,
+      player: game.player,
+      card: secretCard,
+    });
+
+    expect(Array.isArray(game.player.hero.data.secrets)).toBe(true);
+    expect(game.player.hero.data.secrets).toHaveLength(1);
+
+    const snapshot = captureGameState(game);
+    const clone = new Game(null);
+    await clone.init();
+    const ok = restoreCapturedState(clone, snapshot);
+    expect(ok).toBe(true);
+
+    const secrets = clone.player.hero.data.secrets;
+    expect(Array.isArray(secrets)).toBe(true);
+    expect(secrets).toHaveLength(1);
+    expect(secrets[0].type).toBe('explosiveTrap');
+    expect(secrets[0].cardId).toBe(secretCard.id);
   });
 });
