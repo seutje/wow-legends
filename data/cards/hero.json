@@ -27,7 +27,8 @@
       {
         "type": "damage",
         "target": "upToThreeTargets",
-        "amount": 1
+        "amount": 1,
+        "usesSpellDamage": true
       },
       {
         "type": "overload",
