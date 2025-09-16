@@ -352,7 +352,7 @@ import { loadSettings, rehydrateDeck } from '../utils/settings.js';
 
 import { saveDifficulty } from '../utils/settings.js';
 
-export function renderPlay(container, game, { onUpdate, onOpenDeckBuilder } = {}) {
+export function renderPlay(container, game, { onUpdate, onOpenDeckBuilder, onNewGame } = {}) {
   const p = game.player; const e = game.opponent;
 
   let controls = container.querySelector('.controls');
@@ -382,6 +382,16 @@ export function renderPlay(container, game, { onUpdate, onOpenDeckBuilder } = {}
     debugChk.checked = !!(game.state?.debug);
 
     controls = el('div', { class: 'controls' },
+      el('button', { class: 'btn-new-game', onclick: async (ev) => {
+        const btn = ev?.currentTarget;
+        if (btn) btn.disabled = true;
+        try {
+          if (onNewGame) await onNewGame();
+        } finally {
+          if (btn) btn.disabled = false;
+          onUpdate?.();
+        }
+      } }, 'New Game'),
       el('button', { class: 'btn-deck-builder', onclick: () => { onOpenDeckBuilder?.(); } }, 'Deck Builder'),
       el('button', { class: 'btn-hero-power', onclick: async () => { await game.useHeroPower(game.player); onUpdate?.(); } }, 'Hero Power'),
       el('button', { class: 'btn-end-turn', onclick: async (ev) => {
@@ -434,6 +444,8 @@ export function renderPlay(container, game, { onUpdate, onOpenDeckBuilder } = {}
   if (heroPowerBtn) heroPowerBtn.disabled = !!(game.state?.aiThinking || game.player.hero.powerUsed || game.resources.pool(game.player) < 2 || game.player.hero.data.freezeTurns > 0);
   const endTurnBtn = controls.querySelector('.btn-end-turn');
   if (endTurnBtn) endTurnBtn.disabled = !!(game.state?.aiThinking);
+  const newGameBtn = controls.querySelector('.btn-new-game');
+  if (newGameBtn) newGameBtn.disabled = !!(game.state?.aiThinking);
   const deckBtn = controls.querySelector('.btn-deck-builder');
   if (deckBtn) deckBtn.disabled = !!(game.state?.aiThinking);
   const sel = controls.querySelector('select.select-difficulty');

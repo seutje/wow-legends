@@ -24,6 +24,31 @@ describe('UI Play', () => {
     expect(enemyLog.textContent).toContain('Played Other');
   });
 
+  test('new game button appears before deck builder and calls handler', async () => {
+    const container = document.createElement('div');
+    const playerHero = new Hero({ name: 'Player Hero', data: { health: 25, armor: 5 } });
+    const enemyHero = new Hero({ name: 'Enemy Hero', data: { health: 20, armor: 3 } });
+
+    const game = {
+      player: { hero: playerHero, battlefield: { cards: [] }, hand: { cards: [], size: () => 0 }, log: [] },
+      opponent: { hero: enemyHero, battlefield: { cards: [] }, hand: { cards: [], size: () => 0 }, log: [] },
+      resources: { pool: () => 0, available: () => 0 },
+      draw: jest.fn(), attack: jest.fn(), endTurn: jest.fn(), playFromHand: () => true,
+      state: {},
+    };
+
+    const onNewGame = jest.fn().mockResolvedValue();
+    renderPlay(container, game, { onUpdate: jest.fn(), onNewGame });
+    const controls = container.querySelector('.controls');
+    const buttons = Array.from(controls.querySelectorAll('button'));
+    expect(buttons[0].textContent).toContain('New Game');
+    expect(buttons[1].textContent).toContain('Deck Builder');
+
+    buttons[0].dispatchEvent(new Event('click'));
+    await Promise.resolve();
+    expect(onNewGame).toHaveBeenCalled();
+  });
+
   test('log pane has zone styling and auto-scrolls to bottom', async () => {
     const container = document.createElement('div');
     const playerHero = new Hero({ name: 'Player Hero', data: { health: 25, armor: 5 } });
