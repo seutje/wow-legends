@@ -328,8 +328,10 @@ export default class Game {
     });
     let movedAllyBeforeEffects = false;
     let allyDataSnapshot = null;
+    let originalHandIndex = -1;
 
     if (isAlly) {
+      originalHandIndex = player.hand.cards.indexOf(card);
       player.hand.moveTo(player.battlefield, card);
       movedAllyBeforeEffects = true;
       const data = card.data || (card.data = {});
@@ -351,8 +353,23 @@ export default class Game {
 
     const restoreAllyPlacement = () => {
       if (!movedAllyBeforeEffects) return;
-      const dest = player.battlefield.moveTo(player.hand, card);
-      if (!dest && !player.hand.cards.includes(card)) player.hand.add(card);
+      player.battlefield.remove(card);
+      const handCards = player.hand.cards;
+      const normalizeIndex = (idx, arr) => {
+        if (typeof idx !== 'number' || Number.isNaN(idx)) return arr.length;
+        if (idx < 0) return 0;
+        if (idx > arr.length) return arr.length;
+        return idx;
+      };
+      let desiredIndex = normalizeIndex(originalHandIndex, handCards);
+      const currentIndex = handCards.indexOf(card);
+      if (currentIndex === -1) {
+        handCards.splice(desiredIndex, 0, card);
+      } else if (currentIndex !== desiredIndex) {
+        handCards.splice(currentIndex, 1);
+        desiredIndex = normalizeIndex(originalHandIndex, handCards);
+        handCards.splice(desiredIndex, 0, card);
+      }
       const data = card.data || (card.data = {});
       const restore = (key, info) => {
         if (!info || !info.present) delete data[key];
