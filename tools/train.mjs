@@ -1,8 +1,8 @@
 // Train the neural network AI with simple evolutionary RL.
-// - Loads best model from data/model.json if present (unless reset)
+// - Loads best model from data/models/best.json if present (unless reset)
 // - Runs population and generations provided via CLI args
 // - Evaluates vs a baseline MCTS opponent with capped steps (or saved NN when requested)
-// - Saves best to data/model.json
+// - Saves best to data/models/best.json
 
 import fs from 'fs/promises';
 import path from 'path';
@@ -33,7 +33,8 @@ function progress(msg) { __originalLog(msg); }
 // Ensure any debug logging flags are off in Node context
 setDebugLogging(false);
 
-const MODEL_PATH = path.join(__dirname, '..', 'data', 'model.json');
+const MODELS_DIR = path.join(__dirname, '..', 'data', 'models');
+const MODEL_PATH = path.join(MODELS_DIR, 'best.json');
 
 function now() {
   const d = new Date();
@@ -166,6 +167,7 @@ async function evalPopulationParallel(population, { games = 1, maxRounds = 16, c
 
 async function main() {
   const { pop: POP, gens: GENS, reset, opponent } = parseTrainArgs();
+  await fs.mkdir(MODELS_DIR, { recursive: true });
   const savedBest = await loadSavedBest();
   const base = (reset || !savedBest) ? new MLP([38,64,64,1]) : savedBest.clone();
   const KEEP = Math.max(5, Math.floor(POP * 0.1));
@@ -202,7 +204,7 @@ async function main() {
 
     // Save best model for this generation
     try {
-      const genPath = path.join(__dirname, '..', 'data', `model_gen_${gen+1}.json`);
+      const genPath = path.join(MODELS_DIR, `model_gen_${gen+1}.json`);
       const genJSON = JSON.stringify(genBest.toJSON(), null, 2);
       await fs.writeFile(genPath, genJSON, 'utf8');
       progress(`[${now()}] Gen ${gen+1}/${GENS} best=${genBestScore.toFixed(3)} overall=${bestScore.toFixed(3)} | saved ${genPath}`);
