@@ -21,7 +21,7 @@ Code Conventions
   - `src/js/game.js` orchestrates the game
   - `src/js/main.js` is the browser entry; it initializes and exposes `window.game` for UI hooks.
 - Keep changes minimal and scoped to the request. Update docs and tests when behavior changes.
-- Implement cards generically. Do not target specific card IDs; adjust the per-type JSON under `data/` (e.g., `hero.json`, `spell.json`, etc.) and add effect types to cover card-specific behavior.
+- Implement cards generically. Do not target specific card IDs; adjust the per-type JSON under `data/cards/` (e.g., `hero.json`, `spell.json`, etc.) and add effect types to cover card-specific behavior.
 
 Testing
 - Run tests: `npm test`

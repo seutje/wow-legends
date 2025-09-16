@@ -3,7 +3,7 @@ import Game from '../src/js/game.js';
 import Hero from '../src/js/entities/hero.js';
 import Card from '../src/js/entities/card.js';
 
-const read = (name) => JSON.parse(fs.readFileSync(new URL(`../data/${name}.json`, import.meta.url)));
+const read = (name) => JSON.parse(fs.readFileSync(new URL(`../data/cards/${name}.json`, import.meta.url)));
 const cards = [
   ...read('hero'),
   ...read('spell'),
