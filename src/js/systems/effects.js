@@ -1,6 +1,7 @@
 import Card from '../entities/card.js';
 import Equipment from '../entities/equipment.js';
 import { rememberSecretToken, enrichSecretToken } from '../utils/savegame.js';
+import { logSecretTriggered } from '../utils/combatLog.js';
 import { freezeTarget, getSpellDamageBonus, computeSpellDamage, isTargetable } from './keywords.js';
 import { selectTargets } from './targeting.js';
 
@@ -492,6 +493,7 @@ export class EffectSystem {
     const handler = async ({ target }) => {
       if (target !== player.hero) return;
       off();
+      logSecretTriggered(game, player, { card, token });
       // Remove the secret indicator when it triggers
       const arr = player.hero?.data?.secrets;
       if (Array.isArray(arr)) {
@@ -547,6 +549,7 @@ export class EffectSystem {
 
       // Secret triggers once
       off();
+      logSecretTriggered(game, player, { card, token });
       // Remove the secret indicator when it triggers
       const arr = player.hero?.data?.secrets;
       if (Array.isArray(arr)) {
@@ -586,6 +589,7 @@ export class EffectSystem {
       const isEnemy = opponent.battlefield.cards.includes(attacker) || attacker === opponent.hero;
       if (!isEnemy) return;
       off();
+      logSecretTriggered(game, player, { card, token });
       // Remove the secret indicator when it triggers
       const arr = player.hero?.data?.secrets;
       if (Array.isArray(arr)) {
@@ -645,6 +649,7 @@ export class EffectSystem {
       if (!isFriendlyTarget || !fromOpponent) return;
 
       off();
+      logSecretTriggered(game, player, { card, token });
       // Remove secret indicator
       const arr = player.hero?.data?.secrets;
       if (Array.isArray(arr)) {
@@ -698,6 +703,7 @@ export class EffectSystem {
       if (killer !== opponent) return;
 
       off();
+      logSecretTriggered(game, player, { card, token });
       // Remove secret indicator
       const arr = player.hero?.data?.secrets;
       if (Array.isArray(arr)) {
