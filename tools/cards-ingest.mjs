@@ -191,7 +191,7 @@ function main() {
     (acc[c.type] ||= []).push(c);
     return acc;
   }, {});
-  const outDir = path.join(root, 'data');
+  const outDir = path.join(root, 'data', 'cards');
   fs.mkdirSync(outDir, { recursive: true });
   let total = 0;
   for (const [type, list] of Object.entries(byType)) {

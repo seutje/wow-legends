@@ -113,7 +113,7 @@ export default class Game {
       const chunks = [];
       for (const t of types) {
         try {
-          const p = new URL(`../../data/${t}.json`, import.meta.url);
+          const p = new URL(`../../data/cards/${t}.json`, import.meta.url);
           const txt = await fs.readFile(p, 'utf8');
           chunks.push(JSON.parse(txt));
         } catch (err) {
@@ -122,7 +122,7 @@ export default class Game {
       }
       this.allCards = chunks.flat();
     } else {
-      const mk = (name) => fetch(new URL(`../../data/${name}.json`, import.meta.url)).catch(() => null);
+      const mk = (name) => fetch(new URL(`../../data/cards/${name}.json`, import.meta.url)).catch(() => null);
       const [h, s, a, e, q, c] = await Promise.all([
         mk('hero'), mk('spell'), mk('ally'), mk('equipment'), mk('quest'), mk('consumable')
       ]);

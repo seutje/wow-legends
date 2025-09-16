@@ -4,7 +4,7 @@ import Card from '../src/js/entities/card.js';
 import fs from 'fs';
 
 test("Rexxar's hero power scales with Spell Damage bonuses", async () => {
-  const cards = JSON.parse(fs.readFileSync(new URL('../data/hero.json', import.meta.url)));
+  const cards = JSON.parse(fs.readFileSync(new URL('../data/cards/hero.json', import.meta.url)));
   const rexxarData = cards.find(c => c.id === 'hero-rexxar-beastmaster');
 
   const g = new Game();
@@ -32,7 +32,7 @@ test("Rexxar's hero power scales with Spell Damage bonuses", async () => {
 });
 
 test("Rexxar's hero power deals base 2 without Spell Damage", async () => {
-  const cards = JSON.parse(fs.readFileSync(new URL('../data/hero.json', import.meta.url)));
+  const cards = JSON.parse(fs.readFileSync(new URL('../data/cards/hero.json', import.meta.url)));
   const rexxarData = cards.find(c => c.id === 'hero-rexxar-beastmaster');
 
   const g = new Game();

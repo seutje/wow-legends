@@ -3,7 +3,7 @@ import { jest } from '@jest/globals';
 import Game from '../src/js/game.js';
 import Hero from '../src/js/entities/hero.js';
 
-const cards = JSON.parse(fs.readFileSync(new URL('../data/hero.json', import.meta.url)));
+const cards = JSON.parse(fs.readFileSync(new URL('../data/cards/hero.json', import.meta.url)));
 const malfData = cards.find(c => c.id === 'hero-malfurion-stormrage-archdruid');
 
 test("Malfurion's hero power offers a choice", async () => {

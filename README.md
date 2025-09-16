@@ -57,7 +57,7 @@ Developer Notes
 - Train Nightmare AI: `npm run train -- <population> <generations> <reset>` — evolutionary RL saves best model to `data/models/best.json`. Example: `npm run train -- 200 15 true`.
 - Evaluate NN vs hard MCTS: `npm run eval` — runs a single game with NN as player vs hard MCTS as opponent (max 20 rounds) and prints result summary. Provide a model path to pit two neural AIs: `npm run eval -- data/other-model.json`.
 - Simulation CLI: `npm run simulate` (quick AI turns). Balance sampling: `node tools/balance.mjs`.
-- Content pipeline: `node tools/cards-ingest.mjs` parses `CARDS.md` and writes per-type JSON under `data/` (e.g., `data/hero.json`, `data/spell.json`, `data/ally.json`, etc.).
+- Content pipeline: `node tools/cards-ingest.mjs` parses `CARDS.md` and writes per-type JSON under `data/cards/` (e.g., `data/cards/hero.json`, `data/cards/spell.json`, `data/cards/ally.json`, etc.).
 - Live reload policy: `live-reload.json` must be committed; never add to `.gitignore`.
 - Asset optimization: `npm run optim` compresses PNGs in `src/assets/art/*.png` (lossless deflate via sharp) and writes optimized copies to `src/assets/optim/` with the same filenames. To optimize a single card image, pass its card id: `npm run optim -- --id spell-mind-vision` (positional also works: `npm run optim -- spell-mind-vision`).
 
