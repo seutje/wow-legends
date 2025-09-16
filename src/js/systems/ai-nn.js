@@ -37,9 +37,9 @@ export async function loadModelFromDiskOrFetch() {
 // State features (player-centric, 20 dims approx):
 // [ turn/20, pHP/40, pArmor/20, pPool/10, pAvail/10, pHand/10, pAllies, pAtkSum/50, pHpSum/100, pMaxAtk/20,
 //   oHP/40, oArmor/20, oPool/10, oAvail/10, oHand/10, oAllies, oAtkSum/50, oHpSum/100, oTaunts, powerAvail ]
-// Action features (18 dims): one-hot type (3), cost/10, cardAtk/20, cardHp/20, type enum (ally=1,spell=2,equip=3,quest=4)/4,
-// plus flags: rush, taunt, stealth, divineShield (4).
-// Total input ~ 38 dims (20 + 18).
+// Action features (15 dims currently): one-hot type (3), cost/10, cardAtk/20, cardHp/20, type enum (ally=1,spell=2,equip=3,
+// quest=4)/4, plus flags: rush, taunt, stealth, divineShield, windfury, battlecry, reflect, lifesteal (8).
+// Combined with state features we feed 35 inputs, leaving extra padding in the MLP's 38-wide input layer for future tweaks.
 
 function clamp01(x) { return x < 0 ? 0 : x > 1 ? 1 : x; }
 
@@ -80,7 +80,9 @@ function actionFeatures(action) {
   const isPlay = action?.card ? 1 : 0;
   const isPower = action?.usePower ? 1 : 0;
   const isEnd = action?.end ? 1 : 0;
-  let cost = 0, atk = 0, hp = 0, typeEnc = 0, rush=0, taunt=0, stealth=0, divineShield=0;
+  let cost = 0, atk = 0, hp = 0, typeEnc = 0;
+  let rush = 0, taunt = 0, stealth = 0, divineShield = 0, windfury = 0;
+  let battlecry = 0, reflect = 0, lifesteal = 0;
   if (action?.card) {
     const c = action.card;
     cost = c.cost || 0;
@@ -92,11 +94,15 @@ function actionFeatures(action) {
     taunt = kw.includes('Taunt') ? 1 : 0;
     stealth = kw.includes('Stealth') ? 1 : 0;
     divineShield = kw.includes('Divine Shield') ? 1 : 0;
+    windfury = kw.includes('Windfury') ? 1 : 0;
+    battlecry = kw.includes('Battlecry') ? 1 : 0;
+    reflect = kw.includes('Reflect') ? 1 : 0;
+    lifesteal = kw.includes('Lifesteal') ? 1 : 0;
   }
   return [
     isPlay, isPower, isEnd,
     clamp01(cost / 10), clamp01(atk / 20), clamp01(hp / 20), clamp01(typeEnc / 4),
-    rush, taunt, stealth, divineShield,
+    rush, taunt, stealth, divineShield, windfury, battlecry, reflect, lifesteal,
     // pad to fixed length if needed later
   ];
 }
