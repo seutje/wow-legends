@@ -1,3 +1,4 @@
+import { jest } from '@jest/globals';
 import Game from '../src/js/game.js';
 import Card from '../src/js/entities/card.js';
 
@@ -33,4 +34,37 @@ test('counter secret writes combat log entries when triggered', async () => {
   expect(played).toBe(true);
   expect(g.opponent.log).toContain('Secret triggered: Counter Shot');
   expect(g.player.log).toContain('Enemy secret triggered: Counter Shot');
+});
+
+test('canceling targeted ally keeps its original hand position', async () => {
+  const g = new Game();
+  const first = new Card({ type: 'ally', name: 'Frontliner', cost: 0 });
+  const targetAlly = new Card({
+    type: 'ally',
+    name: 'Battlecry Slinger',
+    cost: 0,
+    effects: [{ type: 'dealDamage', amount: 1 }],
+  });
+  const third = new Card({ type: 'ally', name: 'Backliner', cost: 0 });
+  g.player.hand.add(first);
+  g.player.hand.add(targetAlly);
+  g.player.hand.add(third);
+
+  const initialOrder = g.player.hand.cards.map(c => c.id);
+  const originalIndex = g.player.hand.cards.indexOf(targetAlly);
+
+  const spy = jest.spyOn(g.effects, 'execute').mockImplementation(async () => {
+    throw g.CANCEL;
+  });
+
+  let played;
+  try {
+    played = await g.playFromHand(g.player, targetAlly.id);
+  } finally {
+    spy.mockRestore();
+  }
+
+  expect(played).toBe(false);
+  expect(g.player.hand.cards.indexOf(targetAlly)).toBe(originalIndex);
+  expect(g.player.hand.cards.map(c => c.id)).toEqual(initialOrder);
 });
