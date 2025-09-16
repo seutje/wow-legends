@@ -1,5 +1,6 @@
 import Card from '../entities/card.js';
 import Equipment from '../entities/equipment.js';
+import { rememberSecretToken, enrichSecretToken } from '../utils/savegame.js';
 import { freezeTarget, getSpellDamageBonus, computeSpellDamage, isTargetable } from './keywords.js';
 import { selectTargets } from './targeting.js';
 
@@ -463,17 +464,24 @@ export class EffectSystem {
     console.log(`${player.name} drew ${count} card(s).`);
   }
 
-  explosiveTrap(effect, context) {
+  explosiveTrap(effect, context, opts = {}) {
     const { amount = 2 } = effect;
     const { game, player, card } = context;
+    const { restoreToken = null, skipEmit = false } = opts;
 
     // Track an active secret on the owner's hero for UI
     player.hero.data = player.hero.data || {};
     const secrets = (player.hero.data.secrets ||= []);
-    const token = { type: 'explosiveTrap' };
-    secrets.push(token);
-    try { game.bus.emit('secret:added', { player, card }); } catch {}
-    try { game._uiRerender?.(); } catch {}
+    const token = restoreToken
+      ? enrichSecretToken(restoreToken)
+      : rememberSecretToken(effect, context, { type: 'explosiveTrap' });
+    if (!restoreToken) {
+      secrets.push(token);
+      if (!skipEmit) {
+        try { game.bus.emit('secret:added', { player, card }); } catch {}
+        try { game._uiRerender?.(); } catch {}
+      }
+    }
 
     const handler = async ({ target }) => {
       if (target !== player.hero) return;
@@ -493,19 +501,27 @@ export class EffectSystem {
     };
 
     const off = game.bus.on('damageDealt', handler);
+    return token;
   }
 
-  freezingTrap(effect, context) {
+  freezingTrap(effect, context, opts = {}) {
     const { game, player, card } = context;
+    const { restoreToken = null, skipEmit = false } = opts;
     const opponent = player === game.player ? game.opponent : game.player;
 
     // Track an active secret on the owner's hero for UI
     player.hero.data = player.hero.data || {};
     const secrets = (player.hero.data.secrets ||= []);
-    const token = { type: 'freezingTrap' };
-    secrets.push(token);
-    try { game.bus.emit('secret:added', { player, card }); } catch {}
-    try { game._uiRerender?.(); } catch {}
+    const token = restoreToken
+      ? enrichSecretToken(restoreToken)
+      : rememberSecretToken(effect, context, { type: 'freezingTrap' });
+    if (!restoreToken) {
+      secrets.push(token);
+      if (!skipEmit) {
+        try { game.bus.emit('secret:added', { player, card }); } catch {}
+        try { game._uiRerender?.(); } catch {}
+      }
+    }
 
     const handler = ({ attacker }) => {
       // Trigger only when an enemy ally (not hero/equipment) declares an attack
@@ -536,17 +552,25 @@ export class EffectSystem {
     };
 
     const off = game.bus.on('attackDeclared', handler);
+    return token;
   }
 
-  snakeTrap(effect, context) {
+  snakeTrap(effect, context, opts = {}) {
     const { game, player, card } = context;
+    const { restoreToken = null, skipEmit = false } = opts;
     // Track an active secret on the owner's hero for UI
     player.hero.data = player.hero.data || {};
     const secrets = (player.hero.data.secrets ||= []);
-    const token = { type: 'snakeTrap' };
-    secrets.push(token);
-    try { game.bus.emit('secret:added', { player, card }); } catch {}
-    try { game._uiRerender?.(); } catch {}
+    const token = restoreToken
+      ? enrichSecretToken(restoreToken)
+      : rememberSecretToken(effect, context, { type: 'snakeTrap' });
+    if (!restoreToken) {
+      secrets.push(token);
+      if (!skipEmit) {
+        try { game.bus.emit('secret:added', { player, card }); } catch {}
+        try { game._uiRerender?.(); } catch {}
+      }
+    }
 
     const opponent = player === game.player ? game.opponent : game.player;
 
@@ -575,6 +599,7 @@ export class EffectSystem {
     };
 
     const off = game.bus.on('attackDeclared', handler);
+    return token;
   }
 
   counterShot(effect, context) {
@@ -582,21 +607,28 @@ export class EffectSystem {
     const { game, player, card } = context;
     player.hero.data = player.hero.data || {};
     const secrets = (player.hero.data.secrets ||= []);
-    secrets.push({ type: 'counterShot' });
+    secrets.push(rememberSecretToken(effect, context, { type: 'counterShot' }));
     try { game.bus.emit('secret:added', { player, card }); } catch {}
     try { game._uiRerender?.(); } catch {}
   }
 
-  retaliationRunes(effect, context) {
+  retaliationRunes(effect, context, opts = {}) {
     const { game, player, card } = context;
+    const { restoreToken = null, skipEmit = false } = opts;
     const amount = typeof effect.amount === 'number' ? effect.amount : 2;
     // Track secret for UI
     player.hero.data = player.hero.data || {};
     const secrets = (player.hero.data.secrets ||= []);
-    const token = { type: 'retaliationRunes' };
-    secrets.push(token);
-    try { game.bus.emit('secret:added', { player, card }); } catch {}
-    try { game._uiRerender?.(); } catch {}
+    const token = restoreToken
+      ? enrichSecretToken(restoreToken)
+      : rememberSecretToken(effect, context, { type: 'retaliationRunes' });
+    if (!restoreToken) {
+      secrets.push(token);
+      if (!skipEmit) {
+        try { game.bus.emit('secret:added', { player, card }); } catch {}
+        try { game._uiRerender?.(); } catch {}
+      }
+    }
 
     const opponent = player === game.player ? game.opponent : game.player;
 
@@ -632,18 +664,26 @@ export class EffectSystem {
     };
 
     const off = game.bus.on('damageDealt', handler);
+    return token;
   }
 
-  vengefulSpirit(effect, context) {
+  vengefulSpirit(effect, context, opts = {}) {
     const { game, player, card } = context;
+    const { restoreToken = null, skipEmit = false } = opts;
     const amount = typeof effect.amount === 'number' ? effect.amount : 3;
     // Track secret for UI
     player.hero.data = player.hero.data || {};
     const secrets = (player.hero.data.secrets ||= []);
-    const token = { type: 'vengefulSpirit' };
-    secrets.push(token);
-    try { game.bus.emit('secret:added', { player, card }); } catch {}
-    try { game._uiRerender?.(); } catch {}
+    const token = restoreToken
+      ? enrichSecretToken(restoreToken)
+      : rememberSecretToken(effect, context, { type: 'vengefulSpirit' });
+    if (!restoreToken) {
+      secrets.push(token);
+      if (!skipEmit) {
+        try { game.bus.emit('secret:added', { player, card }); } catch {}
+        try { game._uiRerender?.(); } catch {}
+      }
+    }
 
     const opponent = player === game.player ? game.opponent : game.player;
 
@@ -679,6 +719,7 @@ export class EffectSystem {
     };
 
     const off = game.bus.on('allyDefeated', handler);
+    return token;
   }
 
   drawOnHeal(effect, context) {

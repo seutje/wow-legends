@@ -6,6 +6,7 @@ import { fillDeckRandomly } from './utils/deckbuilder.js';
 import { renderPlay } from './ui/play.js';
 import { loadSettings, rehydrateDeck, saveLastDeck } from './utils/settings.js';
 import { deriveDeckFromGame } from './utils/deckstate.js';
+import { saveGameState, loadSavedGameState, clearSavedGameState } from './utils/savegame.js';
 
 function qs(sel) { return document.querySelector(sel); }
 
@@ -30,6 +31,10 @@ try {
   }
 } catch {}
 
+try {
+  loadSavedGameState(game);
+} catch {}
+
 // Expose for quick dev console hooks
 window.game = game;
 
@@ -44,7 +49,19 @@ setStatus('Initialized');
 // Render a minimal board for demo
 const board = document.createElement('div');
 root.appendChild(board);
-const rerender = () => renderPlay(board, game, { onUpdate: rerender, onOpenDeckBuilder: openDeckBuilder });
+
+async function startNewGame() {
+  const deck = deriveDeckFromGame(game);
+  clearSavedGameState();
+  const hasDeck = deck?.hero && Array.isArray(deck.cards) && deck.cards.length === 60;
+  await game.reset(hasDeck ? deck : null);
+  saveGameState(game);
+}
+
+const rerender = () => {
+  renderPlay(board, game, { onUpdate: rerender, onOpenDeckBuilder: openDeckBuilder, onNewGame: startNewGame });
+  saveGameState(game);
+};
 
 rerender();
 
@@ -127,14 +144,16 @@ clearDeckBtn.addEventListener('click', () => {
     deckRoot.style.display = 'none';
     sidebar.style.display = 'none';
     toggleGameVisible(true);
+    clearSavedGameState();
     await game.reset({ hero: deckState.hero, cards: deckState.cards });
     // Persist last used deck
     try { saveLastDeck({ hero: deckState.hero, cards: deckState.cards }); } catch {}
+    saveGameState(game);
     rerender();
     // No RAF loop; state updates via DOM events
   });
 let logsOn = true;
-renderOptions(optsRoot, { onReset: async () => { deckState.cards.length = 0; deckState.hero = null; rerenderDeck(); await game.reset(); rerender(); } });
+renderOptions(optsRoot, { onReset: async () => { deckState.cards.length = 0; deckState.hero = null; rerenderDeck(); clearSavedGameState(); await game.reset(); saveGameState(game); rerender(); } });
 
-// Ensure logs are disabled by default in browser UI
-setDebugLogging(false);
+// Ensure logs mirror saved preference (defaults to false)
+setDebugLogging(!!game.state?.debug);
