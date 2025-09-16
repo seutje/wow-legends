@@ -52,3 +52,46 @@ test('MCTS can chain multiple plays in a turn', () => {
     expect(g.player.hero.data.health).toBeLessThanOrEqual(6);
   });
 });
+
+test('MCTS skips cards with no meaningful effect', async () => {
+  const g = new Game();
+  const ai = new MCTS_AI({ resourceSystem: g.resources, combatSystem: g.combat, game: g, iterations: 150, rolloutDepth: 3 });
+  g.turns.turn = 5;
+
+  g.opponent.hero.active = [];
+  g.opponent.hero.effects = [];
+  g.opponent.hero.powerUsed = false;
+  g.opponent.hero.data.health = 30;
+  g.opponent.hero.data.maxHealth = 30;
+  g.opponent.hero.data.armor = 0;
+  g.opponent.hero.data.spellDamage = 0;
+  g.opponent.battlefield.cards = [];
+  g.opponent.library.cards = [];
+
+  const shieldSlam = new Card({ type: 'spell', name: 'Shield Slam', cost: 1, effects: [{ type: 'damageArmor', target: 'minion' }] });
+  const healingPotion = new Card({ type: 'consumable', name: 'Healing Potion', cost: 1, effects: [{ type: 'heal', target: 'character', amount: 5 }] });
+  const manaPotion = new Card({
+    type: 'consumable',
+    name: 'Mana Potion',
+    cost: 0,
+    effects: [
+      { type: 'restore', amount: 2, requiresSpent: 2 },
+      { type: 'overload', amount: 1 }
+    ]
+  });
+
+  g.opponent.hand.add(shieldSlam);
+  g.opponent.hand.add(healingPotion);
+  g.opponent.hand.add(manaPotion);
+  g.turns.setActivePlayer(g.opponent);
+
+  await ai.takeTurn(g.opponent, g.player);
+
+  expect(g.opponent.graveyard.cards).toHaveLength(0);
+  expect(g.opponent.hand.cards.map(c => c.name)).toEqual(expect.arrayContaining([
+    'Shield Slam',
+    'Healing Potion',
+    'Mana Potion'
+  ]));
+  expect(g.opponent.hero.powerUsed).toBe(false);
+});
