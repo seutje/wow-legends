@@ -224,11 +224,11 @@ function serializeResources(game) {
   const pools = {
     player: {
       pool: game.resources.pool?.(game.player) ?? 0,
-      overload: game.resources._overloadNext?.get?.(game.player) ?? 0,
+      overload: game.resources.pendingOverload?.(game.player) ?? 0,
     },
     opponent: {
       pool: game.resources.pool?.(game.opponent) ?? 0,
-      overload: game.resources._overloadNext?.get?.(game.opponent) ?? 0,
+      overload: game.resources.pendingOverload?.(game.opponent) ?? 0,
     }
   };
   return pools;
@@ -241,11 +241,19 @@ function restoreResources(game, snapshot) {
   if (game.opponent) game.resources.startTurn(game.opponent);
   if (game.player && pools.player) {
     game.resources._pool?.set?.(game.player, pools.player.pool ?? game.resources.available(game.player));
-    game.resources._overloadNext?.set?.(game.player, pools.player.overload ?? 0);
+    if (typeof game.resources.setPendingOverload === 'function') {
+      game.resources.setPendingOverload(game.player, pools.player.overload ?? 0);
+    } else {
+      game.resources._overloadNext?.set?.(game.player, pools.player.overload ?? 0);
+    }
   }
   if (game.opponent && pools.opponent) {
     game.resources._pool?.set?.(game.opponent, pools.opponent.pool ?? game.resources.available(game.opponent));
-    game.resources._overloadNext?.set?.(game.opponent, pools.opponent.overload ?? 0);
+    if (typeof game.resources.setPendingOverload === 'function') {
+      game.resources.setPendingOverload(game.opponent, pools.opponent.overload ?? 0);
+    } else {
+      game.resources._overloadNext?.set?.(game.opponent, pools.opponent.overload ?? 0);
+    }
   }
 }
 

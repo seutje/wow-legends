@@ -1,3 +1,4 @@
+import { jest } from '@jest/globals';
 import Game from '../src/js/game.js';
 import Card from '../src/js/entities/card.js';
 import MCTS_AI from '../src/js/systems/ai-mcts.js';
@@ -94,4 +95,44 @@ test('MCTS skips cards with no meaningful effect', async () => {
     'Mana Potion'
   ]));
   expect(g.opponent.hero.powerUsed).toBe(false);
+});
+
+test('MCTS search includes pending overload from previous actions', async () => {
+  const g = new Game();
+  const ai = new MCTS_AI({ resourceSystem: g.resources, combatSystem: g.combat, game: g, iterations: 20, rolloutDepth: 2 });
+
+  g.turns.turn = 3;
+  g.turns.setActivePlayer(g.opponent);
+  g.opponent.hand.cards = [];
+
+  const overloadBolt = new Card({
+    type: 'spell',
+    name: 'Overload Bolt',
+    cost: 1,
+    effects: [
+      { type: 'damage', amount: 1, target: 'any' },
+      { type: 'overload', amount: 2 }
+    ]
+  });
+
+  g.opponent.hand.add(overloadBolt);
+
+  const calls = [];
+  const actions = [
+    { card: overloadBolt, usePower: false, end: false },
+    { end: true }
+  ];
+
+  const searchMock = jest.spyOn(ai, '_searchAsync').mockImplementation(async (rootState) => {
+    calls.push(rootState.overloadNextPlayer);
+    return actions.shift() || { end: true };
+  });
+
+  await ai.takeTurn(g.opponent, g.player);
+
+  expect(calls.length).toBeGreaterThanOrEqual(2);
+  expect(calls[0]).toBe(0);
+  expect(calls[1]).toBe(2);
+
+  searchMock.mockRestore();
 });

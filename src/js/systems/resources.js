@@ -47,6 +47,14 @@ export class ResourceSystem {
     this._pool.set(player, p + amount);
   }
 
+  pendingOverload(player) {
+    return this._overloadNext.get(player) || 0;
+  }
+
+  setPendingOverload(player, amount) {
+    this._overloadNext.set(player, Math.max(0, amount || 0));
+  }
+
   addOverloadNextTurn(player, amount) {
     const cur = this._overloadNext.get(player) || 0;
     this._overloadNext.set(player, cur + amount);
