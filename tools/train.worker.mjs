@@ -11,10 +11,20 @@ import { RNG } from '../src/js/utils/rng.js';
 // Disable debug logging inside the worker as well
 setDebugLogging(false);
 
-async function evalCandidate(model, { games = 5, maxRounds = 20, opponentMode = 'mcts', opponentModelJSON = null } = {}) {
-  const baselineModel = (opponentMode === 'best' && opponentModelJSON)
-    ? MLP.fromJSON(opponentModelJSON)
+function sanitizeIterations(value, fallback = 5000) {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n <= 0) return fallback;
+  return Math.round(n);
+}
+
+async function evalCandidate(model, { games = 5, maxRounds = 20, opponentConfig = null } = {}) {
+  const config = opponentConfig || { mode: 'mcts', iterations: 5000, rolloutDepth: 10, fullSim: true };
+  const baselineModel = (config.mode === 'best' && config.modelJSON)
+    ? MLP.fromJSON(config.modelJSON)
     : null;
+  const iterations = sanitizeIterations(config.iterations ?? 5000, 5000);
+  const rolloutDepth = Number.isFinite(config.rolloutDepth) ? config.rolloutDepth : 10;
+  const fullSim = config.fullSim ?? true;
   let total = 0;
   for (let g = 0; g < games; g++) {
     const game = new Game(null, { aiPlayers: ['player', 'opponent'] });
@@ -27,7 +37,14 @@ async function evalCandidate(model, { games = 5, maxRounds = 20, opponentMode = 
     const aiOpp = new NeuralAI({ game, resourceSystem: game.resources, combatSystem: game.combat, model });
     const playerAI = (baselineModel)
       ? new NeuralAI({ game, resourceSystem: game.resources, combatSystem: game.combat, model: baselineModel })
-      : new MCTS_AI({ resourceSystem: game.resources, combatSystem: game.combat, game, iterations: 5000, rolloutDepth: 10, fullSim: true });
+      : new MCTS_AI({
+        resourceSystem: game.resources,
+        combatSystem: game.combat,
+        game,
+        iterations,
+        rolloutDepth,
+        fullSim
+      });
 
     let rounds = 0;
     let opponentTurns = 0;
@@ -70,9 +87,9 @@ parentPort.on('message', async (msg) => {
   const { id, cmd, payload } = msg || {};
   try {
     if (cmd === 'eval') {
-      const { modelJSON, games, maxRounds, opponentMode, opponentModelJSON } = payload;
+      const { modelJSON, games, maxRounds, opponentConfig } = payload;
       const model = MLP.fromJSON(modelJSON);
-      const score = await evalCandidate(model, { games, maxRounds, opponentMode, opponentModelJSON });
+      const score = await evalCandidate(model, { games, maxRounds, opponentConfig });
       parentPort.postMessage({ id, ok: true, result: score });
     } else {
       parentPort.postMessage({ id, ok: false, error: `Unknown cmd: ${cmd}` });

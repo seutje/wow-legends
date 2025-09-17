@@ -54,7 +54,10 @@ Developer Notes
   - Game orchestrator: `src/js/game.js`
   - Browser entry: `src/js/main.js`
 - Tests: `__tests__/*`, run with `npm test` or `npm run test:coverage`.
-- Train Nightmare AI: `npm run train -- <population> <generations> <reset>` — evolutionary RL saves best model to `data/models/best.json`. Example: `npm run train -- 200 15 true`.
+- Train Nightmare AI:
+  - `npm run train -- <population> <generations> <reset> <opponent>` — evolutionary RL saves the best model to `data/models/best.json`. The optional `<opponent>` defaults to `mcts`, or set `best`/`mcts@<iterations>` to start against the saved NN or a weaker MCTS baseline.
+  - Add `--curriculum gentle` to ramp from a light MCTS opponent toward the requested baseline automatically. Custom schedules use comma-separated `<scoreThreshold>:<opponent>` entries, e.g. `--curriculum "0:mcts@1500,1.2:mcts@4000,2.0:best"`.
+  - Example: `npm run train -- 200 15 true mcts --curriculum gentle`.
 - Evaluate NN vs hard MCTS: `npm run eval` — runs a single game with NN as player vs hard MCTS as opponent (max 20 rounds) and prints result summary. Provide a model path to pit two neural AIs: `npm run eval -- data/other-model.json`.
 - Simulation CLI: `npm run simulate` (quick AI turns). Balance sampling: `node tools/balance.mjs`.
 - Content pipeline: `node tools/cards-ingest.mjs` parses `CARDS.md` and writes per-type JSON under `data/cards/` (e.g., `data/cards/hero.json`, `data/cards/spell.json`, `data/cards/ally.json`, etc.).
@@ -65,4 +68,4 @@ Nightmare AI
 - Uses a small MLP (two hidden layers of 64) to score Q(s,a).
 - Inputs include normalized state features (health, armor, resources, board/hand metrics) and action features (type, cost, stats, keywords).
 - Output is a scalar score per candidate action; picks the highest.
-- Training runs population=500 for 10 generations vs an MCTS baseline and saves the best model to `data/models/best.json`.
+- Training runs population=500 for 10 generations vs an MCTS baseline (by default) and saves the best model to `data/models/best.json`. Use the `--curriculum` flag to introduce a weaker baseline early and escalate the opponent after the population's top score crosses configured thresholds.
