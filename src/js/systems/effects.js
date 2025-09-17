@@ -116,7 +116,7 @@ export class EffectSystem {
           await this.playRandomConsumableFromLibrary(effect, context);
           break;
         case 'destroy':
-          this.destroyMinion(effect, context);
+          await this.destroyMinion(effect, context);
           break;
         case 'returnToHand':
           await this.returnToHand(effect, context);
@@ -1058,29 +1058,85 @@ export class EffectSystem {
     });
   }
 
-  destroyMinion(effect, context) {
-    const { target, condition } = effect;
+  async destroyMinion(effect, context) {
+    const { target = 'enemyAlly', condition } = effect;
     const { game, player } = context;
     const opponent = player === game.player ? game.opponent : game.player;
 
-    // Destroy a random enemy ally that meets the condition (relative to acting player)
-    const targetMinions = opponent.battlefield.cards
-      .filter(c => {
-        if (c.type !== 'ally') return false;
-        if (condition.type === 'attackLessThan') {
-          return c.data.attack <= condition.amount;
-        }
-        return true;
-      })
-      .filter(isTargetable);
+    const collectAllies = (owner) => owner.battlefield.cards.filter(c => c.type === 'ally');
 
-    if (targetMinions.length > 0) {
-      const minionToDestroy = game.rng.pick(targetMinions);
-      opponent.battlefield.moveTo(opponent.graveyard, minionToDestroy);
-      console.log(`Destroyed ${minionToDestroy.name}.`);
-    } else {
-      console.log('No minion found to destroy.');
+    let candidates;
+    switch (target) {
+      case 'ally':
+      case 'friendlyAlly':
+      case 'friendlyMinion':
+        candidates = collectAllies(player);
+        break;
+      case 'anyAlly':
+      case 'anyMinion':
+        candidates = [...collectAllies(player), ...collectAllies(opponent)];
+        break;
+      case 'minion':
+      case 'enemyAlly':
+      case 'enemyMinion':
+      default:
+        candidates = collectAllies(opponent);
+        break;
     }
+
+    const getAttackValue = (unit) => {
+      if (!unit) return 0;
+      if (typeof unit.totalAttack === 'function') {
+        try {
+          return unit.totalAttack();
+        } catch (err) {
+          // Ignore errors from custom totalAttack implementations and fall back to data.
+        }
+      }
+      if (typeof unit?.data?.attack === 'number') return unit.data.attack;
+      if (typeof unit?.attack === 'number') return unit.attack;
+      return 0;
+    };
+
+    candidates = candidates
+      .filter(isTargetable)
+      .filter((c) => {
+        if (!condition) return true;
+        switch (condition.type) {
+          case 'attackLessThan':
+            return getAttackValue(c) <= (condition.amount ?? 0);
+          default:
+            return true;
+        }
+      });
+
+    if (!candidates.length) {
+      console.log('No minion found to destroy.');
+      return;
+    }
+
+    let chosen;
+    if (candidates.length === 1) {
+      chosen = candidates[0];
+    } else {
+      chosen = await game.promptTarget(candidates);
+      if (chosen === game.CANCEL) throw game.CANCEL;
+      if (!chosen) return;
+    }
+
+    const owner = player.battlefield.cards.includes(chosen)
+      ? player
+      : opponent.battlefield.cards.includes(chosen)
+        ? opponent
+        : null;
+
+    if (!owner) {
+      console.log('No minion found to destroy.');
+      return;
+    }
+
+    owner.battlefield.moveTo(owner.graveyard, chosen);
+    console.log(`Destroyed ${chosen.name}.`);
   }
 
   async returnToHand(effect, context) {
