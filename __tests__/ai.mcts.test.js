@@ -182,6 +182,66 @@ test('MCTS skips temporary hero spell-damage buffs when there is no follow-up', 
 
   const actions = ai._legalActions(rootState);
   expect(actions.some(a => a.card?.name === 'Elixir of Firepower')).toBe(false);
+
+  const sim = ai._buildSimFrom(g, g.opponent, g.player);
+  const simActions = ai._legalActionsSim(sim, sim.player);
+  expect(simActions.some(a => a.card?.name === 'Elixir of Firepower')).toBe(false);
+});
+
+test('MCTS filters useless healing hero power and cards in heuristic and full simulations', () => {
+  const g = new Game();
+  const ai = new MCTS_AI({ resourceSystem: g.resources, combatSystem: g.combat });
+  const aiFull = new MCTS_AI({ resourceSystem: g.resources, combatSystem: g.combat, game: g, fullSim: true });
+
+  g.turns.turn = 3;
+  g.turns.setActivePlayer(g.opponent);
+  g.resources._pool.set(g.opponent, 3);
+
+  g.opponent.hero.powerUsed = false;
+  g.opponent.hero.active = [
+    { type: 'heal', target: 'hero', amount: 2 }
+  ];
+  g.opponent.hero.data.maxHealth = 30;
+  g.opponent.hero.data.health = 30;
+
+  g.player.hero.data.maxHealth = 30;
+  g.player.hero.data.health = 30;
+
+  g.opponent.hand.cards = [];
+  g.opponent.battlefield.cards = [];
+  g.player.battlefield.cards = [];
+
+  const salve = new Card({
+    id: 'test-salve',
+    type: 'spell',
+    name: 'Renewing Salve',
+    cost: 1,
+    effects: [
+      { type: 'heal', target: 'hero', amount: 4 }
+    ]
+  });
+
+  g.opponent.hand.add(salve);
+
+  const rootState = {
+    player: g.opponent,
+    opponent: g.player,
+    pool: 3,
+    turn: 3,
+    powerAvailable: true,
+    overloadNextPlayer: 0,
+    overloadNextOpponent: 0,
+    enteredThisTurn: new Set(),
+  };
+
+  const heuristicActions = ai._legalActions(rootState);
+  expect(heuristicActions).toHaveLength(1);
+  expect(heuristicActions[0]).toEqual({ card: null, usePower: false, end: true });
+
+  const sim = aiFull._buildSimFrom(g, g.opponent, g.player);
+  const simActions = aiFull._legalActionsSim(sim, sim.player);
+  expect(simActions).toHaveLength(1);
+  expect(simActions[0]).toEqual({ card: null, usePower: false, end: true });
 });
 
 test('MCTS spell-damage buffs boost subsequent spell damage in the simple simulation', () => {
