@@ -76,6 +76,9 @@ export class EffectSystem {
         case 'summonBuff':
           this.registerSummonBuff(effect, context);
           break;
+        case 'equipmentKeywordAura':
+          this.registerEquipmentKeywordAura(effect, context);
+          break;
         case 'buff':
           await this.applyBuff(effect, context);
           break;
@@ -411,6 +414,147 @@ export class EffectSystem {
 
     game.bus.on('cardPlayed', onPlay);
     game.bus.on('unitSummoned', onSummon);
+  }
+
+  registerEquipmentKeywordAura(effect, context) {
+    const { keyword, attack = 0, health = 0 } = effect;
+    const { game, player, card } = context;
+
+    if (!keyword || !game || !player || !card) return;
+
+    const keyBase = `equipmentAura:${card.id || card.name || 'unknown'}:${keyword}`;
+    const attackKey = `${keyBase}:attack`;
+    const healthKey = `${keyBase}:health`;
+
+    const matchesEquipment = (eq) => {
+      if (!eq) return false;
+      if (eq === card) return true;
+      if (card.id && eq.id === card.id) return true;
+      if (card.name && eq.name === card.name) return true;
+      return false;
+    };
+
+    const isEquipped = () => {
+      const eqList = Array.isArray(player?.hero?.equipment) ? player.hero.equipment : [];
+      return eqList.some(matchesEquipment);
+    };
+
+    const offFns = [];
+    let disposed = false;
+    let wasActive = false;
+
+    const track = (off) => {
+      if (typeof off === 'function') offFns.push(off);
+    };
+
+    const cleanup = () => {
+      if (disposed) return;
+      disposed = true;
+      while (offFns.length) {
+        const off = offFns.pop();
+        try { off(); } catch {}
+      }
+    };
+
+    const ensureData = (unit) => {
+      if (!unit.data) unit.data = {};
+      return unit.data;
+    };
+
+    const setAttackBonus = (unit, amount) => {
+      const data = ensureData(unit);
+      const current = typeof data[attackKey] === 'number' ? data[attackKey] : 0;
+      if (current === amount) return;
+      const base = typeof data.attack === 'number' ? data.attack : 0;
+      const next = base + (amount - current);
+      data.attack = next;
+      if (amount === 0) delete data[attackKey];
+      else data[attackKey] = amount;
+    };
+
+    const setHealthBonus = (unit, amount) => {
+      const data = ensureData(unit);
+      const current = typeof data[healthKey] === 'number' ? data[healthKey] : 0;
+      if (current === amount) return;
+      const diff = amount - current;
+      const baseHealth = typeof data.health === 'number' ? data.health : 0;
+      const baseMax = typeof data.maxHealth === 'number' ? data.maxHealth : baseHealth;
+      data.health = baseHealth + diff;
+      data.maxHealth = baseMax + diff;
+      if (diff < 0) {
+        data.maxHealth = Math.max(0, data.maxHealth);
+        data.health = Math.max(0, Math.min(data.health, data.maxHealth));
+      }
+      if (amount === 0) delete data[healthKey];
+      else data[healthKey] = amount;
+    };
+
+    const clearAura = () => {
+      if (!player?.battlefield?.cards) return;
+      for (const ally of player.battlefield.cards) {
+        if (!ally || ally.type !== 'ally') continue;
+        setAttackBonus(ally, 0);
+        if (health !== 0 || (ally?.data && typeof ally.data[healthKey] === 'number')) {
+          setHealthBonus(ally, 0);
+        }
+      }
+    };
+
+    const updateAllies = () => {
+      if (disposed) return;
+      if (!player?.battlefield?.cards) return;
+
+      const active = isEquipped();
+      if (!active) {
+        if (!wasActive) return;
+        clearAura();
+        cleanup();
+        return;
+      }
+
+      wasActive = true;
+      for (const ally of player.battlefield.cards) {
+        if (!ally || ally.type !== 'ally') continue;
+        const hasKeyword = Array.isArray(ally.keywords) && ally.keywords.includes(keyword);
+        const targetAttack = hasKeyword ? attack : 0;
+        const targetHealth = hasKeyword ? health : 0;
+        setAttackBonus(ally, targetAttack);
+        if (health !== 0 || (ally?.data && typeof ally.data[healthKey] === 'number')) {
+          setHealthBonus(ally, targetHealth);
+        }
+      }
+    };
+
+    track(game.bus.on('cardPlayed', ({ player: evtPlayer }) => {
+      if (evtPlayer !== player) return;
+      updateAllies();
+    }));
+
+    track(game.bus.on('unitSummoned', ({ player: evtPlayer }) => {
+      if (evtPlayer !== player) return;
+      updateAllies();
+    }));
+
+    track(game.bus.on('damageDealt', ({ player: srcPlayer, source, target }) => {
+      if (srcPlayer === player || source === player.hero || target === player.hero) {
+        updateAllies();
+      }
+    }));
+
+    track(game.bus.on('cardReturned', ({ card: returned }) => {
+      if (disposed) return;
+      if (returned === card || (returned?.id && returned.id === card.id)) {
+        if (wasActive) clearAura();
+        cleanup();
+      }
+    }));
+
+    track(game.turns.bus.on('turn:start', ({ player: turnPlayer }) => {
+      if (turnPlayer !== player) return;
+      updateAllies();
+    }));
+
+    // Ensure existing allies are buffed once equipped (cardPlayed event will trigger post-equip).
   }
 
   async healCharacter(effect, context) {

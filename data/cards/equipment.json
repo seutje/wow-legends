@@ -8,8 +8,9 @@
     "durability": 1,
     "effects": [
       {
-        "type": "rawText",
-        "text": "While equipped, your Taunt allies have +1 ATK."
+        "type": "equipmentKeywordAura",
+        "keyword": "Taunt",
+        "attack": 1
       }
     ],
     "keywords": [

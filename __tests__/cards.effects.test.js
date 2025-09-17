@@ -328,6 +328,30 @@ describe.each(effectCards)('$id executes its effect', (card) => {
         expect(demon.data.health).toBe(2);
         break;
       }
+      case 'equipmentKeywordAura': {
+        const tauntAlly = new Card({
+          name: 'Taunt Ally',
+          type: 'ally',
+          data: { attack: 2, health: 3 },
+          keywords: [effect.keyword],
+        });
+        const otherAlly = new Card({
+          name: 'Other Ally',
+          type: 'ally',
+          data: { attack: 4, health: 4 },
+          keywords: [],
+        });
+        g.player.battlefield.add(tauntAlly);
+        g.player.battlefield.add(otherAlly);
+        await g.playFromHand(g.player, card.id);
+        const attackBonus = typeof effect.attack === 'number' ? effect.attack : 0;
+        const healthBonus = typeof effect.health === 'number' ? effect.health : 0;
+        expect(tauntAlly.data.attack).toBe(2 + attackBonus);
+        expect(tauntAlly.data.health).toBe(3 + healthBonus);
+        expect(otherAlly.data.attack).toBe(4);
+        expect(otherAlly.data.health).toBe(4);
+        break;
+      }
       case 'buffOnArmorGain': {
         g.player.hand.add(new Card(card));
         const treant = g.player.hand.cards[0];
