@@ -10,6 +10,7 @@ export class EffectSystem {
     this.game = game;
     this.effectRegistry = new Map();
     this.temporaryEffects = [];
+    this.cleanupFns = new Set();
     this.registerDefaults();
 
     this.game.turns.bus.on('phase:end', ({ phase }) => {
@@ -17,6 +18,30 @@ export class EffectSystem {
         this.cleanupTemporaryEffects();
       }
     });
+  }
+
+  _trackCleanup(off) {
+    if (typeof off !== 'function') return off;
+    let active = true;
+    const wrapped = () => {
+      if (!active) return;
+      active = false;
+      try { off(); } catch {}
+      finally {
+        this.cleanupFns.delete(wrapped);
+      }
+    };
+    this.cleanupFns.add(wrapped);
+    return wrapped;
+  }
+
+  reset() {
+    const pending = Array.from(this.cleanupFns);
+    this.cleanupFns.clear();
+    for (const off of pending) {
+      try { off(); } catch {}
+    }
+    this.cleanupTemporaryEffects();
   }
 
   async execute(cardEffects, context) {
@@ -412,8 +437,8 @@ export class EffectSystem {
       applyBuff(summoned);
     };
 
-    game.bus.on('cardPlayed', onPlay);
-    game.bus.on('unitSummoned', onSummon);
+    this._trackCleanup(game.bus.on('cardPlayed', onPlay));
+    this._trackCleanup(game.bus.on('unitSummoned', onSummon));
   }
 
   registerEquipmentKeywordAura(effect, context) {
@@ -444,7 +469,12 @@ export class EffectSystem {
     let wasActive = false;
 
     const track = (off) => {
-      if (typeof off === 'function') offFns.push(off);
+      if (typeof off === 'function') {
+        const wrapped = this._trackCleanup(off);
+        offFns.push(wrapped);
+        return wrapped;
+      }
+      return off;
     };
 
     const cleanup = () => {
@@ -652,7 +682,7 @@ export class EffectSystem {
       );
     };
 
-    const off = game.bus.on('damageDealt', handler);
+    const off = this._trackCleanup(game.bus.on('damageDealt', handler));
     return token;
   }
 
@@ -704,7 +734,7 @@ export class EffectSystem {
       try { game._uiRerender?.(); } catch {}
     };
 
-    const off = game.bus.on('attackDeclared', handler);
+    const off = this._trackCleanup(game.bus.on('attackDeclared', handler));
     return token;
   }
 
@@ -755,7 +785,7 @@ export class EffectSystem {
       await game.effects.summonUnit(summon, { game, player, card });
     };
 
-    const off = game.bus.on('attackDeclared', handler);
+    const off = this._trackCleanup(game.bus.on('attackDeclared', handler));
     return token;
   }
 
@@ -821,7 +851,7 @@ export class EffectSystem {
       }
     };
 
-    const off = game.bus.on('damageDealt', handler);
+    const off = this._trackCleanup(game.bus.on('damageDealt', handler));
     return token;
   }
 
@@ -877,7 +907,7 @@ export class EffectSystem {
       }
     };
 
-    const off = game.bus.on('allyDefeated', handler);
+    const off = this._trackCleanup(game.bus.on('allyDefeated', handler));
     return token;
   }
 
@@ -903,8 +933,8 @@ export class EffectSystem {
       }
     };
 
-    const offHeal = game.bus.on('characterHealed', handler);
-    const offTurn = game.turns.bus.on('turn:start', reset);
+    const offHeal = this._trackCleanup(game.bus.on('characterHealed', handler));
+    const offTurn = this._trackCleanup(game.turns.bus.on('turn:start', reset));
 
     const remove = () => {
       offHeal();
@@ -913,13 +943,13 @@ export class EffectSystem {
       offReturn();
     };
 
-    const offDeath = game.bus.on('allyDefeated', ({ card: dead }) => {
+    const offDeath = this._trackCleanup(game.bus.on('allyDefeated', ({ card: dead }) => {
       if (dead === card) remove();
-    });
+    }));
 
-    const offReturn = game.bus.on('cardReturned', ({ card: returned }) => {
+    const offReturn = this._trackCleanup(game.bus.on('cardReturned', ({ card: returned }) => {
       if (returned === card) remove();
-    });
+    }));
   }
 
   healAtEndOfTurn(effect, context) {
@@ -976,7 +1006,7 @@ export class EffectSystem {
       game.bus.emit('characterHealed', { player: healedPlayer, target: targetChar, amount, source: card });
     };
 
-    const offTurn = game.turns.bus.on('turn:start', handler);
+    const offTurn = this._trackCleanup(game.turns.bus.on('turn:start', handler));
 
     const remove = () => {
       offTurn();
@@ -984,13 +1014,13 @@ export class EffectSystem {
       offReturn();
     };
 
-    const offDeath = game.bus.on('allyDefeated', ({ card: dead }) => {
+    const offDeath = this._trackCleanup(game.bus.on('allyDefeated', ({ card: dead }) => {
       if (dead === card) remove();
-    });
+    }));
 
-    const offReturn = game.bus.on('cardReturned', ({ card: returned }) => {
+    const offReturn = this._trackCleanup(game.bus.on('cardReturned', ({ card: returned }) => {
       if (returned === card) remove();
-    });
+    }));
   }
 
   buffAtEndOfTurn(effect, context) {
@@ -1041,7 +1071,7 @@ export class EffectSystem {
       );
     };
 
-    const offTurn = game.turns.bus.on('turn:start', handler);
+    const offTurn = this._trackCleanup(game.turns.bus.on('turn:start', handler));
 
     const remove = () => {
       offTurn();
@@ -1049,13 +1079,13 @@ export class EffectSystem {
       offReturn();
     };
 
-    const offDeath = game.bus.on('allyDefeated', ({ card: dead }) => {
+    const offDeath = this._trackCleanup(game.bus.on('allyDefeated', ({ card: dead }) => {
       if (dead === card) remove();
-    });
+    }));
 
-    const offReturn = game.bus.on('cardReturned', ({ card: returned }) => {
+    const offReturn = this._trackCleanup(game.bus.on('cardReturned', ({ card: returned }) => {
       if (returned === card) remove();
-    });
+    }));
   }
 
   async destroyMinion(effect, context) {
@@ -1457,7 +1487,7 @@ export class EffectSystem {
               off();
             }
           };
-          const off = game.turns.bus.on('turn:start', handler);
+          const off = this._trackCleanup(game.turns.bus.on('turn:start', handler));
         }
       };
 
@@ -1600,7 +1630,7 @@ export class EffectSystem {
       apply();
     };
 
-    const offArmor = game.bus.on('armorGained', handler);
+    const offArmor = this._trackCleanup(game.bus.on('armorGained', handler));
 
     const remove = () => {
       offArmor();
@@ -1608,13 +1638,13 @@ export class EffectSystem {
       offReturn();
     };
 
-    const offDeath = game.bus.on('allyDefeated', ({ card: dead }) => {
+    const offDeath = this._trackCleanup(game.bus.on('allyDefeated', ({ card: dead }) => {
       if (dead === card) remove();
-    });
+    }));
 
-    const offReturn = game.bus.on('cardReturned', ({ card: returned }) => {
+    const offReturn = this._trackCleanup(game.bus.on('cardReturned', ({ card: returned }) => {
       if (returned === card) remove();
-    });
+    }));
   }
 
   buffOnSurviveDamage(effect, context) {
@@ -1638,7 +1668,7 @@ export class EffectSystem {
       if (card.data?.health > 0) apply();
     };
 
-    const offDamage = game.bus.on('damageDealt', handler);
+    const offDamage = this._trackCleanup(game.bus.on('damageDealt', handler));
 
     const remove = () => {
       offDamage();
@@ -1646,13 +1676,13 @@ export class EffectSystem {
       offReturn();
     };
 
-    const offDeath = game.bus.on('allyDefeated', ({ card: dead }) => {
+    const offDeath = this._trackCleanup(game.bus.on('allyDefeated', ({ card: dead }) => {
       if (dead === card) remove();
-    });
+    }));
 
-    const offReturn = game.bus.on('cardReturned', ({ card: returned }) => {
+    const offReturn = this._trackCleanup(game.bus.on('cardReturned', ({ card: returned }) => {
       if (returned === card) remove();
-    });
+    }));
   }
 
   equipItem(effect, context) {

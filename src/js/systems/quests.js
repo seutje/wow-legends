@@ -16,6 +16,10 @@ export class QuestSystem {
     });
   }
 
+  reset() {
+    this.active.clear();
+  }
+
   addQuest(player, card) {
     const arr = this.active.get(player) || [];
     arr.push({ card, progress: 0 });

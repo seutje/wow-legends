@@ -213,7 +213,7 @@ export default class Game {
     this.player.library.shuffle(rng);
     this.opponent.library.shuffle(rng);
 
-    
+
 
     this.turns.setActivePlayer(this.player);
     // Draw opening hand
@@ -849,6 +849,16 @@ export default class Game {
     this.turns.turn = 1;
     this.turns.current = 'Start';
     this.turns.activePlayer = null;
+    if (this.effects?.reset) {
+      this.effects.reset();
+    }
+    if (this.quests?.reset) {
+      this.quests.reset();
+    }
+    if (typeof this.combat?.clear === 'function') {
+      this.combat.clear();
+      this.combat.setDefenderHero(null);
+    }
     this.resources = new ResourceSystem(this.turns);
     this.player = new Player({ name: 'You' });
     this.opponent = new Player({ name: 'AI' });
