@@ -427,6 +427,16 @@ export class MCTS_AI {
     sim.resources.startTurn(sim.opponent);
     sim.resources._pool.set(sim.player, myPool);
     sim.resources._pool.set(sim.opponent, opPool);
+    const originResources = game?.resources || this.resources;
+    const myOverload = originResources?.pendingOverload?.(me) ?? originResources?._overloadNext?.get?.(me) ?? 0;
+    const oppOverload = originResources?.pendingOverload?.(opp) ?? originResources?._overloadNext?.get?.(opp) ?? 0;
+    if (typeof sim.resources.setPendingOverload === 'function') {
+      sim.resources.setPendingOverload(sim.player, myOverload);
+      sim.resources.setPendingOverload(sim.opponent, oppOverload);
+    } else {
+      sim.resources._overloadNext?.set?.(sim.player, myOverload);
+      sim.resources._overloadNext?.set?.(sim.opponent, oppOverload);
+    }
     return sim;
   }
 
@@ -689,14 +699,20 @@ export class MCTS_AI {
     let powerAvailable = !!(player.hero?.active?.length) && !player.hero.powerUsed;
     while (true) {
       const pool = this.resources.pool(player);
+      const overloadPlayer = typeof this.resources.pendingOverload === 'function'
+        ? this.resources.pendingOverload(player)
+        : (this.resources._overloadNext?.get?.(player) || 0);
+      const overloadOpponent = typeof this.resources.pendingOverload === 'function'
+        ? this.resources.pendingOverload(opponent)
+        : (this.resources._overloadNext?.get?.(opponent) || 0);
       const rootState = {
         player,
         opponent,
         pool,
         turn: this.resources.turns.turn,
         powerAvailable,
-        overloadNextPlayer: 0,
-        overloadNextOpponent: 0,
+        overloadNextPlayer: overloadPlayer,
+        overloadNextOpponent: overloadOpponent,
       };
       let action;
       if (this.fullSim && this.game) {
