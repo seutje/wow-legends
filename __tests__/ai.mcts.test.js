@@ -338,3 +338,166 @@ test('MCTS avoids Whirlwind when it cannot kill an enemy enrage minion', async (
   expect(taurenPost.data.attack).toBe(3);
   expect(g.opponent.graveyard.cards.map(c => c.name)).not.toContain('Whirlwind');
 });
+
+test('_scoreRolloutAction rewards direct damage during rollouts', () => {
+  const g = new Game();
+  const ai = new MCTS_AI({ resourceSystem: g.resources, combatSystem: g.combat });
+
+  g.turns.turn = 4;
+  g.turns.setActivePlayer(g.opponent);
+  g.resources._pool.set(g.opponent, 4);
+  g.opponent.hero.active = [];
+  g.opponent.hand.cards = [];
+  g.player.hero.data.health = 10;
+
+  const blast = new Card({
+    id: 'rollout-blast',
+    type: 'spell',
+    name: 'Arcane Blast',
+    cost: 2,
+    effects: [{ type: 'damage', target: 'character', amount: 3 }]
+  });
+
+  g.opponent.hand.add(blast);
+
+  const rootState = {
+    player: g.opponent,
+    opponent: g.player,
+    pool: 4,
+    turn: 4,
+    powerAvailable: false,
+    overloadNextPlayer: 0,
+    overloadNextOpponent: 0,
+    enteredThisTurn: new Set(),
+  };
+
+  const result = ai._scoreRolloutAction(rootState, { card: blast, usePower: false, end: false });
+
+  expect(result.delta).toBeGreaterThan(0);
+  expect(result.outcome.terminal).toBe(false);
+  const enemyHeroHealth = result.outcome.state.opponent.hero.data.health;
+  expect(enemyHeroHealth).toBe(7);
+  const graveNames = result.outcome.state.player.graveyard.cards.map(c => c.name);
+  expect(graveNames).toContain('Arcane Blast');
+});
+
+test('_randomPlayout favors higher-scoring actions when not exploring', () => {
+  const g = new Game();
+  const ai = new MCTS_AI({ resourceSystem: g.resources, combatSystem: g.combat, rolloutDepth: 1 });
+
+  g.turns.turn = 4;
+  g.turns.setActivePlayer(g.opponent);
+  g.resources._pool.set(g.opponent, 4);
+  g.opponent.hero.active = [];
+  g.opponent.hand.cards = [];
+  g.player.hero.data.health = 12;
+
+  const blast = new Card({
+    id: 'rollout-play-blast',
+    type: 'spell',
+    name: 'Arcane Blast',
+    cost: 2,
+    effects: [{ type: 'damage', target: 'character', amount: 3 }]
+  });
+  const mend = new Card({
+    id: 'rollout-play-mend',
+    type: 'consumable',
+    name: 'Mend',
+    cost: 2,
+    effects: [{ type: 'heal', target: 'character', amount: 4 }]
+  });
+
+  g.opponent.hand.add(blast);
+  g.opponent.hand.add(mend);
+
+  const rootState = {
+    player: g.opponent,
+    opponent: g.player,
+    pool: 4,
+    turn: 4,
+    powerAvailable: false,
+    overloadNextPlayer: 0,
+    overloadNextOpponent: 0,
+    enteredThisTurn: new Set(),
+  };
+
+  const origRandom = Math.random;
+  const sequence = [0.5, 0];
+  Math.random = () => (sequence.length ? sequence.shift() : 0.1);
+
+  let resolvedState = null;
+  const resolveSpy = jest.spyOn(ai, '_resolveCombatAndScore').mockImplementation((state) => {
+    resolvedState = state;
+    return { terminal: true, value: 0 };
+  });
+
+  try {
+    ai._randomPlayout(rootState);
+  } finally {
+    Math.random = origRandom;
+    resolveSpy.mockRestore();
+  }
+
+  expect(resolvedState).toBeTruthy();
+  const graveNames = resolvedState.player.graveyard.cards.map(c => c.name);
+  expect(graveNames).toContain('Arcane Blast');
+  const remainingHand = resolvedState.player.hand.cards.map(c => c.name);
+  expect(remainingHand).toContain('Mend');
+});
+
+test('_randomPlayoutSim mirrors weighted rollout preferences', async () => {
+  const g = new Game();
+  const ai = new MCTS_AI({ resourceSystem: g.resources, combatSystem: g.combat, rolloutDepth: 1 });
+
+  g.turns.turn = 4;
+  g.turns.setActivePlayer(g.opponent);
+  g.resources._pool.set(g.opponent, 4);
+  g.resources._pool.set(g.player, 0);
+  g.opponent.hero.active = [];
+  g.opponent.hero.powerUsed = false;
+  g.opponent.hand.cards = [];
+  g.player.hero.data.health = 12;
+
+  const blast = new Card({
+    id: 'rollout-sim-blast',
+    type: 'spell',
+    name: 'Arcane Blast',
+    cost: 2,
+    effects: [{ type: 'damage', target: 'character', amount: 3 }]
+  });
+  const mend = new Card({
+    id: 'rollout-sim-mend',
+    type: 'consumable',
+    name: 'Mend',
+    cost: 2,
+    effects: [{ type: 'heal', target: 'character', amount: 4 }]
+  });
+
+  g.opponent.hand.add(blast);
+  g.opponent.hand.add(mend);
+
+  const sim = ai._buildSimFrom(g, g.opponent, g.player);
+
+  const origRandom = Math.random;
+  const sequence = [0.5, 0];
+  Math.random = () => (sequence.length ? sequence.shift() : 0.1);
+
+  let resolvedSim = null;
+  const resolveSpy = jest.spyOn(ai, '_resolveCombatAndScoreSim').mockImplementation(async (state) => {
+    resolvedSim = state;
+    return { terminal: true, value: 0 };
+  });
+
+  try {
+    await ai._randomPlayoutSim(sim);
+  } finally {
+    Math.random = origRandom;
+    resolveSpy.mockRestore();
+  }
+
+  expect(resolvedSim).toBeTruthy();
+  const graveNames = resolvedSim.player.graveyard.cards.map(c => c.name);
+  expect(graveNames).toContain('Arcane Blast');
+  const remainingHand = resolvedSim.player.hand.cards.map(c => c.name);
+  expect(remainingHand).toContain('Mend');
+});
