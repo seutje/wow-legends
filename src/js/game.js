@@ -596,6 +596,7 @@ export default class Game {
     const defender = player === this.player ? this.opponent : this.player;
     const card = [player.hero, ...player.battlefield.cards].find(c => c.id === cardId);
     if (!card) return false;
+    if ((card?.data?.freezeTurns || 0) > 0) return false;
     const atk = typeof card.totalAttack === 'function' ? card.totalAttack() : (card.data?.attack ?? 0);
     if (atk < 1) return false;
     // Block if summoning sick (no Rush)
