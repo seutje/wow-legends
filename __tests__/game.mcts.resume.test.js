@@ -1,5 +1,10 @@
 import { jest } from '@jest/globals';
 import Game from '../src/js/game.js';
+import MCTS_AI from '../src/js/systems/ai-mcts.js';
+import Player from '../src/js/entities/player.js';
+import TurnSystem from '../src/js/systems/turns.js';
+import ResourceSystem from '../src/js/systems/resources.js';
+import Card from '../src/js/entities/card.js';
 import { captureGameState, restoreCapturedState } from '../src/js/utils/savegame.js';
 
 async function waitFor(predicate, timeout = 5000) {
@@ -80,4 +85,60 @@ test('resumePendingAITurn restarts a queued MCTS turn from save data', async () 
   expect(game.state.aiThinking).toBe(false);
   expect(game.state.aiPending).toBeNull();
   expect(game.turns.activePlayer).toBe(game.player);
+});
+
+test('takeTurn clears cached tree when resuming a turn', async () => {
+  const turns = new TurnSystem();
+  const resources = new ResourceSystem(turns);
+  const player = new Player({ name: 'AI Player' });
+  const opponent = new Player({ name: 'Opponent' });
+  player.hero.active = [];
+  opponent.hero.active = [];
+  const combat = {
+    clear: jest.fn(),
+    declareAttacker: jest.fn(() => false),
+    assignBlocker: jest.fn(),
+    setDefenderHero: jest.fn(),
+    resolve: jest.fn(),
+  };
+  const ai = new MCTS_AI({ resourceSystem: resources, combatSystem: combat });
+  ai._lastTree = { node: { state: {} }, kind: 'state', signature: 'prev', actionChild: {} };
+  const seenRoots = [];
+  ai._searchAsync = jest.fn(async () => {
+    seenRoots.push(ai._lastTree);
+    return null;
+  });
+
+  const ok = await ai.takeTurn(player, opponent, { resume: true });
+  expect(ok).toBe(true);
+  expect(seenRoots[0]).toBeNull();
+  expect(ai._lastTree).toBeNull();
+});
+
+test('takeTurn clears cached tree when an action cannot resolve', async () => {
+  const turns = new TurnSystem();
+  const resources = new ResourceSystem(turns);
+  const player = new Player({ name: 'AI Player' });
+  const opponent = new Player({ name: 'Opponent' });
+  player.hero.active = [];
+  opponent.hero.active = [];
+  const combat = {
+    clear: jest.fn(),
+    declareAttacker: jest.fn(() => false),
+    assignBlocker: jest.fn(),
+    setDefenderHero: jest.fn(),
+    resolve: jest.fn(),
+  };
+  const ai = new MCTS_AI({ resourceSystem: resources, combatSystem: combat });
+  const card = new Card({ name: 'Test Ally', type: 'ally', cost: 0, data: { attack: 1, health: 1 } });
+  player.hand.add(card);
+  ai.game = { playFromHand: jest.fn().mockResolvedValue(false), state: {} };
+  ai._searchAsync = jest.fn(async () => {
+    ai._lastTree = { node: { state: {} }, kind: 'state', signature: 'sig', actionChild: { state: {} } };
+    return { card, usePower: false, end: false };
+  });
+
+  await ai.takeTurn(player, opponent);
+  expect(ai.game.playFromHand).toHaveBeenCalledTimes(1);
+  expect(ai._lastTree).toBeNull();
 });
