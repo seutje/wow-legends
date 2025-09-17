@@ -1011,12 +1011,23 @@ export class MCTS_AI {
 
   _legalActionsSim(sim, me) {
     const actions = [];
+    if (!sim || !me) {
+      actions.push({ card: null, usePower: false, end: true });
+      return actions;
+    }
     const pool = sim.resources.pool(me);
-    const canPower = me.hero?.active?.length && !me.hero.powerUsed && pool >= 2;
+    const turn = typeof sim.turns?.turn === 'number' ? sim.turns.turn : 0;
+    const heroPowerAvailable = !!(me.hero?.active?.length) && !me.hero.powerUsed;
+    me.__mctsPool = pool;
+    const canPower = heroPowerAvailable && pool >= 2
+      && !this._effectsAreUseless(me.hero?.active, me, { pool, turn, powerAvailable: heroPowerAvailable });
     if (canPower) actions.push({ card: null, usePower: true, end: false });
     for (const c of me.hand.cards) {
       const cost = c.cost || 0;
-      if (pool >= cost) actions.push({ card: c, usePower: false, end: false });
+      if (pool < cost) continue;
+      if (this._effectsAreUseless(c.effects, me, { pool, turn, card: c, powerAvailable: heroPowerAvailable })) continue;
+      actions.push({ card: c, usePower: false, end: false });
+      if (canPower && pool - cost >= 2) actions.push({ card: c, usePower: true, end: false });
     }
     actions.push({ card: null, usePower: false, end: true });
     return actions;
@@ -1041,6 +1052,7 @@ export class MCTS_AI {
       const ok = await s.useHeroPower(me);
       if (!ok) return { terminal: true, value: -Infinity };
     }
+    me.__mctsPool = s.resources?.pool?.(me) ?? me.__mctsPool;
     return { terminal: false, state: s };
   }
 
