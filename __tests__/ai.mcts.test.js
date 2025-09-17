@@ -237,3 +237,104 @@ test('MCTS spell-damage buffs boost subsequent spell damage in the simple simula
   const graveNames = afterBolt.state.player.graveyard.cards.map(c => c.name);
   expect(graveNames).toEqual(expect.arrayContaining(['Elixir of Firepower', 'Firebolt']));
 });
+
+test('simple simulation tracks enrage triggers and penalizes leaving them alive', () => {
+  const g = new Game();
+  const ai = new MCTS_AI({ resourceSystem: g.resources, combatSystem: g.combat, iterations: 50, rolloutDepth: 2 });
+
+  g.turns.turn = 4;
+  g.turns.setActivePlayer(g.opponent);
+
+  const whirlwind = new Card({
+    id: 'test-whirlwind',
+    type: 'spell',
+    name: 'Whirlwind',
+    cost: 2,
+    effects: [{ type: 'damage', target: 'allCharacters', amount: 1 }]
+  });
+  const tauren = new Card({
+    id: 'test-tauren',
+    type: 'ally',
+    name: 'Tauren Brave',
+    cost: 3,
+    effects: [{ type: 'buffOnSurviveDamage', attack: 2 }],
+    keywords: ['Taunt', 'Enrage'],
+    data: { attack: 3, health: 3 }
+  });
+
+  g.opponent.hand.add(whirlwind);
+  g.player.battlefield.cards.push(tauren);
+
+  const rootState = {
+    player: g.opponent,
+    opponent: g.player,
+    pool: 3,
+    turn: 4,
+    powerAvailable: false,
+    overloadNextPlayer: 0,
+    overloadNextOpponent: 0,
+    enteredThisTurn: new Set(),
+  };
+
+  const afterWhirl = ai._applyAction(rootState, { card: whirlwind, usePower: false, end: false });
+  expect(afterWhirl.terminal).toBe(false);
+  const simState = afterWhirl.state;
+  const enemyMinion = simState.opponent.battlefield.cards[0];
+  expect(enemyMinion.data.health).toBe(2);
+  expect(enemyMinion.data.attack).toBe(5);
+  expect(simState.enragedOpponentThisTurn.get(enemyMinion.id)).toBe(1);
+
+  const scoreAfterWhirl = ai._resolveCombatAndScore(simState).value;
+  const baseline = ai._resolveCombatAndScore(ai._cloneState(rootState)).value;
+  expect(scoreAfterWhirl).toBeLessThan(baseline);
+});
+
+test('MCTS avoids Whirlwind when it cannot kill an enemy enrage minion', async () => {
+  const g = new Game();
+  const ai = new MCTS_AI({ resourceSystem: g.resources, combatSystem: g.combat, game: g, iterations: 300, rolloutDepth: 3 });
+
+  g.turns.turn = 4;
+  g.turns.setActivePlayer(g.opponent);
+  g.opponent.hero.active = [];
+  g.opponent.hero.powerUsed = false;
+  g.opponent.hand.cards = [];
+  g.opponent.library.cards = [];
+  g.opponent.battlefield.cards = [];
+  g.player.battlefield.cards = [];
+  g.player.hero.data.health = 30;
+  g.opponent.hero.data.health = 30;
+  g.resources._pool.set(g.opponent, 3);
+
+  const whirlwind = new Card({
+    id: 'live-whirlwind',
+    type: 'spell',
+    name: 'Whirlwind',
+    cost: 2,
+    effects: [{ type: 'damage', target: 'allCharacters', amount: 1 }]
+  });
+  const tauren = new Card({
+    id: 'live-tauren',
+    type: 'ally',
+    name: 'Tauren Brave',
+    cost: 3,
+    effects: [{ type: 'buffOnSurviveDamage', attack: 2 }],
+    keywords: ['Taunt', 'Enrage'],
+    data: { attack: 3, health: 3 }
+  });
+
+  g.opponent.hand.add(whirlwind);
+  g.player.battlefield.cards.push(tauren);
+
+  const origRandom = Math.random;
+  Math.random = () => 0;
+  try {
+    await ai.takeTurn(g.opponent, g.player);
+  } finally {
+    Math.random = origRandom;
+  }
+
+  const taurenPost = g.player.battlefield.cards.find((c) => c.id === tauren.id);
+  expect(taurenPost.data.health).toBe(3);
+  expect(taurenPost.data.attack).toBe(3);
+  expect(g.opponent.graveyard.cards.map(c => c.name)).not.toContain('Whirlwind');
+});

@@ -20,6 +20,7 @@ class MCTSNode {
     this.untried = null; // filled lazily
     this.visits = 0;
     this.total = 0;
+    this.terminal = false;
   }
 
   ucb1(c = 1.4) {
@@ -170,6 +171,141 @@ export class MCTS_AI {
     return !sawHeroSpellBuff;
   }
 
+  _determineOwner(entity, player, opponent) {
+    if (!entity) return null;
+    if (entity.id && player?.hero?.id === entity.id) return 'player';
+    if (entity.id && opponent?.hero?.id === entity.id) return 'opponent';
+    const playerCards = player?.battlefield?.cards || [];
+    if (playerCards.some(c => c?.id === entity.id)) return 'player';
+    const opponentCards = opponent?.battlefield?.cards || [];
+    if (opponentCards.some(c => c?.id === entity.id)) return 'opponent';
+    return null;
+  }
+
+  _getEnrageEffects(card) {
+    if (!card?.effects?.length) return [];
+    return card.effects.filter((fx) => fx?.type === 'buffOnSurviveDamage');
+  }
+
+  _getEnrageTracker(state, owner) {
+    if (!state) return null;
+    if (owner === 'opponent') {
+      if (!(state.enragedOpponentThisTurn instanceof Map)) state.enragedOpponentThisTurn = new Map();
+      return state.enragedOpponentThisTurn;
+    }
+    if (owner === 'player') {
+      if (!(state.enragedPlayerThisTurn instanceof Map)) state.enragedPlayerThisTurn = new Map();
+      return state.enragedPlayerThisTurn;
+    }
+    return null;
+  }
+
+  _recordEnrageTrigger(state, owner, card) {
+    if (!card?.id) return;
+    const tracker = this._getEnrageTracker(state, owner);
+    if (!tracker) return;
+    const prev = tracker.get(card.id) || 0;
+    tracker.set(card.id, prev + 1);
+  }
+
+  _clearEnrageTracking(state, owner, cardId) {
+    if (!cardId) return;
+    const tracker = this._getEnrageTracker(state, owner);
+    if (!tracker) return;
+    tracker.delete(cardId);
+  }
+
+  _applyEnrageBuff(card, state, owner) {
+    const effects = this._getEnrageEffects(card);
+    if (!effects.length) return;
+    card.data = card.data || {};
+    for (const fx of effects) {
+      if (typeof fx.attack === 'number') {
+        const current = typeof card.data.attack === 'number' ? card.data.attack : 0;
+        card.data.attack = current + fx.attack;
+      }
+      if (typeof fx.health === 'number' && fx.health !== 0) {
+        const current = typeof card.data.health === 'number' ? card.data.health : 0;
+        const prior = current;
+        const next = current + fx.health;
+        card.data.health = next;
+        const baseMax = (typeof card.data.maxHealth === 'number') ? card.data.maxHealth : prior;
+        card.data.maxHealth = baseMax + fx.health;
+        if (fx.health < 0) {
+          card.data.health = Math.max(0, Math.min(card.data.health, card.data.maxHealth));
+        }
+      }
+    }
+    this._recordEnrageTrigger(state, owner, card);
+  }
+
+  _triggerEnrageIfPresent(card, owner, state) {
+    if (!card || card.type !== 'ally') return;
+    if (!this._getEnrageEffects(card).length) return;
+    if ((card.data?.health ?? 0) <= 0) return;
+    this._applyEnrageBuff(card, state, owner);
+  }
+
+  _applyDamageToTarget(target, amount, { state = null, player = null, opponent = null } = {}) {
+    if (!target || amount <= 0) return;
+    const data = target.data || (target.data = {});
+    const prevHealth = typeof data.health === 'number' ? data.health : (target.health ?? 0);
+    if (prevHealth <= 0) return;
+    const newHealth = Math.max(0, prevHealth - amount);
+    data.health = newHealth;
+    const owner = this._determineOwner(target, player, opponent);
+    if (owner && state) {
+      if (newHealth <= 0) {
+        if (target.type === 'ally') data.dead = true;
+        this._clearEnrageTracking(state, owner, target.id);
+      } else if (newHealth < prevHealth) {
+        this._triggerEnrageIfPresent(target, owner, state);
+      }
+    }
+  }
+
+  _collectDamageTargets(targetType, player, opponent, source = null) {
+    const friendly = [player?.hero, ...(player?.battlefield?.cards || [])].filter(Boolean);
+    const enemy = [opponent?.hero, ...(opponent?.battlefield?.cards || [])].filter(Boolean);
+    switch (targetType) {
+      case 'allCharacters':
+        return [...friendly, ...enemy];
+      case 'allOtherCharacters':
+        return [...friendly, ...enemy].filter(t => !source || t.id !== source.id);
+      case 'allies':
+      case 'allFriendlies':
+        return friendly;
+      case 'allEnemies':
+        return enemy;
+      default: {
+        return enemy.length ? [enemy[0]] : [];
+      }
+    }
+  }
+
+  _processCombatEnrage(events, state, player, opponent) {
+    if (!Array.isArray(events) || !state) return;
+    for (const ev of events) {
+      const target = ev?.target;
+      if (!target) continue;
+      const owner = this._determineOwner(target, player, opponent);
+      if (!owner) continue;
+      const prev = typeof ev?.prevHealth === 'number'
+        ? ev.prevHealth
+        : (target.data?.health ?? target.health ?? 0) + (ev.amount || 0);
+      const post = typeof ev?.postHealth === 'number'
+        ? ev.postHealth
+        : (target.data?.health ?? target.health ?? 0);
+      if (post <= 0) {
+        this._clearEnrageTracking(state, owner, target.id);
+        continue;
+      }
+      if (post < prev && (ev?.amount || 0) > 0) {
+        this._triggerEnrageIfPresent(target, owner, state);
+      }
+    }
+  }
+
   _applySimpleEffects(effects = [], player, opponent, pool, context = {}) {
     const { source = null, state = null } = context;
     for (const e of effects) {
@@ -189,15 +325,14 @@ export class MCTS_AI {
           break;
         }
         case 'damage': {
-          const chars = [opponent.hero, ...opponent.battlefield.cards];
-          const target = chars[0];
-          if (target) {
-            let total = amt;
-            const usesSpellDamage = (source?.type === 'spell') || e.usesSpellDamage;
-            if (usesSpellDamage) {
-              total += this._estimateSpellDamage(player);
-            }
-            target.data.health = Math.max(0, (target.data?.health ?? target.health) - total);
+          let total = amt;
+          const usesSpellDamage = (source?.type === 'spell') || e.usesSpellDamage;
+          if (usesSpellDamage) {
+            total += this._estimateSpellDamage(player);
+          }
+          const targets = this._collectDamageTargets(e.target, player, opponent, source);
+          for (const target of targets) {
+            this._applyDamageToTarget(target, total, { state, player, opponent });
           }
           break;
         }
@@ -276,6 +411,15 @@ export class MCTS_AI {
         ? base.baseHeroSpellDamage
         : null,
     };
+    const cloneEnrageMap = (value) => {
+      if (!value) return new Map();
+      if (value instanceof Map) return new Map(value);
+      if (value instanceof Set) return new Map(Array.from(value, id => [id, 1]));
+      if (Array.isArray(value)) return new Map(value);
+      return new Map();
+    };
+    s.enragedOpponentThisTurn = cloneEnrageMap(base.enragedOpponentThisTurn);
+    s.enragedPlayerThisTurn = cloneEnrageMap(base.enragedPlayerThisTurn);
     // track pool on the cloned player to reason about restore-spent conditions
     s.player.__mctsPool = s.pool;
     const hero = s.player?.hero;
@@ -408,7 +552,8 @@ export class MCTS_AI {
       if (block) combat.assignBlocker(a.id, block);
     }
     combat.setDefenderHero(o.hero);
-    combat.resolve();
+    const events = combat.resolve();
+    this._processCombatEnrage(events, state, p, o);
 
     for (const pl of [p, o]) {
       const dead = pl.battlefield.cards.filter(c => c.data?.dead);
@@ -425,6 +570,7 @@ export class MCTS_AI {
       resources: state.pool,
       overloadNextPlayer: state.overloadNextPlayer,
       overloadNextOpponent: state.overloadNextOpponent,
+      enragedOpponentThisTurn: state.enragedOpponentThisTurn,
     });
     return { terminal: true, value: score };
   }
@@ -628,10 +774,16 @@ export class MCTS_AI {
     for (let i = 0; i < this.iterations; i++) {
       let node = root;
       // Selection
-      while (node.untried === null ? false : node.untried.length === 0 && node.children.length) {
+      while (!node.terminal && (node.untried === null ? false : node.untried.length === 0 && node.children.length)) {
         node = this._selectChild(node);
       }
       // Expansion
+      if (node.terminal) {
+        const value = node.visits > 0 ? (node.total / node.visits) : 0;
+        let n = node;
+        while (n) { n.visits++; n.total += value; n = n.parent; }
+        continue;
+      }
       if (node.untried === null) node.untried = this._legalActionsSim(node.state, node.state.player);
       if (node.untried.length) {
         const idx = Math.floor(Math.random() * node.untried.length);
@@ -639,6 +791,14 @@ export class MCTS_AI {
         const res = await this._applyActionSim(node.state, action);
         if (res.terminal) {
           const value = res.value;
+          const child = new MCTSNode(null, node, action);
+          child.visits = 1;
+          child.total = value;
+          child.terminal = true;
+          child.state = null;
+          child.untried = [];
+          child.children = [];
+          node.children.push(child);
           let n = node; while (n) { n.visits++; n.total += value; n = n.parent; }
           continue;
         } else {
@@ -666,10 +826,16 @@ export class MCTS_AI {
       }
       // Selection
       let node = root;
-      while (node.untried === null ? false : node.untried.length === 0 && node.children.length) {
+      while (!node.terminal && (node.untried === null ? false : node.untried.length === 0 && node.children.length)) {
         node = this._selectChild(node);
       }
       // Expansion
+      if (node.terminal) {
+        const value = node.visits > 0 ? (node.total / node.visits) : 0;
+        let n = node;
+        while (n) { n.visits++; n.total += value; n = n.parent; }
+        continue;
+      }
       if (node.untried === null) node.untried = this._legalActions(node.state);
       if (node.untried.length) {
         const idx = Math.floor(Math.random() * node.untried.length);
@@ -678,6 +844,14 @@ export class MCTS_AI {
         if (res.terminal) {
           // Rollout is trivial: already terminal
           const value = res.value;
+          const child = new MCTSNode(null, node, action);
+          child.visits = 1;
+          child.total = value;
+          child.terminal = true;
+          child.state = null;
+          child.untried = [];
+          child.children = [];
+          node.children.push(child);
           // Backprop
           let n = node;
           while (n) { n.visits++; n.total += value; n = n.parent; }
@@ -710,10 +884,16 @@ export class MCTS_AI {
       const doOne = () => {
         // Selection
         let node = root;
-        while (node.untried === null ? false : node.untried.length === 0 && node.children.length) {
+        while (!node.terminal && (node.untried === null ? false : node.untried.length === 0 && node.children.length)) {
           node = this._selectChild(node);
         }
         // Expansion
+        if (node.terminal) {
+          const value = node.visits > 0 ? (node.total / node.visits) : 0;
+          let n = node;
+          while (n) { n.visits++; n.total += value; n = n.parent; }
+          return;
+        }
         if (node.untried === null) node.untried = this._legalActions(node.state);
         if (node.untried.length) {
           const idx = Math.floor(Math.random() * node.untried.length);
@@ -721,6 +901,14 @@ export class MCTS_AI {
           const res = this._applyAction(node.state, action);
           if (res.terminal) {
             const value = res.value;
+            const child = new MCTSNode(null, node, action);
+            child.visits = 1;
+            child.total = value;
+            child.terminal = true;
+            child.state = null;
+            child.untried = [];
+            child.children = [];
+            node.children.push(child);
             let n = node;
             while (n) { n.visits++; n.total += value; n = n.parent; }
             return;

@@ -169,6 +169,8 @@ export class CombatSystem {
     // Apply damage events sequentially
     for (const ev of events) {
       // Divine Shield absorbs one instance of damage (minions only)
+      const prevHealth = getStat(ev.target, 'health', 0);
+      ev.prevHealth = prevHealth;
       const shielded = !!(ev.target?.data?.divineShield);
       if (shielded) {
         ev.target.data.divineShield = false;
@@ -176,15 +178,16 @@ export class CombatSystem {
           ev.target.keywords = ev.target.keywords.filter(k => k !== 'Divine Shield');
         }
         ev.amount = 0;
+        ev.postHealth = prevHealth;
         // No damage applied; skip armor, logging, freeze, and death marking
         continue;
       }
 
       let rem = armorApply(ev.target, ev.amount);
       ev.amount = rem;
-      const hp = getStat(ev.target, 'health', 0);
-      const newHp = Math.max(0, hp - rem);
+      const newHp = Math.max(0, prevHealth - rem);
       setStat(ev.target, 'health', newHp);
+      ev.postHealth = newHp;
       if (isDebugLogging()) {
         console.log(`${ev.target.name} took ${rem} damage from ${ev.source?.name ?? 'an unknown source'}. Remaining health: ${getStat(ev.target, 'health', 0)}`);
       }
