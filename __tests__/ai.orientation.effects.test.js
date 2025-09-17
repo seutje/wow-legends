@@ -1,3 +1,4 @@
+import { jest } from '@jest/globals';
 import Game from '../src/js/game.js';
 import Card from '../src/js/entities/card.js';
 import Hero from '../src/js/entities/hero.js';
@@ -54,6 +55,39 @@ test('AI Shadow Word: Pain destroys player ally (<=3 ATK)', async () => {
 
   expect(g.player.battlefield.cards.length).toBe(0);
   expect(g.player.graveyard.cards.some(c => c.name === 'Weak Ally')).toBe(true);
+});
+
+test('Player Shadow Word: Pain prompts for a target when multiple enemies are valid', async () => {
+  const g = new Game();
+  await g.setupMatch();
+
+  // Controlled setup
+  g.player.hand.cards = [];
+  g.player.battlefield.cards = [];
+  g.opponent.hand.cards = [];
+  g.opponent.battlefield.cards = [];
+  g.resources._pool.set(g.player, 10);
+
+  const enemyOne = new Card({ name: 'Enemy One', type: 'ally', data: { attack: 2, health: 2 }, keywords: [] });
+  const enemyTwo = new Card({ name: 'Enemy Two', type: 'ally', data: { attack: 3, health: 3 }, keywords: [] });
+  g.opponent.battlefield.add(enemyOne);
+  g.opponent.battlefield.add(enemyTwo);
+
+  const swpData = g.allCards.find(c => c.id === 'spell-shadow-word-pain');
+  const swp = new Card(swpData);
+  g.player.hand.add(swp);
+
+  const promptSpy = jest.fn(async (candidates) => candidates[1]);
+  g.promptTarget = promptSpy;
+
+  await g.playFromHand(g.player, swp.id);
+
+  expect(promptSpy).toHaveBeenCalledTimes(1);
+  const [candidates] = promptSpy.mock.calls[0];
+  expect(candidates).toHaveLength(2);
+  expect(g.opponent.battlefield.cards).toContain(enemyOne);
+  expect(g.opponent.battlefield.cards).not.toContain(enemyTwo);
+  expect(g.opponent.graveyard.cards).toContain(enemyTwo);
 });
 
 test('AI Consecration damages only player side (all enemies)', async () => {
