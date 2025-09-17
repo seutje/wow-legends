@@ -41,6 +41,217 @@ export class MCTS_AI {
     this.fullSim = !!fullSim;
     // Prefer offloading search to a Web Worker when available (browser only)
     this._canUseWorker = (typeof window !== 'undefined') && (typeof Worker !== 'undefined');
+    this._lastTree = null;
+  }
+
+  _clearLastTree() {
+    this._lastTree = null;
+  }
+
+  _extractZoneCards(zone) {
+    if (!zone) return [];
+    if (Array.isArray(zone)) return zone;
+    if (Array.isArray(zone.cards)) return zone.cards;
+    return [];
+  }
+
+  _cardSnapshot(card) {
+    if (!card) return '';
+    const data = card.data || {};
+    const attack = data.attack ?? card.attack ?? null;
+    const health = data.health ?? card.health ?? null;
+    const armor = data.armor ?? card.armor ?? null;
+    const durability = data.durability ?? card.durability ?? null;
+    const keywords = Array.isArray(card.keywords) ? [...card.keywords].sort().join('.') : '';
+    const simpleData = [];
+    for (const key of Object.keys(data || {}).sort()) {
+      const value = data[key];
+      const type = typeof value;
+      if (type === 'number' || type === 'boolean') {
+        simpleData.push(`${key}:${value}`);
+      }
+    }
+    return [
+      card.name || '',
+      card.type || '',
+      card.cost ?? '',
+      attack ?? '',
+      health ?? '',
+      armor ?? '',
+      durability ?? '',
+      keywords,
+      simpleData.join(','),
+    ].join('|');
+  }
+
+  _heroSnapshot(hero) {
+    if (!hero) return null;
+    const data = hero.data || {};
+    const equipment = Array.isArray(hero.equipment)
+      ? hero.equipment.map((eq) => {
+        if (!eq) return '';
+        const eqData = eq.data || {};
+        const attack = eq.attack ?? eqData.attack ?? '';
+        const armor = eq.armor ?? eqData.armor ?? '';
+        const durability = eq.durability ?? eqData.durability ?? '';
+        const name = eq.name || '';
+        const id = eq.id || '';
+        return `${name}|${id}|${attack}|${armor}|${durability}`;
+      }).join('|')
+      : '';
+    const keywords = Array.isArray(hero.keywords) ? [...hero.keywords].sort().join('.') : '';
+    return {
+      id: hero.id || null,
+      name: hero.name || null,
+      health: data.health ?? hero.health ?? null,
+      armor: data.armor ?? hero.armor ?? null,
+      attack: data.attack ?? hero.attack ?? null,
+      powerUsed: !!hero.powerUsed,
+      spellDamage: data.spellDamage ?? hero.spellDamage ?? 0,
+      keywords,
+      equipment,
+    };
+  }
+
+  _playerSnapshot(player) {
+    if (!player) return null;
+    const hand = this._extractZoneCards(player.hand);
+    const battlefield = this._extractZoneCards(player.battlefield);
+    const graveyard = this._extractZoneCards(player.graveyard);
+    return {
+      id: player.id || null,
+      hero: this._heroSnapshot(player.hero),
+      hand: hand.map((c) => this._cardSnapshot(c)).join(','),
+      battlefield: battlefield.map((c) => this._cardSnapshot(c)).join(','),
+      graveyard: graveyard.map((c) => this._cardSnapshot(c)).join(','),
+      cardsPlayedThisTurn: player.cardsPlayedThisTurn || 0,
+      armorGainedThisTurn: player.armorGainedThisTurn || 0,
+    };
+  }
+
+  _stateFingerprint(state) {
+    if (!state) return null;
+    const normalized = {
+      turn: state.turn ?? 0,
+      pool: state.pool ?? 0,
+      powerAvailable: !!state.powerAvailable,
+      overloadNextPlayer: state.overloadNextPlayer || 0,
+      overloadNextOpponent: state.overloadNextOpponent || 0,
+      player: this._playerSnapshot(state.player),
+      opponent: this._playerSnapshot(state.opponent),
+    };
+    try {
+      return JSON.stringify(normalized);
+    } catch {
+      return null;
+    }
+  }
+
+  _stateFromLive(player, opponent) {
+    const turns = this.resources?.turns;
+    const turn = turns?.turn ?? 0;
+    const pool = typeof this.resources?.pool === 'function'
+      ? this.resources.pool(player)
+      : 0;
+    const overloadPlayer = typeof this.resources?.pendingOverload === 'function'
+      ? this.resources.pendingOverload(player)
+      : (this.resources?._overloadNext?.get?.(player) || 0);
+    const overloadOpponent = typeof this.resources?.pendingOverload === 'function'
+      ? this.resources.pendingOverload(opponent)
+      : (this.resources?._overloadNext?.get?.(opponent) || 0);
+    const powerAvailable = !!(player?.hero?.active?.length) && !player?.hero?.powerUsed;
+    return {
+      player,
+      opponent,
+      pool,
+      turn,
+      powerAvailable,
+      overloadNextPlayer: overloadPlayer,
+      overloadNextOpponent: overloadOpponent,
+    };
+  }
+
+  _stateFromSim(sim) {
+    if (!sim) return null;
+    const res = sim.resources;
+    const me = sim.player;
+    const opp = sim.opponent;
+    const turn = sim.turns?.turn ?? 0;
+    const pool = typeof res?.pool === 'function' ? res.pool(me) : 0;
+    const overloadPlayer = typeof res?.pendingOverload === 'function'
+      ? res.pendingOverload(me)
+      : (res?._overloadNext?.get?.(me) || 0);
+    const overloadOpponent = typeof res?.pendingOverload === 'function'
+      ? res.pendingOverload(opp)
+      : (res?._overloadNext?.get?.(opp) || 0);
+    const powerAvailable = !!(me?.hero?.active?.length) && !me?.hero?.powerUsed;
+    return {
+      player: me,
+      opponent: opp,
+      pool,
+      turn,
+      powerAvailable,
+      overloadNextPlayer: overloadPlayer,
+      overloadNextOpponent: overloadOpponent,
+    };
+  }
+
+  _fingerprintForKind(kind, input) {
+    if (kind === 'sim') {
+      return this._stateFingerprint(this._stateFromSim(input));
+    }
+    return this._stateFingerprint(input);
+  }
+
+  _fingerprintForNode(kind, node) {
+    if (!node || !node.state) return null;
+    if (kind === 'sim') {
+      return this._stateFingerprint(this._stateFromSim(node.state));
+    }
+    return this._stateFingerprint(node.state);
+  }
+
+  _prepareRootNode(kind, rootInput, buildNode) {
+    const fingerprint = this._fingerprintForKind(kind, rootInput);
+    const canReuse = !!(fingerprint && this._lastTree && this._lastTree.node && this._lastTree.kind === kind && this._lastTree.signature === fingerprint);
+    if (canReuse) {
+      this._lastTree.signature = fingerprint;
+      this._lastTree.actionChild = null;
+      return this._lastTree.node;
+    }
+    const node = buildNode();
+    this._lastTree = {
+      node,
+      kind,
+      signature: fingerprint,
+      actionChild: null,
+    };
+    return node;
+  }
+
+  _setLastTreeChoice(node) {
+    if (this._lastTree) this._lastTree.actionChild = node || null;
+  }
+
+  _advanceLastTreeToChild(kind, child, actualState) {
+    if (!child || !child.state) {
+      this._clearLastTree();
+      return false;
+    }
+    const expected = this._stateFingerprint(actualState);
+    const candidate = this._fingerprintForNode(kind, child);
+    if (!expected || !candidate || expected !== candidate) {
+      this._clearLastTree();
+      return false;
+    }
+    child.parent = null;
+    this._lastTree = {
+      node: child,
+      kind,
+      signature: candidate,
+      actionChild: null,
+    };
+    return true;
   }
 
   _selectChild(node) {
@@ -910,7 +1121,7 @@ export class MCTS_AI {
   async _searchFullSimAsync(rootGame) {
     // Root is a sim snapshot built from the external game state
     const rootSim = rootGame;
-    const root = new MCTSNode(rootSim);
+    const root = this._prepareRootNode('sim', rootSim, () => new MCTSNode(rootSim));
     for (let i = 0; i < this.iterations; i++) {
       let node = root;
       // Selection
@@ -953,11 +1164,12 @@ export class MCTS_AI {
       while (node) { node.visits++; node.total += value; node = node.parent; }
     }
     const best = this._bestChild(root);
+    this._setLastTreeChoice(best);
     return best?.action || { end: true };
   }
 
   _search(rootState) {
-    const root = new MCTSNode(this._cloneState(rootState));
+    const root = this._prepareRootNode('state', rootState, () => new MCTSNode(this._cloneState(rootState)));
     for (let i = 0; i < this.iterations; i++) {
       // Progress events for UI overlays (best-effort; in main thread these won't paint until yielding)
       if (i === 0 || (i % 100) === 0) {
@@ -1010,6 +1222,7 @@ export class MCTS_AI {
     // Choose child with best average value
     const best = this._bestChild(root);
     try { this.game?.bus?.emit?.('ai:progress', { progress: 1 }); } catch {}
+    this._setLastTreeChoice(best);
     return best?.action || { end: true };
   }
 
@@ -1018,7 +1231,7 @@ export class MCTS_AI {
     const useWorker = this._canUseWorker && this.game?.state?.difficulty === 'hard';
     if (!useWorker) {
       // Perform incremental search on the main thread, yielding periodically for UI updates
-      const root = new MCTSNode(this._cloneState(rootState));
+      const root = this._prepareRootNode('state', rootState, () => new MCTSNode(this._cloneState(rootState)));
       const iterations = this.iterations;
       const chunk = 200;
       const doOne = () => {
@@ -1073,9 +1286,11 @@ export class MCTS_AI {
       }
       const best = this._bestChild(root);
       try { this.game?.bus?.emit?.('ai:progress', { progress: 1 }); } catch {}
+      this._setLastTreeChoice(best);
       return best?.action || { end: true };
     }
 
+    this._clearLastTree();
     // Resolve relative to this module so it works in the dev server
     const workerUrl = new URL('../workers/mcts.worker.js', import.meta.url);
     return new Promise((resolve) => {
@@ -1125,6 +1340,7 @@ export class MCTS_AI {
 
   async takeTurn(player, opponent = null, options = {}) {
     const { resume = false } = options;
+    this._clearLastTree();
     // Start turn: mirror BasicAI semantics
     if (!resume) {
       this.resources.startTurn(player);
@@ -1155,22 +1371,34 @@ export class MCTS_AI {
         overloadNextOpponent: overloadOpponent,
       };
       let action;
-      if (this.fullSim && this.game) {
+      const useSim = this.fullSim && this.game;
+      if (useSim) {
         const simRoot = this._buildSimFrom(this.game, player, opponent);
         action = await this._searchFullSimAsync(simRoot);
       } else {
         action = await this._searchAsync(rootState);
       }
-      if (!action || action.end) break;
+      const candidate = this._lastTree?.actionChild || null;
+      const searchKind = useSim ? 'sim' : 'state';
+      if (!action || action.end) {
+        this._clearLastTree();
+        break;
+      }
       // Apply chosen action to real game state
       if (action.card) {
         if (this.game && typeof this.game.playFromHand === 'function') {
           const ok = await this.game.playFromHand(player, action.card.id);
-          if (!ok) break;
+          if (!ok) {
+            this._clearLastTree();
+            break;
+          }
         } else {
           // Fallback (should not happen in game integration)
           const cost = action.card.cost || 0;
-          if (!this.resources.pay(player, cost)) break;
+          if (!this.resources.pay(player, cost)) {
+            this._clearLastTree();
+            break;
+          }
           if (action.card.type === 'ally' || action.card.type === 'equipment' || action.card.type === 'quest') {
             player.hand.moveTo(player.battlefield, action.card);
             if (action.card.type === 'equipment') player.hero.equipment = [action.card];
@@ -1187,14 +1415,22 @@ export class MCTS_AI {
       if (action.usePower) {
         if (this.game && typeof this.game.useHeroPower === 'function') {
           const ok = await this.game.useHeroPower(player);
-          if (!ok) break;
+          if (!ok) {
+            this._clearLastTree();
+            break;
+          }
         } else {
-          if (!this.resources.pay(player, 2)) break;
-          player.hero.powerUsed = true; powerAvailable = false;
+          if (!this.resources.pay(player, 2)) {
+            this._clearLastTree();
+            break;
+          }
+          player.hero.powerUsed = true;
         }
       }
       // Keep hero power availability synced
-      powerAvailable = !!(player.hero?.active?.length) && !player.hero.powerUsed;
+      const descriptor = this._stateFromLive(player, opponent);
+      this._advanceLastTreeToChild(searchKind, candidate, descriptor);
+      powerAvailable = descriptor.powerAvailable;
     }
 
     // After actions, perform combat like BasicAI (respect Taunt when selecting targets)
