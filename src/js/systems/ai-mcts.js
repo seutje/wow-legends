@@ -529,6 +529,74 @@ export class MCTS_AI {
     return { terminal: false, state: s };
   }
 
+  _evaluateRolloutState(state) {
+    if (!state) return 0;
+    const payload = {
+      player: state.player,
+      opponent: state.opponent,
+      turn: typeof state.turn === 'number' ? state.turn : 0,
+      resources: typeof state.pool === 'number' ? state.pool : 0,
+      overloadNextPlayer: state.overloadNextPlayer || 0,
+      overloadNextOpponent: state.overloadNextOpponent || 0,
+      enragedOpponentThisTurn: state.enragedOpponentThisTurn,
+    };
+    const score = evaluateGameState(payload);
+    return Number.isFinite(score) ? score : 0;
+  }
+
+  _scoreRolloutAction(state, action, { baseline = null } = {}) {
+    const base = (typeof baseline === 'number') ? baseline : this._evaluateRolloutState(state);
+    const outcome = this._applyAction(state, action);
+    if (outcome.terminal) {
+      const value = Number.isFinite(outcome.value) ? outcome.value : -Infinity;
+      return {
+        baseline: base,
+        value,
+        delta: value - base,
+        outcome,
+      };
+    }
+    const nextScore = this._evaluateRolloutState(outcome.state);
+    const value = Number.isFinite(nextScore) ? nextScore : 0;
+    return {
+      baseline: base,
+      value,
+      delta: value - base,
+      outcome,
+    };
+  }
+
+  _chooseRolloutAction(entries, explorationChance = 0.2) {
+    if (!Array.isArray(entries) || entries.length === 0) return null;
+    if (Math.random() < explorationChance) {
+      return entries[Math.floor(Math.random() * entries.length)];
+    }
+    let maxAbs = 0;
+    for (const entry of entries) {
+      const delta = Number.isFinite(entry?.delta) ? entry.delta : 0;
+      const abs = Math.abs(delta);
+      if (abs > maxAbs) maxAbs = abs;
+    }
+    if (maxAbs <= 0) maxAbs = 1;
+    const weights = entries.map((entry) => {
+      const delta = Number.isFinite(entry?.delta) ? entry.delta : 0;
+      const normalized = delta / maxAbs;
+      const clipped = Math.max(-0.95, Math.min(0.95, normalized));
+      return 1 + clipped;
+    });
+    let total = 0;
+    for (const weight of weights) total += weight;
+    if (total <= 0) {
+      return entries[Math.floor(Math.random() * entries.length)];
+    }
+    let r = Math.random() * total;
+    for (let i = 0; i < entries.length; i++) {
+      r -= weights[i];
+      if (r <= 0) return entries[i];
+    }
+    return entries[entries.length - 1];
+  }
+
   _resolveCombatAndScore(state) {
     // Simulate a simple combat: attack with all ready attackers at opponent hero
     const p = state.player; const o = state.opponent;
@@ -607,10 +675,25 @@ export class MCTS_AI {
       // Bias slightly against immediate end unless there are no other actions
       const nonEnd = actions.filter(a => !a.end);
       const pickFrom = nonEnd.length ? nonEnd : actions;
-      const a = pickFrom[Math.floor(Math.random() * pickFrom.length)];
-      const res = this._applyAction(s, a);
-      if (res.terminal) return res.value;
-      s = res.state;
+      const baseline = this._evaluateRolloutState(s);
+      const scored = pickFrom.map((action) => {
+        const scoredAction = this._scoreRolloutAction(s, action, { baseline });
+        return {
+          action,
+          delta: scoredAction.delta,
+          outcome: scoredAction.outcome,
+          value: scoredAction.value,
+        };
+      });
+      if (!scored.length) break;
+      let choice = this._chooseRolloutAction(scored);
+      if (!choice) {
+        choice = scored[Math.floor(Math.random() * scored.length)];
+      }
+      const result = choice?.outcome;
+      if (!result) break;
+      if (result.terminal) return result.value;
+      s = result.state;
     }
     return this._resolveCombatAndScore(s).value;
   }
@@ -781,10 +864,44 @@ export class MCTS_AI {
       if (!actions.length) break;
       const nonEnd = actions.filter(a => !a.end);
       const pickFrom = nonEnd.length ? nonEnd : actions;
-      const a = pickFrom[Math.floor(Math.random() * pickFrom.length)];
-      const res = await this._applyActionSim(s, a);
-      if (res.terminal) return res.value;
-      s = res.state;
+      const baselineScore = evaluateGameState({
+        player: s.player,
+        opponent: s.opponent,
+        turn: s.turns.turn,
+        resources: s.resources.pool(s.player),
+        overloadNextPlayer: 0,
+        overloadNextOpponent: 0,
+      });
+      const baseline = Number.isFinite(baselineScore) ? baselineScore : 0;
+      const scored = [];
+      for (const action of pickFrom) {
+        const outcome = await this._applyActionSim(s, action);
+        if (outcome.terminal) {
+          const value = Number.isFinite(outcome.value) ? outcome.value : -Infinity;
+          scored.push({ action, delta: value - baseline, outcome, value });
+          continue;
+        }
+        const next = outcome.state;
+        const nextScore = evaluateGameState({
+          player: next.player,
+          opponent: next.opponent,
+          turn: next.turns.turn,
+          resources: next.resources.pool(next.player),
+          overloadNextPlayer: 0,
+          overloadNextOpponent: 0,
+        });
+        const value = Number.isFinite(nextScore) ? nextScore : 0;
+        scored.push({ action, delta: value - baseline, outcome, value });
+      }
+      if (!scored.length) break;
+      let choice = this._chooseRolloutAction(scored);
+      if (!choice) {
+        choice = scored[Math.floor(Math.random() * scored.length)];
+      }
+      const result = choice?.outcome;
+      if (!result) break;
+      if (result.terminal) return result.value;
+      s = result.state;
     }
     const res = await this._resolveCombatAndScoreSim(s);
     return res.value;
