@@ -2,6 +2,7 @@
 // - Loads best model from data/models/best.json if present (unless reset)
 // - Runs population and generations provided via CLI args
 // - Evaluates vs a baseline MCTS opponent with capped steps (or saved NN when requested)
+// - Supports opponent curricula (--curriculum) to ramp difficulty as scores improve
 // - Saves best to data/models/best.json
 
 import fs from 'fs/promises';
@@ -68,10 +69,228 @@ function cloneAndMutate(base, sigma = 0.1) {
   return m;
 }
 
-async function evalCandidate(model, { games = 5, maxRounds = 20, opponentMode = 'mcts', opponentModelJSON = null } = {}) {
-  const baselineModel = (opponentMode === 'best' && opponentModelJSON)
-    ? MLP.fromJSON(opponentModelJSON)
+function sanitizeIterations(value, fallback = 5000) {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n <= 0) return fallback;
+  return Math.round(n);
+}
+
+function formatIterations(iterations) {
+  return Number.isFinite(iterations)
+    ? iterations.toLocaleString('en-US')
+    : String(iterations);
+}
+
+const NAMED_MCTS_LEVELS = {
+  weak: 1200,
+  easy: 1500,
+  medium: 2500,
+  strong: 4000,
+  hard: 5500,
+  brutal: 8000
+};
+
+function parseOpponentDescriptorToken(token, { baseIterations = 5000 } = {}) {
+  const raw = token == null ? '' : String(token).trim();
+  if (!raw) {
+    const iterations = sanitizeIterations(baseIterations);
+    return {
+      kind: 'mcts',
+      iterations,
+      label: `MCTS ${formatIterations(iterations)} iterations`
+    };
+  }
+  const text = raw.toLowerCase();
+  if (/^(best|saved|nn|model)$/.test(text)) {
+    const fallbackIterations = sanitizeIterations(baseIterations);
+    return {
+      kind: 'best',
+      label: 'Saved best NN opponent',
+      fallbackIterations
+    };
+  }
+  if (Object.prototype.hasOwnProperty.call(NAMED_MCTS_LEVELS, text)) {
+    const iterations = sanitizeIterations(NAMED_MCTS_LEVELS[text], baseIterations);
+    return {
+      kind: 'mcts',
+      iterations,
+      label: `MCTS ${formatIterations(iterations)} iterations (${text})`
+    };
+  }
+  const mctsMatch = text.match(/^mcts(?:[@:](\d+))?$/);
+  if (mctsMatch) {
+    const iterations = sanitizeIterations(mctsMatch[1] ? Number.parseInt(mctsMatch[1], 10) : baseIterations, baseIterations);
+    return {
+      kind: 'mcts',
+      iterations,
+      label: `MCTS ${formatIterations(iterations)} iterations`
+    };
+  }
+  if (/^\d+$/.test(text)) {
+    const iterations = sanitizeIterations(Number.parseInt(text, 10), baseIterations);
+    return {
+      kind: 'mcts',
+      iterations,
+      label: `MCTS ${formatIterations(iterations)} iterations`
+    };
+  }
+  return {
+    kind: 'mcts',
+    iterations: sanitizeIterations(baseIterations),
+    label: `MCTS ${formatIterations(sanitizeIterations(baseIterations))} iterations`
+  };
+}
+
+function descriptorBaseIterations(descriptor) {
+  if (!descriptor) return 5000;
+  if (descriptor.kind === 'mcts') return sanitizeIterations(descriptor.iterations ?? 5000, 5000);
+  if (descriptor.kind === 'best') return sanitizeIterations(descriptor.fallbackIterations ?? descriptor.iterations ?? 5000, 5000);
+  return 5000;
+}
+
+function buildGentleSchedule(baseDescriptor) {
+  const baseIterations = descriptorBaseIterations(baseDescriptor);
+  const early = sanitizeIterations(Math.max(400, Math.round(baseIterations * 0.35)), baseIterations);
+  const mid = sanitizeIterations(Math.max(600, Math.round(baseIterations * 0.6)), baseIterations);
+  const schedule = [
+    {
+      threshold: 0,
+      descriptor: {
+        kind: 'mcts',
+        iterations: early,
+        label: `MCTS ${formatIterations(early)} iterations (curriculum: gentle start)`
+      }
+    },
+    {
+      threshold: 0.8,
+      descriptor: {
+        kind: 'mcts',
+        iterations: mid,
+        label: `MCTS ${formatIterations(mid)} iterations (curriculum: ramp)`
+      }
+    }
+  ];
+  if (baseDescriptor?.kind === 'best') {
+    const full = sanitizeIterations(baseDescriptor.fallbackIterations ?? baseIterations, baseIterations);
+    schedule.push({
+      threshold: 1.4,
+      descriptor: {
+        kind: 'mcts',
+        iterations: full,
+        label: `MCTS ${formatIterations(full)} iterations (curriculum: full baseline)`
+      }
+    });
+    schedule.push({
+      threshold: 1.9,
+      descriptor: baseDescriptor
+    });
+  } else {
+    schedule.push({
+      threshold: 1.6,
+      descriptor: baseDescriptor
+    });
+  }
+  return schedule;
+}
+
+function parseCurriculumSchedule(spec, baseDescriptor) {
+  if (!spec) return null;
+  const trimmed = String(spec).trim();
+  if (!trimmed) return null;
+  const lowered = trimmed.toLowerCase();
+  if (lowered === 'gentle' || lowered === 'default') {
+    return buildGentleSchedule(baseDescriptor);
+  }
+
+  const baseIterations = descriptorBaseIterations(baseDescriptor);
+  const stages = trimmed.split(',').map((part) => part.trim()).filter(Boolean).map((part) => {
+    const idx = part.indexOf(':');
+    if (idx <= 0) throw new Error(`Invalid curriculum stage "${part}"; expected <threshold>:<opponent>`);
+    const thresholdText = part.slice(0, idx).trim();
+    const opponentText = part.slice(idx + 1).trim();
+    if (!opponentText) throw new Error(`Missing opponent descriptor in stage "${part}"`);
+    const threshold = Number.parseFloat(thresholdText);
+    if (!Number.isFinite(threshold)) throw new Error(`Invalid threshold "${thresholdText}" in stage "${part}"`);
+    const descriptor = parseOpponentDescriptorToken(opponentText, { baseIterations });
+    if (descriptor.kind === 'best' && descriptor.fallbackIterations == null) {
+      descriptor.fallbackIterations = descriptorBaseIterations(baseDescriptor);
+    }
+    return { threshold, descriptor };
+  });
+  stages.sort((a, b) => a.threshold - b.threshold);
+  return stages;
+}
+
+function descriptorToConfig(descriptor, { savedBestJSON } = {}) {
+  if (!descriptor) {
+    const iterations = 5000;
+    return {
+      mode: 'mcts',
+      label: `MCTS ${formatIterations(iterations)} iterations`,
+      iterations,
+      rolloutDepth: 10,
+      fullSim: true
+    };
+  }
+  if (descriptor.kind === 'best') {
+    if (savedBestJSON) {
+      return {
+        mode: 'best',
+        label: descriptor.label ?? 'Saved best NN opponent',
+        modelJSON: savedBestJSON,
+        rolloutDepth: descriptor.rolloutDepth ?? 10,
+        fullSim: descriptor.fullSim ?? true,
+        iterations: descriptorBaseIterations(descriptor)
+      };
+    }
+    const fallbackIterations = descriptorBaseIterations(descriptor);
+    return {
+      mode: 'mcts',
+      label: `${descriptor.label ?? 'Saved best NN opponent'} (fallback to MCTS ${formatIterations(fallbackIterations)} iterations; saved model missing)`,
+      iterations: fallbackIterations,
+      rolloutDepth: descriptor.rolloutDepth ?? 10,
+      fullSim: descriptor.fullSim ?? true
+    };
+  }
+  const iterations = sanitizeIterations(descriptor.iterations ?? 5000, 5000);
+  return {
+    mode: 'mcts',
+    label: descriptor.label ?? `MCTS ${formatIterations(iterations)} iterations`,
+    iterations,
+    rolloutDepth: descriptor.rolloutDepth ?? 10,
+    fullSim: descriptor.fullSim ?? true
+  };
+}
+
+function describeCurriculum(schedule, context = {}) {
+  if (!Array.isArray(schedule) || schedule.length === 0) return '';
+  return schedule.map((entry, idx) => {
+    const cfg = descriptorToConfig(entry.descriptor, context);
+    const threshold = Number.isFinite(entry.threshold)
+      ? (idx === 0 ? 'start' : `>= ${entry.threshold.toFixed(2)}`)
+      : 'start';
+    return `${threshold}: ${cfg.label}`;
+  }).join(' | ');
+}
+
+function pickCurriculumStage(schedule, score) {
+  if (!Array.isArray(schedule) || schedule.length === 0) return null;
+  let chosen = schedule[0];
+  for (const entry of schedule) {
+    if (score >= entry.threshold) chosen = entry;
+    else break;
+  }
+  return chosen;
+}
+
+async function evalCandidate(model, { games = 5, maxRounds = 20, opponentConfig = null } = {}) {
+  const config = opponentConfig || { mode: 'mcts', iterations: 5000, rolloutDepth: 10, fullSim: true };
+  const baselineModel = (config.mode === 'best' && config.modelJSON)
+    ? MLP.fromJSON(config.modelJSON)
     : null;
+  const iterations = sanitizeIterations(config.iterations ?? 5000, 5000);
+  const rolloutDepth = Number.isFinite(config.rolloutDepth) ? config.rolloutDepth : 10;
+  const fullSim = config.fullSim ?? true;
   let total = 0;
   for (let g = 0; g < games; g++) {
     const game = new Game(null, { aiPlayers: ['player', 'opponent'] });
@@ -85,7 +304,14 @@ async function evalCandidate(model, { games = 5, maxRounds = 20, opponentMode = 
     const aiOpp = new NeuralAI({ game, resourceSystem: game.resources, combatSystem: game.combat, model });
     const playerAI = (baselineModel)
       ? new NeuralAI({ game, resourceSystem: game.resources, combatSystem: game.combat, model: baselineModel })
-      : new MCTS_AI({ resourceSystem: game.resources, combatSystem: game.combat, game, iterations: 5000, rolloutDepth: 10, fullSim: true });
+      : new MCTS_AI({
+        resourceSystem: game.resources,
+        combatSystem: game.combat,
+        game,
+        iterations,
+        rolloutDepth,
+        fullSim
+      });
 
     // Ensure start is player's turn (Game.setupMatch sets player start)
     let rounds = 0;
@@ -130,7 +356,7 @@ async function evalCandidate(model, { games = 5, maxRounds = 20, opponentMode = 
 }
 
 // Parallel evaluation with worker pool
-async function evalPopulationParallel(population, { games = 1, maxRounds = 16, concurrency = Math.max(1, (os.cpus()?.length || 2) - 1), opponentMode = 'mcts', opponentModelJSON = null } = {}) {
+async function evalPopulationParallel(population, { games = 1, maxRounds = 16, concurrency = Math.max(1, (os.cpus()?.length || 2) - 1), opponentConfig = null } = {}) {
   const workerURL = new URL('./train.worker.mjs', import.meta.url);
   const poolSize = Math.max(1, Number(process.env.TRAIN_WORKERS) || concurrency);
   const workers = Array.from({ length: poolSize }, () => new Worker(workerURL, { type: 'module' }));
@@ -150,7 +376,7 @@ async function evalPopulationParallel(population, { games = 1, maxRounds = 16, c
       worker.postMessage({
         id,
         cmd: 'eval',
-        payload: { modelJSON: population[idx].toJSON(), games, maxRounds, opponentMode, opponentModelJSON }
+        payload: { modelJSON: population[idx].toJSON(), games, maxRounds, opponentConfig }
       });
     });
   }
@@ -173,9 +399,10 @@ async function evalPopulationParallel(population, { games = 1, maxRounds = 16, c
 }
 
 async function main() {
-  const { pop: POP, gens: GENS, reset, opponent } = parseTrainArgs();
+  const { pop: POP, gens: GENS, reset, opponent, curriculum } = parseTrainArgs();
   await fs.mkdir(MODELS_DIR, { recursive: true });
   const savedBest = await loadSavedBest();
+  const savedBestJSON = savedBest ? savedBest.toJSON() : null;
   const base = (reset || !savedBest) ? new MLP([38,64,64,1]) : savedBest.clone();
   const networkShape = base.sizes.slice();
   const KEEP = Math.max(5, Math.floor(POP * 0.1));
@@ -193,22 +420,40 @@ async function main() {
     population.push(cloneAndMutate(best, initialSigma));
   }
 
-  let opponentMode = opponent;
-  let opponentModelJSON = null;
-  if (opponent === 'best') {
-    if (savedBest) {
-      opponentModelJSON = savedBest.toJSON();
-    } else {
-      progress(`[${now()}] Requested saved-model opponent but ${MODEL_PATH} missing; using MCTS baseline.`);
-      opponentMode = 'mcts';
+  const baseDescriptor = parseOpponentDescriptorToken(opponent, { baseIterations: 5000 });
+  const scheduleContext = { savedBestJSON };
+  let curriculumSchedule = null;
+  if (curriculum) {
+    try {
+      curriculumSchedule = parseCurriculumSchedule(curriculum, baseDescriptor);
+      if (!curriculumSchedule || curriculumSchedule.length === 0) {
+        curriculumSchedule = null;
+        progress(`[${now()}] Curriculum "${curriculum}" did not yield any stages; using static opponent.`);
+      }
+    } catch (err) {
+      curriculumSchedule = null;
+      progress(`[${now()}] Failed to parse curriculum "${curriculum}": ${err?.message || err}; using static opponent.`);
     }
   }
 
-  progress(`[${now()}] Starting training: pop=${POP}, gens=${GENS}, reset=${Boolean(reset)}, opponent=${opponentMode}`);
+  const usesSavedOpponent = baseDescriptor.kind === 'best'
+    || (curriculumSchedule?.some((stage) => stage.descriptor?.kind === 'best'));
+  if (!savedBest && usesSavedOpponent) {
+    progress(`[${now()}] Requested saved-model opponent but ${MODEL_PATH} missing; using MCTS fallback until a model is saved.`);
+  }
+
+  let activeStage = curriculumSchedule ? pickCurriculumStage(curriculumSchedule, -Infinity) : null;
+  let activeOpponentConfig = descriptorToConfig(activeStage ? activeStage.descriptor : baseDescriptor, scheduleContext);
+
+  progress(`[${now()}] Starting training: pop=${POP}, gens=${GENS}, reset=${Boolean(reset)}, opponent=${activeOpponentConfig.label}`);
+  if (curriculumSchedule) {
+    const summary = describeCurriculum(curriculumSchedule, scheduleContext);
+    progress(`[${now()}] Opponent curriculum (${curriculum}): ${summary}`);
+  }
 
   for (let gen = 0; gen < GENS; gen++) {
     // Evaluate in parallel using worker threads
-    const scores = await evalPopulationParallel(population, { games: 5, maxRounds: 16, opponentMode, opponentModelJSON });
+    const scores = await evalPopulationParallel(population, { games: 5, maxRounds: 16, opponentConfig: activeOpponentConfig });
     scores.sort((a,b)=> b.score - a.score);
     const top = scores.slice(0, KEEP);
     const parents = top.map(({ idx }) => population[idx].clone());
@@ -241,9 +486,22 @@ async function main() {
       const genPath = path.join(MODELS_DIR, `model_gen_${gen+1}.json`);
       const genJSON = JSON.stringify(genBest.toJSON(), null, 2);
       await fs.writeFile(genPath, genJSON, 'utf8');
-      progress(`[${now()}] Gen ${gen+1}/${GENS} best=${genBestScore.toFixed(3)} overall=${bestScore.toFixed(3)} | saved ${genPath}`);
+      progress(`[${now()}] Gen ${gen+1}/${GENS} best=${genBestScore.toFixed(3)} overall=${bestScore.toFixed(3)} | opponent=${activeOpponentConfig.label} | saved ${genPath}`);
     } catch (e) {
-      progress(`[${now()}] Gen ${gen+1}/${GENS} best=${genBestScore.toFixed(3)} overall=${bestScore.toFixed(3)} | failed to save generation model: ${e?.message || e}`);
+      progress(`[${now()}] Gen ${gen+1}/${GENS} best=${genBestScore.toFixed(3)} overall=${bestScore.toFixed(3)} | opponent=${activeOpponentConfig.label} | failed to save generation model: ${e?.message || e}`);
+    }
+
+    if (curriculumSchedule) {
+      const nextStage = pickCurriculumStage(curriculumSchedule, bestScore);
+      if (nextStage !== activeStage) {
+        activeStage = nextStage;
+        const previousLabel = activeOpponentConfig.label;
+        activeOpponentConfig = descriptorToConfig(activeStage.descriptor, scheduleContext);
+        const thresholdText = Number.isFinite(activeStage.threshold)
+          ? `>= ${activeStage.threshold.toFixed(2)}`
+          : 'final';
+        progress(`[${now()}] Curriculum update: best score ${bestScore.toFixed(3)} reached ${thresholdText}; opponent ${previousLabel} -> ${activeOpponentConfig.label}`);
+      }
     }
 
     if (gen < GENS - 1) {
