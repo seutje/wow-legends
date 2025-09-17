@@ -74,15 +74,59 @@ export function parseTrainArgs(argv = process.argv) {
 
   const popArg = positional[0] ?? getFlag('pop', 'population');
   const genArg = positional[1] ?? getFlag('gens', 'gen', 'generations');
-  const resetArg = positional[2] ?? getFlag('reset');
-  const opponentArg = positional[3] ?? getFlag('opponent', 'baseline');
+  const extras = positional.slice(2);
+
+  const booleanPattern = /^(true|false|1|0|yes|no|y|n)$/i;
+  const isLikelyCurriculumToken = (token) => {
+    if (token == null) return false;
+    const text = String(token).trim();
+    if (!text) return false;
+    const lowered = text.toLowerCase();
+    if (lowered === 'gentle' || lowered === 'default') return true;
+    if (lowered.includes(':')) return true;
+    if (lowered.startsWith('curriculum=')) return true;
+    if (lowered.startsWith('schedule=')) return true;
+    if (lowered.startsWith('opponent-curriculum=')) return true;
+    return false;
+  };
+
+  const resetFlag = getFlag('reset');
+  let resetValue = resetFlag;
+  if (resetValue == null) {
+    const boolIdx = extras.findIndex((token) => booleanPattern.test(String(token).trim()));
+    if (boolIdx >= 0) {
+      resetValue = extras.splice(boolIdx, 1)[0];
+    }
+  }
+
+  const opponentFlag = getFlag('opponent', 'baseline');
+  let opponentValue = opponentFlag;
+  if (opponentValue == null && extras.length > 0) {
+    const candidate = extras[0];
+    if (!isLikelyCurriculumToken(candidate)) {
+      opponentValue = extras.shift();
+    }
+  }
+
+  let curriculum = getFlag('curriculum', 'opponent-curriculum', 'schedule');
+  if (curriculum == null && extras.length > 0) {
+    const idx = extras.findIndex((token) => isLikelyCurriculumToken(token));
+    if (idx >= 0) {
+      const picked = extras.splice(idx, 1)[0];
+      if (typeof picked === 'string' && picked.includes('=')) {
+        const [, value] = picked.split('=');
+        curriculum = value ?? picked;
+      } else {
+        curriculum = picked;
+      }
+    }
+  }
 
   const pop = toInt(popArg) ?? 100;
   const gens = toInt(genArg) ?? 10;
-  const reset = toBool(resetArg);
-  const opponent = parseOpponent(opponentArg);
+  const reset = toBool(resetValue);
+  const opponent = parseOpponent(opponentValue);
 
-  let curriculum = getFlag('curriculum', 'opponent-curriculum', 'schedule');
   if (typeof curriculum === 'string') {
     const trimmed = curriculum.trim();
     if (!trimmed || /^(false|0|no|off)$/i.test(trimmed)) curriculum = null;

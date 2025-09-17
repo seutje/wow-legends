@@ -42,5 +42,17 @@ describe('parseTrainArgs', () => {
     const res = parseTrainArgs(args);
     expect(res).toEqual({ pop: 60, gens: 12, reset: true, opponent: 'best', curriculum: 'gentle' });
   });
+
+  test('treats trailing gentle token as curriculum when npm strips the flag', () => {
+    const args = ['node', 'tools/train.mjs', '1', '1', 'gentle'];
+    const res = parseTrainArgs(args);
+    expect(res).toEqual({ pop: 1, gens: 1, reset: false, opponent: 'mcts', curriculum: 'gentle' });
+  });
+
+  test('keeps opponent token and curriculum token when reset flag omitted', () => {
+    const args = ['node', 'tools/train.mjs', '120', '18', 'best', 'gentle'];
+    const res = parseTrainArgs(args);
+    expect(res).toEqual({ pop: 120, gens: 18, reset: false, opponent: 'best', curriculum: 'gentle' });
+  });
 });
 
