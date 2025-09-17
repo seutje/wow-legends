@@ -20,6 +20,31 @@ function armorApply(card, amount) {
   return amount - use;
 }
 
+function safeZoneTransfer(fromZone, toZone, card) {
+  if (!card || !toZone) return false;
+  if (fromZone && typeof fromZone.moveTo === 'function') {
+    const res = fromZone.moveTo(toZone, card);
+    if (res) return true;
+  }
+  let removed = card;
+  if (fromZone && Array.isArray(fromZone.cards)) {
+    const idx = fromZone.cards.findIndex(c => c === card || (c?.id && card?.id && c.id === card.id));
+    if (idx !== -1) {
+      [removed] = fromZone.cards.splice(idx, 1);
+    }
+  }
+  if (typeof toZone.add === 'function') {
+    toZone.add(removed);
+    return true;
+  }
+  if (Array.isArray(toZone.cards)) {
+    const exists = toZone.cards.some(c => c === removed || (c?.id && removed?.id && c.id === removed.id));
+    if (!exists) toZone.cards.push(removed);
+    return true;
+  }
+  return false;
+}
+
 export class CombatSystem {
   constructor(bus = null) {
     this._attacks = new Map(); // attackerId -> { attacker, blockers: Card[] }
@@ -108,20 +133,16 @@ export class CombatSystem {
         // Move broken equipment to graveyard and remove from hero
         const owner = attacker?.owner;
         const broken = attacker.equipment.filter(e => (e?.durability ?? 1) <= 0);
-            if (owner && broken.length > 0) {
-              for (const b of broken) {
-                // Log breaking
-                if (owner?.log) owner.log.push(`${b.name} broke and was destroyed.`);
-                let moved = false;
-                if (owner?.battlefield && owner?.graveyard) {
-              const res = owner.battlefield.moveTo(owner.graveyard, b);
-                  moved = !!res;
-                }
-                if (!moved && owner?.graveyard?.add) {
-                  owner.graveyard.add(b);
-                }
-              }
+        if (owner && broken.length > 0) {
+          for (const b of broken) {
+            // Log breaking
+            if (owner?.log) owner.log.push(`${b.name} broke and was destroyed.`);
+            const moved = safeZoneTransfer(owner?.battlefield, owner?.graveyard, b);
+            if (!moved && owner?.graveyard?.add) {
+              owner.graveyard.add(b);
             }
+          }
+        }
         attacker.equipment = attacker.equipment.filter(e => (e?.durability ?? 1) > 0);
       }
     }
@@ -152,11 +173,7 @@ export class CombatSystem {
         if (owner && broken.length > 0) {
           for (const b of broken) {
             if (owner?.log) owner.log.push(`${b.name} broke and was destroyed.`);
-            let moved = false;
-            if (owner?.battlefield && owner?.graveyard) {
-              const res = owner.battlefield.moveTo(owner.graveyard, b);
-              moved = !!res;
-            }
+            const moved = safeZoneTransfer(owner?.battlefield, owner?.graveyard, b);
             if (!moved && owner?.graveyard?.add) {
               owner.graveyard.add(b);
             }
