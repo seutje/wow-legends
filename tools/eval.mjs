@@ -1,7 +1,8 @@
 #!/usr/bin/env node
-// Evaluate a single full game.
+// Evaluate one or more full games.
 // Default: NN (player) vs hard MCTS (opponent).
 // If a model path argument is provided, pits NN-best (player) vs NN-candidate (opponent).
+// Provide a positive integer as the final argument to run multiple matches.
 // Caps at 20 rounds (player+opponent turns). Prints concise results.
 
 import Game from '../src/js/game.js';
@@ -15,14 +16,24 @@ function fmtResult({ rounds, pHP, pArmor, oHP, oArmor }, pName, oName) {
   const pAlive = pHP > 0;
   const oAlive = oHP > 0;
   let winner = 'draw';
-  if (pAlive && !oAlive) winner = `${pName} (player)`;
-  else if (!pAlive && oAlive) winner = `${oName} (opponent)`;
-  else if (pAlive && oAlive) {
+  let winnerKey = 'draw';
+  if (pAlive && !oAlive) {
+    winner = `${pName} (player)`;
+    winnerKey = 'player';
+  } else if (!pAlive && oAlive) {
+    winner = `${oName} (opponent)`;
+    winnerKey = 'opponent';
+  } else if (pAlive && oAlive) {
     const diff = (pHP + pArmor) - (oHP + oArmor);
-    if (diff > 0) winner = `${pName} (player) — HP advantage`;
-    else if (diff < 0) winner = `${oName} (opponent) — HP advantage`;
+    if (diff > 0) {
+      winner = `${pName} (player) — HP advantage`;
+      winnerKey = 'player';
+    } else if (diff < 0) {
+      winner = `${oName} (opponent) — HP advantage`;
+      winnerKey = 'opponent';
+    }
   }
-  return { winner, rounds, player: { hp: pHP, armor: pArmor }, opponent: { hp: oHP, armor: oArmor } };
+  return { winner, winnerKey, rounds, player: { hp: pHP, armor: pArmor }, opponent: { hp: oHP, armor: oArmor } };
 }
 
 function attachCombatLogPrinter(outFn, label, entries) {
@@ -56,76 +67,56 @@ function attachCombatLogPrinter(outFn, label, entries) {
   };
 }
 
-async function main() {
-  // Optional seed via env or arg; else randomize
-  const argSeed = process.env.SEED || process.argv.find(a => a.startsWith('--seed='))?.split('=')[1];
-  const seed = argSeed ? Number(argSeed) >>> 0 : (Math.floor(Math.random() * 0xFFFFFFFF) >>> 0);
-  const maxRounds = Number(process.env.MAX_ROUNDS || 20);
-  const modelArg = process.argv.slice(2).find(a => !a.startsWith('--'));
-
+async function playMatch({ matchSeed, maxRounds, bestModel, candidateModel, playerName, opponentName, logDetails, out }) {
   const game = new Game(null, { aiPlayers: ['player', 'opponent'] });
-  game.rng = new RNG(seed);
+  game.rng = new RNG(matchSeed);
   await game.setupMatch();
 
-  // Load NN model and set active
-  const model = await loadModelFromDiskOrFetch();
-  setActiveModel(model);
+  const nn = new NeuralAI({ game, resourceSystem: game.resources, combatSystem: game.combat, model: bestModel });
+  const useMctsOpponent = !candidateModel;
+  const opponentAI = useMctsOpponent
+    ? new MCTS_AI({ resourceSystem: game.resources, combatSystem: game.combat, game, iterations: 5000, rolloutDepth: 10, fullSim: true })
+    : new NeuralAI({ game, resourceSystem: game.resources, combatSystem: game.combat, model: candidateModel });
 
-  const nn = new NeuralAI({ game, resourceSystem: game.resources, combatSystem: game.combat, model });
-  let opponentAI = null;
-  let playerName = 'NN';
-  let opponentName = 'MCTS-hard';
+  let finalizePlayerLog = () => {};
+  let finalizeOpponentLog = () => {};
 
-  if (modelArg) {
-    const fs = await import('fs/promises');
-    const url = new URL(`../${modelArg}`, import.meta.url);
-    const txt = await fs.readFile(url, 'utf8');
-    const obj = JSON.parse(txt);
-    const oppModel = MLP.fromJSON(obj);
-    opponentAI = new NeuralAI({ game, resourceSystem: game.resources, combatSystem: game.combat, model: oppModel });
-    playerName = 'NN-best';
-    opponentName = 'NN-candidate';
-  } else {
-    opponentAI = new MCTS_AI({ resourceSystem: game.resources, combatSystem: game.combat, game, iterations: 5000, rolloutDepth: 10, fullSim: true });
+  if (logDetails) {
+    const playerHeroName = game.player?.hero?.name || 'Unknown Hero';
+    const opponentHeroName = game.opponent?.hero?.name || 'Unknown Hero';
+
+    out(`[eval] Player AI ${playerName} controls hero ${playerHeroName}`);
+    out(`[eval] Opponent AI ${opponentName} controls hero ${opponentHeroName}`);
+
+    finalizePlayerLog = attachCombatLogPrinter(out, `Player (${playerName})`, game.player.log);
+    finalizeOpponentLog = attachCombatLogPrinter(out, `Opponent (${opponentName})`, game.opponent.log);
   }
-
-  const out = getOriginalConsole().log;
-
-  const playerHeroName = game.player?.hero?.name || 'Unknown Hero';
-  const opponentHeroName = game.opponent?.hero?.name || 'Unknown Hero';
-
-  out(`[eval] Player AI ${playerName} controls hero ${playerHeroName}`);
-  out(`[eval] Opponent AI ${opponentName} controls hero ${opponentHeroName}`);
-
-  const finalizePlayerLog = attachCombatLogPrinter(out, `Player (${playerName})`, game.player.log);
-  const finalizeOpponentLog = attachCombatLogPrinter(out, `Opponent (${opponentName})`, game.opponent.log);
 
   let rounds = 0;
   while (rounds < maxRounds && game.player.hero.data.health > 0 && game.opponent.hero.data.health > 0) {
-    // Player (NN) turn — Game starts with player active
     await nn.takeTurn(game.player, game.opponent);
     if (game.opponent.hero.data.health <= 0 || game.player.hero.data.health <= 0) break;
 
-    // Opponent turn
     game.turns.setActivePlayer(game.opponent);
     game.turns.startTurn();
-    if (!modelArg) game.resources.startTurn(game.opponent);
+    if (useMctsOpponent) game.resources.startTurn(game.opponent);
     await opponentAI.takeTurn(game.opponent, game.player);
 
-    // End of opponent turn -> advance to player's next turn
     while (game.turns.current !== 'End') game.turns.nextPhase();
     game.turns.nextPhase();
     game.turns.setActivePlayer(game.player);
     game.turns.startTurn();
-    if (!modelArg) game.resources.startTurn(game.player);
+    if (useMctsOpponent) game.resources.startTurn(game.player);
 
     rounds++;
 
-    const pRoundHP = game.player.hero.data.health;
-    const pRoundArmor = game.player.hero.data.armor || 0;
-    const oRoundHP = game.opponent.hero.data.health;
-    const oRoundArmor = game.opponent.hero.data.armor || 0;
-    out(`[eval] Round ${rounds}: ${playerName} HP=${pRoundHP} Armor=${pRoundArmor} | ${opponentName} HP=${oRoundHP} Armor=${oRoundArmor}`);
+    if (logDetails) {
+      const pRoundHP = game.player.hero.data.health;
+      const pRoundArmor = game.player.hero.data.armor || 0;
+      const oRoundHP = game.opponent.hero.data.health;
+      const oRoundArmor = game.opponent.hero.data.armor || 0;
+      out(`[eval] Round ${rounds}: ${playerName} HP=${pRoundHP} Armor=${pRoundArmor} | ${opponentName} HP=${oRoundHP} Armor=${oRoundArmor}`);
+    }
   }
 
   const pHP = game.player.hero.data.health;
@@ -134,17 +125,114 @@ async function main() {
   const oArmor = game.opponent.hero.data.armor || 0;
   const summary = fmtResult({ rounds, pHP, pArmor, oHP, oArmor }, playerName, opponentName);
 
-  // Basic action counts for color
-  const pPlays = game.player.log.filter(l => l.startsWith('Played ')).length;
-  const oPlays = game.opponent.log.filter(l => l.startsWith('Played ')).length;
+  if (logDetails) {
+    const pPlays = game.player.log.filter(l => l.startsWith('Played ')).length;
+    const oPlays = game.opponent.log.filter(l => l.startsWith('Played ')).length;
 
-  // Always print via original console to bypass debug silencing
-  out(`[eval] Seed=0x${seed.toString(16)} rounds=${summary.rounds}`);
-  out(`[eval] Result: ${summary.winner}`);
-  out(`[eval] Player (${playerName}) HP=${pHP} Armor=${pArmor} | Plays=${pPlays}`);
-  out(`[eval] Opponent (${opponentName}) HP=${oHP} Armor=${oArmor} | Plays=${oPlays}`);
+    out(`[eval] Seed=0x${matchSeed.toString(16)} rounds=${summary.rounds}`);
+    out(`[eval] Result: ${summary.winner}`);
+    out(`[eval] Player (${playerName}) HP=${pHP} Armor=${pArmor} | Plays=${pPlays}`);
+    out(`[eval] Opponent (${opponentName}) HP=${oHP} Armor=${oArmor} | Plays=${oPlays}`);
+  }
+
   finalizePlayerLog();
   finalizeOpponentLog();
+
+  return summary;
+}
+
+async function main() {
+  const argSeed = process.env.SEED || process.argv.find(a => a.startsWith('--seed='))?.split('=')[1];
+  const baseSeed = argSeed ? Number(argSeed) >>> 0 : (Math.floor(Math.random() * 0xFFFFFFFF) >>> 0);
+  const maxRounds = Number(process.env.MAX_ROUNDS || 20);
+
+  const positionalArgs = process.argv.slice(2).filter(a => !a.startsWith('--'));
+  let modelArg = null;
+  let matchCount = 1;
+  let matchCountProvided = false;
+  const digitsOnly = /^\d+$/;
+
+  for (const arg of positionalArgs) {
+    if (digitsOnly.test(arg)) {
+      if (matchCountProvided) {
+        throw new Error(`[eval] Unexpected extra match count argument: ${arg}`);
+      }
+      matchCount = Number(arg);
+      matchCountProvided = true;
+      continue;
+    }
+    if (!modelArg) {
+      modelArg = arg;
+      continue;
+    }
+    throw new Error(`[eval] Unexpected positional argument: ${arg}`);
+  }
+
+  if (!Number.isInteger(matchCount) || matchCount < 1) {
+    throw new Error('[eval] Match count must be a positive integer');
+  }
+
+  const bestModel = await loadModelFromDiskOrFetch();
+  setActiveModel(bestModel);
+
+  let candidateModel = null;
+  if (modelArg) {
+    const fs = await import('fs/promises');
+    const url = new URL(`../${modelArg}`, import.meta.url);
+    const txt = await fs.readFile(url, 'utf8');
+    const obj = JSON.parse(txt);
+    candidateModel = MLP.fromJSON(obj);
+  }
+
+  const playerName = modelArg ? 'NN-best' : 'NN';
+  const opponentName = modelArg ? 'NN-candidate' : 'MCTS-hard';
+
+  const out = getOriginalConsole().log;
+  const logDetails = matchCount === 1;
+
+  const totals = { player: 0, opponent: 0, draw: 0 };
+
+  for (let i = 0; i < matchCount; i++) {
+    const matchSeed = (baseSeed + i) >>> 0;
+    const summary = await playMatch({
+      matchSeed,
+      maxRounds,
+      bestModel,
+      candidateModel,
+      playerName,
+      opponentName,
+      logDetails,
+      out,
+    });
+
+    if (summary.winnerKey === 'player') totals.player += 1;
+    else if (summary.winnerKey === 'opponent') totals.opponent += 1;
+    else totals.draw += 1;
+
+    if (!logDetails) {
+      out(`[eval] Match ${i + 1}/${matchCount}: ${summary.winner}`);
+    }
+  }
+
+  if (!logDetails) {
+    const playerWins = totals.player;
+    const opponentWins = totals.opponent;
+    const draws = totals.draw;
+    const playerWinRate = playerWins / matchCount;
+    const opponentWinRate = opponentWins / matchCount;
+    const drawRate = draws / matchCount;
+
+    if (playerWins === opponentWins) {
+      out(`[eval] Overall result: draw — both ${playerName} and ${opponentName} won ${(playerWinRate * 100).toFixed(1)}% of matches; draws ${(drawRate * 100).toFixed(1)}%.`);
+    } else {
+      const overallWinner = playerWins > opponentWins ? playerName : opponentName;
+      const overallLoser = playerWins > opponentWins ? opponentName : playerName;
+      const winnerRate = playerWins > opponentWins ? playerWinRate : opponentWinRate;
+      const loserRate = playerWins > opponentWins ? opponentWinRate : playerWinRate;
+      const margin = (winnerRate - loserRate) * 100;
+      out(`[eval] Overall winner: ${overallWinner} with ${(winnerRate * 100).toFixed(1)}% wins (+${margin.toFixed(1)}% vs ${overallLoser}; draws ${(drawRate * 100).toFixed(1)}%).`);
+    }
+  }
 }
 
 main().catch(err => { console.error(err); process.exit(1); });
