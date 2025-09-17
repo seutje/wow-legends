@@ -624,8 +624,9 @@ export default class Game {
         if (choice && choice.id !== defender.hero.id) target = choice;
       }
     }
+    const actualTarget = target || defender.hero;
     this.combat.clear();
-    if (!this.combat.declareAttacker(card)) return false;
+    if (!this.combat.declareAttacker(card, actualTarget)) return false;
     this.combat.setDefenderHero(defender.hero);
     if (target) this.combat.assignBlocker(card.id, target);
     const events = this.combat.resolve();
@@ -639,7 +640,6 @@ export default class Game {
     }
     await this.cleanupDeaths(player, defender);
     await this.cleanupDeaths(defender, player);
-    const actualTarget = target || defender.hero;
     player.log.push(`Attacked ${actualTarget.name} with ${card.name}`);
     // Mark attack usage
     card.data.attacked = true;
@@ -738,15 +738,6 @@ export default class Game {
           const nonHero = legal.filter(t => t.id !== this.player.hero.id);
           if (nonHero.length === 0) continue;
         }
-        const declared = this.combat.declareAttacker(c);
-        if (!declared) continue;
-        if (c.data) {
-          c.data.attacked = true;
-          c.data.attacksUsed = (c.data.attacksUsed || 0) + 1;
-        }
-        if (c?.keywords?.includes?.('Stealth')) {
-          c.keywords = c.keywords.filter(k => k !== 'Stealth');
-        }
         let block = null;
         if (legal.length === 1) {
           const only = legal[0];
@@ -756,6 +747,15 @@ export default class Game {
           block = this.rng.pick(choices);
         }
         const target = block || this.player.hero;
+        const declared = this.combat.declareAttacker(c, target);
+        if (!declared) continue;
+        if (c.data) {
+          c.data.attacked = true;
+          c.data.attacksUsed = (c.data.attacksUsed || 0) + 1;
+        }
+        if (c?.keywords?.includes?.('Stealth')) {
+          c.keywords = c.keywords.filter(k => k !== 'Stealth');
+        }
         if (block) this.combat.assignBlocker(c.id, block);
         this.opponent.log.push(`Attacked ${target.name} with ${c.name}`);
       }

@@ -245,7 +245,9 @@ describe.each(effectCards)('$id executes its effect', (card) => {
         await g.playFromHand(g.player, card.id);
         const enemy = new Card({ id: 'enemy-2', name: 'Enemy', type: 'ally', cost: 1, data: { attack: 1, health: 2 }, keywords: [] });
         g.opponent.battlefield.add(enemy);
-        g.combat.declareAttacker(enemy);
+        const friendly = new Card({ id: 'friendly-1', name: 'Friendly', type: 'ally', cost: 1, data: { attack: 1, health: 3 }, keywords: [] });
+        g.player.battlefield.add(friendly);
+        g.combat.declareAttacker(enemy, friendly);
         // Expect 3 snakes summoned for player
         const snakes = g.player.battlefield.cards.filter(c => c.name === 'Snake');
         expect(snakes.length).toBe(3);

@@ -193,9 +193,6 @@ export class NeuralAI {
     const attackers = [player.hero, ...player.battlefield.cards]
       .filter(c => (c.type !== 'equipment') && !c.data?.attacked && ((typeof c.totalAttack === 'function' ? c.totalAttack() : c.data?.attack || 0) > 0));
     for (const a of attackers) {
-      if (!this.combat.declareAttacker(a)) continue;
-      if (a.data) a.data.attacked = true;
-      if (a?.keywords?.includes?.('Stealth')) a.keywords = a.keywords.filter(k => k !== 'Stealth');
       const defenders = [opponent.hero, ...opponent.battlefield.cards.filter(d => d.type !== 'equipment' && d.type !== 'quest')];
       const legal = selectTargets(defenders);
       let block = null;
@@ -208,8 +205,12 @@ export class NeuralAI {
       } else if (legal.length === 1 && legal[0].id !== opponent.hero.id) {
         block = legal[0];
       }
+      const target = block || opponent.hero;
+      if (!this.combat.declareAttacker(a, target)) continue;
+      if (a.data) a.data.attacked = true;
+      if (a?.keywords?.includes?.('Stealth')) a.keywords = a.keywords.filter(k => k !== 'Stealth');
       if (block) this.combat.assignBlocker(a.id, block);
-      player.log.push(`Attacked ${(block||opponent.hero).name} with ${a.name}`);
+      player.log.push(`Attacked ${target.name} with ${a.name}`);
     }
     this.combat.setDefenderHero(opponent.hero);
     const events = this.combat.resolve();

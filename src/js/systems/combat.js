@@ -27,13 +27,13 @@ export class CombatSystem {
     this.bus = bus;
   }
 
-  declareAttacker(attacker) {
+  declareAttacker(attacker, defender = null) {
     // Cannot attack when frozen/stunned
     if (getStat(attacker, 'freezeTurns', 0) > 0) return false;
     // Emit an attack declaration event to allow reactive effects (e.g., secrets)
     if (this.bus) {
       try {
-        this.bus.emit('attackDeclared', { attacker });
+        this.bus.emit('attackDeclared', { attacker, defender });
       } catch (e) {
         // Defensive: do not block combat due to handler errors
         console.error(e);
