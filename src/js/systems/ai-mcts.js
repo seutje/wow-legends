@@ -689,11 +689,17 @@ export class MCTS_AI {
     });
   }
 
-  async takeTurn(player, opponent = null) {
+  async takeTurn(player, opponent = null, options = {}) {
+    const { resume = false } = options;
     // Start turn: mirror BasicAI semantics
-    this.resources.startTurn(player);
-    const drawn = player.library.draw(1);
-    if (drawn[0]) player.hand.add(drawn[0]);
+    if (!resume) {
+      this.resources.startTurn(player);
+      const drawn = player.library.draw(1);
+      if (drawn[0]) player.hand.add(drawn[0]);
+    }
+    if (this.game?.state?.aiPending?.type === 'mcts') {
+      this.game.state.aiPending.stage = 'running';
+    }
 
     // Iteratively choose and apply actions using MCTS until we choose to end
     let powerAvailable = !!(player.hero?.active?.length) && !player.hero.powerUsed;

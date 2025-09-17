@@ -696,20 +696,18 @@ export default class Game {
       }
     } else if (diff === 'medium' || diff === 'hard') {
       // Use MCTS for medium/hard; hard uses deeper search
-      const { default: MCTS_AI } = await import('./systems/ai-mcts.js');
-      const ai = new MCTS_AI({
-        resourceSystem: this.resources,
-        combatSystem: this.combat,
-        game: this,
-        ...(diff === 'hard' ? { iterations: 5000, rolloutDepth: 10 } : {})
-      });
+      if (this.state) this.state.aiPending = { type: 'mcts', stage: 'queued' };
+      const ai = await this._createMctsAI(diff);
       // Mark AI as thinking to allow UI to disable controls
       if (this.state) this.state.aiThinking = true;
       this.bus.emit('ai:thinking', { thinking: true });
       try {
         await ai.takeTurn(this.opponent, this.player);
       } finally {
-        if (this.state) this.state.aiThinking = false;
+        if (this.state) {
+          this.state.aiThinking = false;
+          this.state.aiPending = null;
+        }
         this.bus.emit('ai:thinking', { thinking: false });
       }
     } else {
@@ -776,6 +774,60 @@ export default class Game {
     }
 
     // End AI's turn and start player's turn
+    await this._finalizeOpponentTurn();
+  }
+
+  async resumePendingAITurn() {
+    const pending = this.state?.aiPending;
+    if (!pending || pending.type !== 'mcts') return false;
+    const diff = this.state?.difficulty || 'easy';
+    if (!(diff === 'medium' || diff === 'hard')) {
+      if (this.state) {
+        this.state.aiPending = null;
+        this.state.aiThinking = false;
+      }
+      this.bus.emit('ai:thinking', { thinking: false });
+      return false;
+    }
+    if (this.turns.activePlayer !== this.opponent) {
+      if (this.state) {
+        this.state.aiPending = null;
+        this.state.aiThinking = false;
+      }
+      this.bus.emit('ai:thinking', { thinking: false });
+      return false;
+    }
+    const resume = pending.stage && pending.stage !== 'queued';
+    const ai = await this._createMctsAI(diff);
+    try {
+      await ai.takeTurn(this.opponent, this.player, { resume });
+    } finally {
+      if (this.state) {
+        this.state.aiThinking = false;
+        this.state.aiPending = null;
+      }
+      this.bus.emit('ai:thinking', { thinking: false });
+    }
+    await this._finalizeOpponentTurn();
+    return true;
+  }
+
+  async _createMctsAI(diff) {
+    if (typeof this.opts?.createMctsAI === 'function') {
+      const custom = await this.opts.createMctsAI(diff, this);
+      if (custom) return custom;
+    }
+    const { default: MCTS_AI } = await import('./systems/ai-mcts.js');
+    const config = {
+      resourceSystem: this.resources,
+      combatSystem: this.combat,
+      game: this,
+    };
+    if (diff === 'hard') Object.assign(config, { iterations: 5000, rolloutDepth: 10 });
+    return new MCTS_AI(config);
+  }
+
+  async _finalizeOpponentTurn() {
     while(this.turns.current !== 'End') {
       this.turns.nextPhase();
     }

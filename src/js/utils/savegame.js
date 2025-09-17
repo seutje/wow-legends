@@ -349,6 +349,9 @@ export function captureGameState(game) {
     debug: !!game.state?.debug,
     aiThinking: !!game.state?.aiThinking,
     aiProgress: game.state?.aiProgress ?? 0,
+    aiPending: game.state?.aiPending
+      ? { type: game.state.aiPending.type || null, stage: game.state.aiPending.stage || 'queued' }
+      : null,
     frame: game.state?.frame ?? 0,
     startedAt: game.state?.startedAt ?? Date.now(),
   };
