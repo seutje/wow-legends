@@ -177,6 +177,7 @@ async function main() {
   await fs.mkdir(MODELS_DIR, { recursive: true });
   const savedBest = await loadSavedBest();
   const base = (reset || !savedBest) ? new MLP([38,64,64,1]) : savedBest.clone();
+  const networkShape = base.sizes.slice();
   const KEEP = Math.max(5, Math.floor(POP * 0.1));
   const effectiveGens = Math.max(1, GENS);
   const mutationSigma = (generationIndex) => 0.1 * (1 - generationIndex / effectiveGens) + 0.02;
@@ -184,6 +185,9 @@ async function main() {
   let bestScore = -Infinity;
   let population = [];
   const initialSigma = mutationSigma(0);
+  const plateauThreshold = Math.max(3, Math.min(10, Math.floor(effectiveGens * 0.1)));
+  let plateauStreak = 0;
+  let plateauActive = false;
   population.push(best.clone());
   for (let i = 1; i < POP; i++) {
     population.push(cloneAndMutate(best, initialSigma));
@@ -214,7 +218,23 @@ async function main() {
     }
     const genBest = parents[0];
     const genBestScore = top[0].score;
-    if (genBestScore > bestScore) { best = genBest.clone(); bestScore = genBestScore; }
+    const improved = genBestScore > bestScore;
+    if (improved) { best = genBest.clone(); bestScore = genBestScore; }
+
+    const wasPlateau = plateauActive;
+    if (improved) {
+      plateauStreak = 0;
+      plateauActive = false;
+      if (wasPlateau) {
+        progress(`[${now()}] Plateau broken at gen ${gen+1}; restoring baseline exploration.`);
+      }
+    } else {
+      plateauStreak += 1;
+      if (!plateauActive && plateauStreak >= plateauThreshold) {
+        plateauActive = true;
+        progress(`[${now()}] Plateau detected after ${plateauStreak} generations without improvement; increasing exploration.`);
+      }
+    }
 
     // Save best model for this generation
     try {
@@ -231,15 +251,23 @@ async function main() {
       for (let i = 0; i < parents.length && nextPopulation.length < POP; i++) {
         nextPopulation.push(parents[i].clone());
       }
-      const sigma = mutationSigma(gen + 1);
-      for (let i = 0; i < parents.length && nextPopulation.length < POP; i++) {
-        nextPopulation.push(cloneAndMutate(parents[i], sigma));
+      const baseSigma = mutationSigma(gen + 1);
+      const adaptiveSigma = plateauActive ? Math.min(0.5, baseSigma * 2) : baseSigma;
+      let freshCount = plateauActive ? Math.max(1, Math.floor(POP * 0.05)) : 0;
+      let remainingSlots = Math.max(0, POP - nextPopulation.length);
+      if (freshCount > remainingSlots) freshCount = remainingSlots;
+      const targetBeforeFresh = POP - freshCount;
+      if (plateauActive) {
+        progress(`[${now()}] Gen ${gen+1}/${GENS} plateau streak=${plateauStreak}; using sigma=${adaptiveSigma.toFixed(3)} and reserving ${freshCount} fresh models.`);
       }
       let idx = 0;
-      while (nextPopulation.length < POP) {
+      while (nextPopulation.length < targetBeforeFresh) {
         const parent = parents[idx % parents.length];
-        nextPopulation.push(cloneAndMutate(parent, sigma));
+        nextPopulation.push(cloneAndMutate(parent, adaptiveSigma));
         idx++;
+      }
+      for (let i = 0; i < freshCount && nextPopulation.length < POP; i++) {
+        nextPopulation.push(new MLP(networkShape));
       }
       population = nextPopulation;
     }
