@@ -51,26 +51,31 @@ export default class Game {
           player.cardsPlayedThisTurn = 0;
           player.armorGainedThisTurn = 0;
         }
-      const bonus = player?.hero?.data?.nextSpellDamageBonus;
-      if (bonus?.eachTurn) bonus.used = false;
-      if (player?.hero) {
-        player.hero.powerUsed = false;
-        // Reset per-turn attack state
-        player.hero.data.attacked = false;
-        player.hero.data.attacksUsed = 0;
-        player.hero.data.summoningSick = false;
-        for (const c of player.battlefield.cards) {
-          if (c.data) {
-            c.data.attacked = false;
-            c.data.attacksUsed = 0;
-            c.data.summoningSick = false;
+        const bonus = player?.hero?.data?.nextSpellDamageBonus;
+        if (bonus?.eachTurn) bonus.used = false;
+        if (player?.hero) {
+          player.hero.powerUsed = false;
+          // Reset per-turn attack state
+          player.hero.data.attacked = false;
+          player.hero.data.attacksUsed = 0;
+          player.hero.data.summoningSick = false;
+          for (const c of player.battlefield.cards) {
+            if (c.data) {
+              c.data.attacked = false;
+              c.data.attacksUsed = 0;
+              c.data.summoningSick = false;
+            }
+          }
+          if (player.hero.passive?.length) {
+            this.effects.execute(player.hero.passive, { game: this, player, card: player.hero });
           }
         }
-        if (player.hero.passive?.length) {
-          this.effects.execute(player.hero.passive, { game: this, player, card: player.hero });
-        }
-      }
-        if (player) this.draw(player, 1);
+        const difficulty = this.state?.difficulty || 'easy';
+        const opponentIsAI = typeof this.aiPlayers?.has === 'function' && this.aiPlayers.has('opponent');
+        const aiHandlesDraw = opponentIsAI
+          && player === this.opponent
+          && (difficulty === 'medium' || difficulty === 'hard' || difficulty === 'nightmare');
+        if (player && !aiHandlesDraw) this.draw(player, 1);
       });
 
       this.turns.bus.on('phase:end', ({ phase }) => {
