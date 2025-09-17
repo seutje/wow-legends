@@ -19,6 +19,8 @@ export const FREEZE_WEIGHT = -2;
 export const AI_OVERLOAD_WEIGHT = -1;
 export const PLAYER_OVERLOAD_WEIGHT = 1;
 export const WIN_CONDITION_BONUS = 1000;
+export const ENEMY_ENRAGED_BASE_PENALTY = 20;
+export const ENEMY_ENRAGED_ATTACK_WEIGHT = 8;
 
 function countKeyword(cards, keyword) {
   return cards.filter(c => c?.keywords?.includes?.(keyword)).length;
@@ -36,6 +38,7 @@ export function evaluateGameState({
   resources = 0,
   overloadNextPlayer = 0,
   overloadNextOpponent = 0,
+  enragedOpponentThisTurn = null,
 }) {
   let score = 0;
 
@@ -75,6 +78,30 @@ export function evaluateGameState({
 
   if (oppHealth <= 0) score += WIN_CONDITION_BONUS;
   if (aiHealth <= 0) score -= WIN_CONDITION_BONUS;
+
+  const toMap = (value) => {
+    if (!value) return new Map();
+    if (value instanceof Map) return value;
+    if (value instanceof Set) return new Map(Array.from(value, id => [id, 1]));
+    if (Array.isArray(value)) return new Map(value);
+    return new Map();
+  };
+  const enemyEnraged = toMap(enragedOpponentThisTurn);
+  if (enemyEnraged.size > 0) {
+    for (const card of opponent.battlefield?.cards || []) {
+      if (!enemyEnraged.has(card.id)) continue;
+      const health = card?.data?.health ?? 0;
+      if (health <= 0) continue;
+      const effects = Array.isArray(card?.effects)
+        ? card.effects.filter((fx) => fx?.type === 'buffOnSurviveDamage')
+        : [];
+      if (!effects.length) continue;
+      const attackGain = effects.reduce((sum, fx) => sum + (fx.attack || 0), 0);
+      const triggers = Math.max(1, enemyEnraged.get(card.id) || 1);
+      const penalty = (ENEMY_ENRAGED_BASE_PENALTY + Math.max(0, attackGain) * ENEMY_ENRAGED_ATTACK_WEIGHT) * triggers;
+      score -= penalty;
+    }
+  }
 
   return score;
 }

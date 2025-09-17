@@ -11,6 +11,7 @@ class WNode {
     this.untried = null;
     this.visits = 0;
     this.total = 0;
+    this.terminal = false;
   }
   ucb1(c = 1.4) {
     if (this.visits === 0) return Infinity;
@@ -34,10 +35,16 @@ self.onmessage = (ev) => {
     for (let i = 0; i < iters; i++) {
       // Selection
       let node = root;
-      while (node.untried === null ? false : node.untried.length === 0 && node.children.length) {
+      while (!node.terminal && (node.untried === null ? false : node.untried.length === 0 && node.children.length)) {
         node = node.children.reduce((a, b) => (a.ucb1() > b.ucb1() ? a : b));
       }
       // Expansion
+      if (node.terminal) {
+        const value = node.visits > 0 ? (node.total / node.visits) : 0;
+        let n = node;
+        while (n) { n.visits++; n.total += value; n = n.parent; }
+        continue;
+      }
       if (node.untried === null) node.untried = ai._legalActions(node.state);
       if (node.untried.length) {
         const idx = Math.floor(Math.random() * node.untried.length);
@@ -45,6 +52,14 @@ self.onmessage = (ev) => {
         const res = ai._applyAction(node.state, action);
         if (res.terminal) {
           const value = res.value;
+          const child = new WNode(null, node, action);
+          child.visits = 1;
+          child.total = value;
+          child.terminal = true;
+          child.state = null;
+          child.untried = [];
+          child.children = [];
+          node.children.push(child);
           let n = node;
           while (n) { n.visits++; n.total += value; n = n.parent; }
         } else {
