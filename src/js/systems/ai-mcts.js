@@ -61,7 +61,20 @@ export class MCTS_AI {
     if (!player) return 0;
     let bonus = 0;
     const hero = player.hero;
-    if (hero?.data && typeof hero.data.spellDamage === 'number') bonus += hero.data.spellDamage;
+    let heroBonus = 0;
+    const baseFromState = typeof player.__mctsBaseSpellDamage === 'number'
+      ? player.__mctsBaseSpellDamage
+      : null;
+    const tempFromState = typeof player.__mctsTempSpellDamage === 'number'
+      ? player.__mctsTempSpellDamage
+      : null;
+    if (baseFromState !== null || tempFromState !== null) {
+      if (baseFromState !== null) heroBonus += baseFromState;
+      if (tempFromState !== null) heroBonus += tempFromState;
+    } else if (hero?.data && typeof hero.data.spellDamage === 'number') {
+      heroBonus += hero.data.spellDamage;
+    }
+    bonus += heroBonus;
     if (Array.isArray(hero?.equipment)) {
       for (const eq of hero.equipment) {
         const val = typeof eq?.spellDamage === 'number'
@@ -94,8 +107,44 @@ export class MCTS_AI {
     const spent = Math.max(0, avail - poolRemaining);
     const armor = player?.hero?.data?.armor || 0;
     const spellDamage = this._estimateSpellDamage(player);
+    const card = context?.card || null;
+    const cardCost = card?.cost || 0;
+    const powerAvailable = !!context?.powerAvailable;
+
+    let sawHeroSpellBuff = false;
+    let heroSpellBuffUseful = false;
 
     for (const e of effects) {
+      if (e.type === 'buff') {
+        if (e.target === 'hero' && e.property === 'spellDamage') {
+          const duration = e.duration || 'permanent';
+          if (duration === 'thisTurn' || duration === 'endOfTurn') {
+            sawHeroSpellBuff = true;
+            const poolAfter = Math.max(0, poolRemaining - cardCost);
+            const hasFollowupSpell = player?.hand?.cards?.some((c) => {
+              if (!c) return false;
+              if (card && c.id === card.id) return false;
+              const cCost = c.cost || 0;
+              if (cCost > poolAfter) return false;
+              if (c.type === 'spell') return true;
+              const usesSpellDamage = Array.isArray(c.effects) && c.effects.some((fx) => fx?.usesSpellDamage);
+              const comboUses = Array.isArray(c.combo) && c.combo.some((fx) => fx?.usesSpellDamage);
+              return usesSpellDamage || comboUses;
+            }) || false;
+            let heroPowerSpellLike = false;
+            if (!hasFollowupSpell && powerAvailable && poolAfter >= 2) {
+              heroPowerSpellLike = Array.isArray(player?.hero?.active)
+                && player.hero.active.some((fx) => fx?.type === 'damage' && (fx.usesSpellDamage || player?.hero?.type === 'spell'));
+            }
+            if (hasFollowupSpell || heroPowerSpellLike) {
+              heroSpellBuffUseful = true;
+              return false;
+            }
+            continue;
+          }
+        }
+        return false;
+      }
       switch (e.type) {
         case 'heal': {
           const chars = [player?.hero, ...(player?.battlefield?.cards || [])];
@@ -117,10 +166,12 @@ export class MCTS_AI {
           return false;
       }
     }
-    return true;
+    if (sawHeroSpellBuff && !heroSpellBuffUseful) return true;
+    return !sawHeroSpellBuff;
   }
 
-  _applySimpleEffects(effects = [], player, opponent, pool) {
+  _applySimpleEffects(effects = [], player, opponent, pool, context = {}) {
+    const { source = null, state = null } = context;
     for (const e of effects) {
       const amt = e.amount || 0;
       switch (e.type) {
@@ -141,7 +192,40 @@ export class MCTS_AI {
           const chars = [opponent.hero, ...opponent.battlefield.cards];
           const target = chars[0];
           if (target) {
-            target.data.health = Math.max(0, (target.data?.health ?? target.health) - amt);
+            let total = amt;
+            const usesSpellDamage = (source?.type === 'spell') || e.usesSpellDamage;
+            if (usesSpellDamage) {
+              total += this._estimateSpellDamage(player);
+            }
+            target.data.health = Math.max(0, (target.data?.health ?? target.health) - total);
+          }
+          break;
+        }
+        case 'buff': {
+          if (e.target === 'hero' && player?.hero) {
+            const property = e.property;
+            const duration = e.duration || 'permanent';
+            const data = player.hero.data || (player.hero.data = {});
+            if (property === 'spellDamage' && (duration === 'thisTurn' || duration === 'endOfTurn')) {
+              const prevTemp = state?.tempSpellDamage || 0;
+              const baseSpellDamage = typeof state?.baseHeroSpellDamage === 'number'
+                ? state.baseHeroSpellDamage
+                : (typeof player.__mctsBaseSpellDamage === 'number'
+                  ? player.__mctsBaseSpellDamage
+                  : Math.max(0, (data.spellDamage || 0) - prevTemp));
+              const nextTemp = Math.max(0, prevTemp + amt);
+              const clampedBase = Math.max(0, baseSpellDamage);
+              data.spellDamage = Math.max(0, clampedBase + nextTemp);
+              if (state) {
+                state.baseHeroSpellDamage = clampedBase;
+                state.tempSpellDamage = nextTemp;
+              }
+              player.__mctsBaseSpellDamage = clampedBase;
+              player.__mctsTempSpellDamage = nextTemp;
+            } else if (property) {
+              const current = typeof data[property] === 'number' ? data[property] : 0;
+              data[property] = current + amt;
+            }
           }
           break;
         }
@@ -187,9 +271,30 @@ export class MCTS_AI {
       overloadNextPlayer: base.overloadNextPlayer || 0,
       overloadNextOpponent: base.overloadNextOpponent || 0,
       enteredThisTurn: new Set(base.enteredThisTurn ? Array.from(base.enteredThisTurn) : []),
+      tempSpellDamage: Math.max(0, base.tempSpellDamage || 0),
+      baseHeroSpellDamage: typeof base.baseHeroSpellDamage === 'number'
+        ? base.baseHeroSpellDamage
+        : null,
     };
     // track pool on the cloned player to reason about restore-spent conditions
     s.player.__mctsPool = s.pool;
+    const hero = s.player?.hero;
+    if (hero) {
+      const heroData = hero.data || (hero.data = {});
+      let baseSpellDamage = s.baseHeroSpellDamage;
+      if (baseSpellDamage == null) {
+        const current = typeof heroData.spellDamage === 'number' ? heroData.spellDamage : 0;
+        baseSpellDamage = Math.max(0, current - s.tempSpellDamage);
+      }
+      baseSpellDamage = Math.max(0, baseSpellDamage);
+      heroData.spellDamage = baseSpellDamage;
+      s.baseHeroSpellDamage = baseSpellDamage;
+      s.player.__mctsBaseSpellDamage = baseSpellDamage;
+    } else {
+      s.baseHeroSpellDamage = Math.max(0, s.baseHeroSpellDamage || 0);
+      s.player.__mctsBaseSpellDamage = s.baseHeroSpellDamage;
+    }
+    s.player.__mctsTempSpellDamage = s.tempSpellDamage;
     return s;
   }
 
@@ -198,12 +303,12 @@ export class MCTS_AI {
     const p = state.player;
     const pool = state.pool;
     const canPower = p.hero?.active?.length && state.powerAvailable && pool >= 2
-      && !this._effectsAreUseless(p.hero.active, p, { pool, turn: state.turn });
+      && !this._effectsAreUseless(p.hero.active, p, { pool, turn: state.turn, powerAvailable: state.powerAvailable });
     if (canPower) actions.push({ card: null, usePower: true, end: false });
     for (const c of p.hand.cards) {
       const cost = c.cost || 0;
       if (pool < cost) continue;
-      if (this._effectsAreUseless(c.effects, p, { pool, turn: state.turn })) continue;
+      if (this._effectsAreUseless(c.effects, p, { pool, turn: state.turn, card: c, powerAvailable: state.powerAvailable })) continue;
       actions.push({ card: c, usePower: false, end: false });
       if (canPower && pool - cost >= 2) actions.push({ card: c, usePower: true, end: false });
     }
@@ -242,7 +347,7 @@ export class MCTS_AI {
         // set current state for summon tracking inside effects
         this._currentState = s;
         for (const e of played.effects) { if (e.type === 'overload') s.overloadNextPlayer += (e.amount || 1); }
-        s.pool = this._applySimpleEffects(played.effects, p, o, s.pool);
+        s.pool = this._applySimpleEffects(played.effects, p, o, s.pool, { source: played, state: s });
         this._currentState = null;
       }
     }
@@ -253,7 +358,8 @@ export class MCTS_AI {
       if (p.hero.active?.length) {
         this._currentState = s;
         for (const e of p.hero.active) { if (e.type === 'overload') s.overloadNextPlayer += (e.amount || 1); }
-        s.pool = this._applySimpleEffects(p.hero.active, p, o, s.pool);
+        const source = { type: 'heroPower', hero: p.hero };
+        s.pool = this._applySimpleEffects(p.hero.active, p, o, s.pool, { source, state: s });
         this._currentState = null;
       }
     }

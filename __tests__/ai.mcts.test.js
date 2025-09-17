@@ -32,7 +32,7 @@ test('MCTS prefers lethal damage over healing', () => {
 
 test('MCTS can chain multiple plays in a turn', () => {
   const g = new Game();
-  const ai = new MCTS_AI({ resourceSystem: g.resources, combatSystem: g.combat, game: g, iterations: 250, rolloutDepth: 4 });
+  const ai = new MCTS_AI({ resourceSystem: g.resources, combatSystem: g.combat, game: g, iterations: 1000, rolloutDepth: 4 });
   g.turns.turn = 4;
   g.opponent.hero.data.maxHealth = 30;
   g.opponent.hero.data.health = 30;
@@ -86,7 +86,13 @@ test('MCTS skips cards with no meaningful effect', async () => {
   g.opponent.hand.add(manaPotion);
   g.turns.setActivePlayer(g.opponent);
 
-  await ai.takeTurn(g.opponent, g.player);
+  const origRandom = Math.random;
+  Math.random = () => 0;
+  try {
+    await ai.takeTurn(g.opponent, g.player);
+  } finally {
+    Math.random = origRandom;
+  }
 
   expect(g.opponent.graveyard.cards).toHaveLength(0);
   expect(g.opponent.hand.cards.map(c => c.name)).toEqual(expect.arrayContaining([
@@ -128,11 +134,106 @@ test('MCTS search includes pending overload from previous actions', async () => 
     return actions.shift() || { end: true };
   });
 
-  await ai.takeTurn(g.opponent, g.player);
+  const origRandom = Math.random;
+  Math.random = () => 0;
+  try {
+    await ai.takeTurn(g.opponent, g.player);
+  } finally {
+    Math.random = origRandom;
+  }
 
   expect(calls.length).toBeGreaterThanOrEqual(2);
   expect(calls[0]).toBe(0);
   expect(calls[1]).toBe(2);
 
   searchMock.mockRestore();
+});
+
+test('MCTS skips temporary hero spell-damage buffs when there is no follow-up', () => {
+  const g = new Game();
+  const ai = new MCTS_AI({ resourceSystem: g.resources, combatSystem: g.combat });
+
+  g.turns.turn = 3;
+  g.turns.setActivePlayer(g.opponent);
+  g.opponent.hero.active = [];
+  g.opponent.hand.cards = [];
+
+  const elixir = new Card({
+    id: 'test-elixir',
+    type: 'consumable',
+    name: 'Elixir of Firepower',
+    cost: 1,
+    effects: [
+      { type: 'buff', target: 'hero', property: 'spellDamage', amount: 1, duration: 'thisTurn' }
+    ]
+  });
+  g.opponent.hand.add(elixir);
+
+  const rootState = {
+    player: g.opponent,
+    opponent: g.player,
+    pool: 3,
+    turn: 3,
+    powerAvailable: false,
+    overloadNextPlayer: 0,
+    overloadNextOpponent: 0,
+    enteredThisTurn: new Set(),
+  };
+
+  const actions = ai._legalActions(rootState);
+  expect(actions.some(a => a.card?.name === 'Elixir of Firepower')).toBe(false);
+});
+
+test('MCTS spell-damage buffs boost subsequent spell damage in the simple simulation', () => {
+  const g = new Game();
+  const ai = new MCTS_AI({ resourceSystem: g.resources, combatSystem: g.combat });
+
+  g.turns.turn = 4;
+  g.turns.setActivePlayer(g.opponent);
+  g.opponent.hero.active = [];
+  g.opponent.hand.cards = [];
+  g.player.hero.data.health = 30;
+
+  const elixir = new Card({
+    id: 'test-elixir-followup',
+    type: 'consumable',
+    name: 'Elixir of Firepower',
+    cost: 1,
+    effects: [
+      { type: 'buff', target: 'hero', property: 'spellDamage', amount: 1, duration: 'thisTurn' }
+    ]
+  });
+  const bolt = new Card({
+    id: 'test-firebolt',
+    type: 'spell',
+    name: 'Firebolt',
+    cost: 2,
+    effects: [
+      { type: 'damage', target: 'character', amount: 2 }
+    ]
+  });
+
+  g.opponent.hand.add(elixir);
+  g.opponent.hand.add(bolt);
+
+  const rootState = {
+    player: g.opponent,
+    opponent: g.player,
+    pool: 4,
+    turn: 4,
+    powerAvailable: false,
+    overloadNextPlayer: 0,
+    overloadNextOpponent: 0,
+    enteredThisTurn: new Set(),
+  };
+
+  const afterElixir = ai._applyAction(rootState, { card: elixir, usePower: false, end: false });
+  expect(afterElixir.terminal).toBe(false);
+  expect(afterElixir.state.tempSpellDamage).toBe(1);
+
+  const afterBolt = ai._applyAction(afterElixir.state, { card: bolt, usePower: false, end: false });
+  expect(afterBolt.terminal).toBe(false);
+  expect(afterBolt.state.opponent.hero.data.health).toBe(27);
+  const graveNames = afterBolt.state.player.graveyard.cards.map(c => c.name);
+  expect(graveNames).toEqual(expect.arrayContaining(['Elixir of Firepower', 'Firebolt']));
 });
