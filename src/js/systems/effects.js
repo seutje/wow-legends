@@ -727,11 +727,14 @@ export class EffectSystem {
 
     const opponent = player === game.player ? game.opponent : game.player;
 
-    const handler = async ({ attacker }) => {
-      // Trigger on enemy attack declaration (target-agnostic, similar to Freezing Trap)
+    const handler = async ({ attacker, defender: target }) => {
+      // Trigger only when an enemy attacks one of the player's allies
       if (!attacker) return;
       const isEnemy = opponent.battlefield.cards.includes(attacker) || attacker === opponent.hero;
       if (!isEnemy) return;
+      const isFriendlyAllyTarget =
+        target && target !== player.hero && target.type === 'ally' && player.battlefield.cards.includes(target);
+      if (!isFriendlyAllyTarget) return;
       off();
       logSecretTriggered(game, player, { card, token });
       // Remove the secret indicator when it triggers

@@ -784,18 +784,18 @@ export class MCTS_AI {
           // Prefer RNG from game if available for variety
           block = this.game?.rng?.pick ? this.game.rng.pick(choices) : (choices[0] || null);
         }
+        const target = block || opponent.hero;
         // If Rush and just entered, skip if no non-hero block target
         const enteredTurn = a?.data?.enteredTurn;
         const justEntered = !!(enteredTurn && (enteredTurn === (this.resources?.turns?.turn || 0)));
         if (a?.keywords?.includes?.('Rush') && justEntered && !block) continue;
-        if (!this.combat.declareAttacker(a)) continue;
+        if (!this.combat.declareAttacker(a, target)) continue;
         if (a.data) a.data.attacked = true;
         // Stealth is lost when a unit attacks (AI - MCTS path)
         if (a?.keywords?.includes?.('Stealth')) {
           a.keywords = a.keywords.filter(k => k !== 'Stealth');
         }
         if (block) this.combat.assignBlocker(a.id, block);
-        const target = block || opponent.hero;
         if (player?.log) player.log.push(`Attacked ${target.name} with ${a.name}`);
       }
       this.combat.setDefenderHero(opponent.hero);
