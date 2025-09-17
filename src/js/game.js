@@ -828,7 +828,7 @@ export default class Game {
       combatSystem: this.combat,
       game: this,
     };
-    if (diff === 'hard') Object.assign(config, { iterations: 5000, rolloutDepth: 10 });
+    if (diff === 'hard') Object.assign(config, { iterations: 10000, rolloutDepth: 20 });
     return new MCTS_AI(config);
   }
 
