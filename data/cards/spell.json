@@ -72,7 +72,10 @@
       {
         "type": "damage",
         "target": "allCharacters",
-        "amount": 1
+        "amount": 1,
+        "friendlyDamageBuff": {
+          "attack": 1
+        }
       }
     ],
     "keywords": [

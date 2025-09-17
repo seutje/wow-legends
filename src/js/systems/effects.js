@@ -192,7 +192,7 @@ export class EffectSystem {
   }
 
   async dealDamage(effect, context) {
-    const { target, amount, freeze, beastBonus, comboAmount, usesSpellDamage } = effect;
+    const { target, amount, freeze, beastBonus, comboAmount, usesSpellDamage, friendlyDamageBuff } = effect;
     const { game, player, card, comboActive } = context;
     const opponent = player === game.player ? game.opponent : game.player;
       let dmgAmount = amount;
@@ -340,6 +340,7 @@ export class EffectSystem {
         remaining -= use;
       }
       if (remaining <= 0) continue;
+      const damageApplied = remaining;
       if (t.data && t.data.health != null) {
         t.data.health -= remaining;
         console.log(
@@ -353,6 +354,20 @@ export class EffectSystem {
           `${t.name} took ${remaining} damage from ${card?.name ?? 'an unknown source'}. Remaining health: ${t.health}`
         );
         if (t.health > 0 && freeze) freezeTarget(t, freeze);
+      }
+      if (friendlyDamageBuff && damageApplied > 0) {
+        const friendlyCards = Array.isArray(player?.battlefield?.cards) ? player.battlefield.cards : [];
+        const isFriendlyAlly = t?.type === 'ally' && friendlyCards.includes(t);
+        const survived = (t?.data?.health ?? t?.health ?? 0) > 0;
+        if (isFriendlyAlly && survived) {
+          const { attack: bonusAttack = 0 } = friendlyDamageBuff;
+          if (typeof bonusAttack === 'number' && bonusAttack !== 0) {
+            if (!t.data) t.data = {};
+            const currentAttack = typeof t.data.attack === 'number' ? t.data.attack : 0;
+            t.data.attack = currentAttack + bonusAttack;
+            console.log(`${t.name} enraged from ${card?.name ?? 'damage effect'} gaining +${bonusAttack} ATK.`);
+          }
+        }
       }
       if (t.keywords?.includes?.('Stealth')) {
         t.keywords = t.keywords.filter(k => k !== 'Stealth');
