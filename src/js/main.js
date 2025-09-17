@@ -31,8 +31,9 @@ try {
   }
 } catch {}
 
+let loadedFromSave = false;
 try {
-  loadSavedGameState(game);
+  loadedFromSave = loadSavedGameState(game);
 } catch {}
 
 // Expose for quick dev console hooks
@@ -79,6 +80,10 @@ game.bus.on('ai:progress', ({ progress }) => {
   if (game.state) game.state.aiProgress = Math.max(0, Math.min(1, progress ?? 0));
   rerender();
 });
+
+if (loadedFromSave && game.state?.aiThinking && game.state?.aiPending?.type === 'mcts') {
+  game.resumePendingAITurn().catch(() => {});
+}
 // Keep UI in sync when quests complete (quest card moves off battlefield)
 game.bus.on('quest:completed', () => {
   rerender();

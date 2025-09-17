@@ -10,6 +10,7 @@ describe('savegame utilities', () => {
     // Modify some state to ensure it survives round-trip
     game.player.hero.data.health -= 3;
     game.state.debug = true;
+    game.state.aiPending = { type: 'mcts', stage: 'running' };
     game.turns.turn = 3;
     game.turns.current = 'Main';
     game.resources._pool.set(game.player, 2);
@@ -28,6 +29,7 @@ describe('savegame utilities', () => {
     expect(clone.turns.current).toBe('Main');
     expect(clone.resources.pool(clone.player)).toBe(2);
     expect(clone.state.debug).toBe(true);
+    expect(clone.state.aiPending).toEqual({ type: 'mcts', stage: 'running' });
   });
 
   test('secrets persist across save and restore', async () => {
