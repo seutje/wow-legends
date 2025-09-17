@@ -178,8 +178,16 @@ async function main() {
   const savedBest = await loadSavedBest();
   const base = (reset || !savedBest) ? new MLP([38,64,64,1]) : savedBest.clone();
   const KEEP = Math.max(5, Math.floor(POP * 0.1));
+  const effectiveGens = Math.max(1, GENS);
+  const mutationSigma = (generationIndex) => 0.1 * (1 - generationIndex / effectiveGens) + 0.02;
   let best = base.clone();
   let bestScore = -Infinity;
+  let population = [];
+  const initialSigma = mutationSigma(0);
+  population.push(best.clone());
+  for (let i = 1; i < POP; i++) {
+    population.push(cloneAndMutate(best, initialSigma));
+  }
 
   let opponentMode = opponent;
   let opponentModelJSON = null;
@@ -195,17 +203,16 @@ async function main() {
   progress(`[${now()}] Starting training: pop=${POP}, gens=${GENS}, reset=${Boolean(reset)}, opponent=${opponentMode}`);
 
   for (let gen = 0; gen < GENS; gen++) {
-    const population = [];
-    population.push(best.clone()); // elitism
-    for (let i = 1; i < POP; i++) {
-      const sigma = 0.1 * (1 - gen / GENS) + 0.02; // anneal mutation
-      population.push(cloneAndMutate(best, sigma));
-    }
     // Evaluate in parallel using worker threads
     const scores = await evalPopulationParallel(population, { games: 5, maxRounds: 16, opponentMode, opponentModelJSON });
     scores.sort((a,b)=> b.score - a.score);
     const top = scores.slice(0, KEEP);
-    const genBest = population[top[0].idx];
+    const parents = top.map(({ idx }) => population[idx].clone());
+    if (parents.length === 0) {
+      progress(`[${now()}] Gen ${gen+1}/${GENS} produced no valid parents; stopping early.`);
+      break;
+    }
+    const genBest = parents[0];
     const genBestScore = top[0].score;
     if (genBestScore > bestScore) { best = genBest.clone(); bestScore = genBestScore; }
 
@@ -217,6 +224,24 @@ async function main() {
       progress(`[${now()}] Gen ${gen+1}/${GENS} best=${genBestScore.toFixed(3)} overall=${bestScore.toFixed(3)} | saved ${genPath}`);
     } catch (e) {
       progress(`[${now()}] Gen ${gen+1}/${GENS} best=${genBestScore.toFixed(3)} overall=${bestScore.toFixed(3)} | failed to save generation model: ${e?.message || e}`);
+    }
+
+    if (gen < GENS - 1) {
+      const nextPopulation = [];
+      for (let i = 0; i < parents.length && nextPopulation.length < POP; i++) {
+        nextPopulation.push(parents[i].clone());
+      }
+      const sigma = mutationSigma(gen + 1);
+      for (let i = 0; i < parents.length && nextPopulation.length < POP; i++) {
+        nextPopulation.push(cloneAndMutate(parents[i], sigma));
+      }
+      let idx = 0;
+      while (nextPopulation.length < POP) {
+        const parent = parents[idx % parents.length];
+        nextPopulation.push(cloneAndMutate(parent, sigma));
+        idx++;
+      }
+      population = nextPopulation;
     }
   }
 
