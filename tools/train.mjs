@@ -75,8 +75,8 @@ async function evalCandidate(model, { games = 5, maxRounds = 20, opponentMode = 
   let total = 0;
   for (let g = 0; g < games; g++) {
     const game = new Game(null, { aiPlayers: ['player', 'opponent'] });
-    // Randomize RNG seed per evaluation to diversify decks/hands
-    const seed = (Math.floor(Math.random() * 0xFFFFFFFF)) >>> 0;
+    // Use deterministic RNG seeds per evaluation so every candidate sees identical matchups
+    const seed = g >>> 0;
     game.rng = new RNG(seed);
     await game.setupMatch();
     setActiveModel(model); // ensure endTurn or direct AI uses this model
