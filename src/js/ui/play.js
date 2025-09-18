@@ -361,7 +361,7 @@ export function renderPlay(container, game, { onUpdate, onOpenDeckBuilder, onNew
   const initialMount = !controls || !board;
   if (initialMount) {
     container.innerHTML = '';
-    const diffOptions = ['easy', 'medium', 'hard', 'hybrid', 'nightmare'];
+    const diffOptions = ['easy', 'medium', 'hard', 'nightmare', 'hybrid'];
     const diffSelect = el('select', {
       class: 'select-difficulty',
       onchange: (e) => {

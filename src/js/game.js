@@ -870,8 +870,8 @@ export default class Game {
       const { NeuralPolicyValueModel } = await import('./systems/ai-nn.js');
       const model = await this._ensureNNModelLoading();
       Object.assign(config, {
-        iterations: 6500,
-        rolloutDepth: 18,
+        iterations: 10000,
+        rolloutDepth: 20,
         policyValueModel: new NeuralPolicyValueModel({ model }),
       });
     }
