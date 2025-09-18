@@ -118,6 +118,25 @@ function zoneCards(title, cards, { clickCard, owner } = {}) {
   return el('section', { class: 'zone' }, el('h3', {}, title), wrap);
 }
 
+function handSize(hand) {
+  if (typeof hand?.size === 'function') return hand.size();
+  if (Array.isArray(hand?.cards)) return hand.cards.length;
+  return 0;
+}
+
+function buildAiHandZone(hand, { owner, debugOn } = {}) {
+  if (debugOn) {
+    const section = zoneCards('Enemy Hand', hand?.cards ?? [], { owner });
+    section.classList.add('ai-hand');
+    section.dataset.debugView = '1';
+    return section;
+  }
+  return el('section', { class: 'zone ai-hand', dataset: { debugView: '0' } },
+    el('h3', {}, 'Enemy Hand'),
+    el('p', { class: 'count' }, `${handSize(hand)} cards`)
+  );
+}
+
 function logPane(title, entries = []) {
   const ul = el('ul', {}, ...entries.map(e => el('li', {}, e)));
   const pane = el('div', { class: 'log-pane zone' }, el('h3', {}, title), ul);
@@ -347,13 +366,14 @@ function renderSecretBadges(cardEl, card) {
   }
 }
 
-import { setDebugLogging, isDebugLogging } from '../utils/logger.js';
+import { setDebugLogging } from '../utils/logger.js';
 import { loadSettings, rehydrateDeck } from '../utils/settings.js';
 
 import { saveDifficulty } from '../utils/settings.js';
 
 export function renderPlay(container, game, { onUpdate, onOpenDeckBuilder, onNewGame } = {}) {
   const p = game.player; const e = game.opponent;
+  const debugEnabled = !!(game.state?.debug);
 
   let controls = container.querySelector('.controls');
   let board = container.querySelector('.board');
@@ -419,7 +439,7 @@ export function renderPlay(container, game, { onUpdate, onOpenDeckBuilder, onNew
     const aiHero = el('div', { class: 'slot ai-hero' }, el('h3', {}, 'AI hero'), buildCardEl(e.hero));
     const aiMana = el('div', { class: 'slot ai-mana' }, el('h3', {}, 'Mana'), el('div', { class: 'mana' }, `${game.resources.pool(e)} / ${game.resources.available(e)}`));
     const aiLog = logPane('Enemy Log', e.log); aiLog.classList.add('ai-log');
-    const aiHand = el('div', { class: 'zone ai-hand' }, el('h3', {}, 'Enemy Hand'), el('p', { class: 'count' }, `${e.hand.size()} cards`));
+    const aiHand = buildAiHandZone(e.hand, { owner: e, debugOn: debugEnabled });
     const aiField = zoneCards('Enemy Battlefield', e.battlefield.cards, { owner: e }); aiField.classList.add('ai-field');
 
     // Player side
@@ -468,8 +488,23 @@ export function renderPlay(container, game, { onUpdate, onOpenDeckBuilder, onNew
   syncCardsSection(board.querySelector('.ai-field'), e.battlefield.cards, { owner: e });
   syncCardsSection(board.querySelector('.p-field'), p.battlefield.cards, { owner: p, clickCard: async (c)=>{ await game.attack(game.player, c.id); onUpdate?.(); } });
   syncCardsSection(board.querySelector('.p-hand'), p.hand.cards, { owner: p, clickCard: async (c)=>{ if (!await game.playFromHand(game.player, c.id)) { /* ignore */ } onUpdate?.(); } });
-  const aiHand = board.querySelector('.ai-hand .count');
-  if (aiHand) aiHand.textContent = `${e.hand.size()} cards`;
+  let aiHandSection = board.querySelector('.ai-hand');
+  if (!aiHandSection || ((aiHandSection.dataset?.debugView === '1') !== debugEnabled)) {
+    const replacement = buildAiHandZone(e.hand, { owner: e, debugOn: debugEnabled });
+    if (aiHandSection) aiHandSection.replaceWith(replacement);
+    else {
+      const aiFieldEl = board.querySelector('.ai-field');
+      if (aiFieldEl?.parentNode) aiFieldEl.parentNode.insertBefore(replacement, aiFieldEl);
+      else board.append(replacement);
+    }
+    aiHandSection = replacement;
+  }
+  if (debugEnabled) {
+    syncCardsSection(aiHandSection, e.hand.cards, { owner: e });
+  } else {
+    const countEl = aiHandSection?.querySelector('.count');
+    if (countEl) countEl.textContent = `${handSize(e.hand)} cards`;
+  }
 
   // Logs
   syncLogPane(board.querySelector('.ai-log'), e.log);
