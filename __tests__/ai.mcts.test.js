@@ -30,6 +30,57 @@ test('MCTS prefers lethal damage over healing', () => {
   });
 });
 
+test('MCTS simulation targets the biggest threat with single-target removal', () => {
+  const g = new Game();
+  const ai = new MCTS_AI({ resourceSystem: g.resources, combatSystem: g.combat, game: g, iterations: 100, rolloutDepth: 3 });
+
+  g.turns.turn = 6;
+  g.turns.setActivePlayer(g.opponent);
+  g.opponent.hero.active = [];
+
+  const bigThreat = new Card({
+    id: 'big-threat',
+    type: 'ally',
+    name: 'Huge Golem',
+    data: { attack: 8, health: 6, maxHealth: 6, enteredTurn: 0 }
+  });
+  const smallThreat = new Card({
+    id: 'small-threat',
+    type: 'ally',
+    name: 'Tiny Imp',
+    data: { attack: 1, health: 2, maxHealth: 2, enteredTurn: 0 }
+  });
+  g.player.battlefield.cards = [bigThreat, smallThreat];
+
+  const removal = new Card({
+    id: 'removal',
+    type: 'spell',
+    name: 'Execute',
+    cost: 4,
+    effects: [
+      { type: 'damage', target: 'minion', amount: 6 }
+    ]
+  });
+  g.opponent.hand.cards = [removal];
+  g.opponent.battlefield.cards = [];
+  g.resources._pool.set(g.opponent, 6);
+
+  const state = ai._stateFromLive(g.opponent, g.player);
+  const actions = ai._legalActions(state);
+  const removalAction = actions.find((act) => act.card && act.card.id === 'removal');
+  expect(removalAction).toBeTruthy();
+
+  const result = ai._applyAction(state, removalAction);
+  expect(result.terminal).toBe(false);
+  expect(removalAction.__mctsTargetSignature).toContain('big-threat');
+  expect(ai._actionSignature(removalAction)).toContain('big-threat');
+
+  const enemyBattlefield = result.state.opponent.battlefield.cards.map((c) => c.id);
+  expect(enemyBattlefield).not.toContain('big-threat');
+  expect(enemyBattlefield).toContain('small-threat');
+  expect(result.state.opponent.graveyard.cards.some((c) => c.id === 'big-threat')).toBe(true);
+});
+
 test('MCTS can chain multiple plays in a turn', () => {
   const g = new Game();
   const ai = new MCTS_AI({ resourceSystem: g.resources, combatSystem: g.combat, game: g, iterations: 1000, rolloutDepth: 4 });

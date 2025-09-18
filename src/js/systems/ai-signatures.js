@@ -36,7 +36,10 @@ export function actionSignature(action) {
   }
   const usePower = action.usePower ? 'power:1' : 'power:0';
   const end = action.end ? 'end:1' : 'end:0';
-  return `${cardPart}|${attackPart}|${usePower}|${end}`;
+  const targets = (typeof action.__mctsTargetSignature === 'string' && action.__mctsTargetSignature.length)
+    ? `targets:${action.__mctsTargetSignature}`
+    : 'targets:none';
+  return `${cardPart}|${attackPart}|${usePower}|${end}|${targets}`;
 }
 
 export default actionSignature;
