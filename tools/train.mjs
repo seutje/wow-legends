@@ -16,7 +16,7 @@ const __dirname = path.dirname(__filename);
 
 import Game from '../src/js/game.js';
 import MLP from '../src/js/systems/nn.js';
-import NeuralAI, { setActiveModel } from '../src/js/systems/ai-nn.js';
+import NeuralAI, { setActiveModel, DEFAULT_MODEL_SHAPE, MODEL_INPUT_SIZE } from '../src/js/systems/ai-nn.js';
 import MCTS_AI from '../src/js/systems/ai-mcts.js';
 import { setDebugLogging, getOriginalConsole } from '../src/js/utils/logger.js';
 import { parseTrainArgs } from './train.args.mjs';
@@ -401,9 +401,13 @@ async function evalPopulationParallel(population, { games = 1, maxRounds = 16, c
 async function main() {
   const { pop: POP, gens: GENS, reset, opponent, curriculum } = parseTrainArgs();
   await fs.mkdir(MODELS_DIR, { recursive: true });
-  const savedBest = await loadSavedBest();
+  let savedBest = await loadSavedBest();
+  if (savedBest && (!Array.isArray(savedBest.sizes) || savedBest.sizes[0] !== MODEL_INPUT_SIZE)) {
+    progress(`[${now()}] Saved model input size ${savedBest?.sizes?.[0]} does not match expected ${MODEL_INPUT_SIZE}; ignoring saved checkpoint.`);
+    savedBest = null;
+  }
   const savedBestJSON = savedBest ? savedBest.toJSON() : null;
-  const base = (reset || !savedBest) ? new MLP([38,64,64,1]) : savedBest.clone();
+  const base = (reset || !savedBest) ? new MLP(DEFAULT_MODEL_SHAPE) : savedBest.clone();
   const networkShape = base.sizes.slice();
   const KEEP = Math.max(5, Math.floor(POP * 0.1));
   const effectiveGens = Math.max(1, GENS);

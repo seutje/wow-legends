@@ -7,10 +7,78 @@ import { selectTargets } from './targeting.js';
 import MLP from './nn.js';
 import { actionSignature } from './ai-signatures.js';
 
+export const HERO_ID_VOCAB = Object.freeze([
+  'hero-anduin-wrynn-high-king-priest',
+  'hero-arthas-menethil-deathlord',
+  'hero-garrosh-hellscream-warmonger',
+  'hero-gul-dan-dark-conjurer',
+  'hero-illidan-stormrage-the-betrayer',
+  'hero-jaina-proudmoore-archmage',
+  'hero-malfurion-stormrage-archdruid',
+  'hero-rexxar-beastmaster',
+  'hero-sylvanas-windrunner-banshee-queen',
+  'hero-thrall-warchief-of-the-horde',
+  'hero-tyrande-whisperwind-high-priestess',
+  'hero-uther-the-lightbringer',
+  'hero-valeera-sanguinar-master-assassin',
+  'hero-varian-wrynn-high-king',
+]);
+const HERO_ID_TO_INDEX = new Map(HERO_ID_VOCAB.map((id, index) => [id, index]));
+const HERO_VECTOR_SIZE = HERO_ID_VOCAB.length + 1; // +1 for unknown heroes
+const HERO_UNKNOWN_INDEX = HERO_VECTOR_SIZE - 1;
+const STATE_BASE_FEATURE_COUNT = 20;
+const ACTION_FEATURE_COUNT = 15;
+export const STATE_FEATURE_COUNT = STATE_BASE_FEATURE_COUNT + HERO_VECTOR_SIZE * 2;
+export const MODEL_INPUT_SIZE = STATE_FEATURE_COUNT + ACTION_FEATURE_COUNT;
+export const DEFAULT_MODEL_SHAPE = [MODEL_INPUT_SIZE, 64, 64, 1];
+
+export function heroIdToVector(heroId) {
+  const vec = new Array(HERO_VECTOR_SIZE).fill(0);
+  if (typeof heroId === 'string') {
+    const idx = HERO_ID_TO_INDEX.get(heroId);
+    if (typeof idx === 'number' && idx >= 0) {
+      vec[idx] = 1;
+      return vec;
+    }
+  }
+  vec[HERO_UNKNOWN_INDEX] = 1;
+  return vec;
+}
+
 let ActiveModel = null; // module-level active model
 
-export function setActiveModel(model) { ActiveModel = model; }
-export function getActiveModel() { return ActiveModel; }
+function isModelCompatible(model) {
+  return !!(model && Array.isArray(model.sizes) && model.sizes[0] === MODEL_INPUT_SIZE);
+}
+
+function createDefaultModel() {
+  return new MLP(DEFAULT_MODEL_SHAPE);
+}
+
+function hasForward(model) {
+  return typeof model?.forward === 'function';
+}
+
+function resolveModel(candidate) {
+  if (isModelCompatible(candidate)) return candidate;
+  if (candidate && !Array.isArray(candidate?.sizes) && hasForward(candidate)) return candidate;
+  if (isModelCompatible(ActiveModel)) return ActiveModel;
+  return createDefaultModel();
+}
+
+export function setActiveModel(model) {
+  if (model == null) {
+    ActiveModel = null;
+  } else if (isModelCompatible(model)) {
+    ActiveModel = model;
+  } else {
+    ActiveModel = null;
+  }
+}
+
+export function getActiveModel() {
+  return isModelCompatible(ActiveModel) ? ActiveModel : null;
+}
 
 export async function loadModelFromDiskOrFetch() {
   try {
@@ -19,17 +87,21 @@ export async function loadModelFromDiskOrFetch() {
       const path = new URL('../../../data/models/best.json', import.meta.url);
       const txt = await fs.readFile(path, 'utf8');
       const obj = JSON.parse(txt);
-      ActiveModel = MLP.fromJSON(obj);
+      const candidate = MLP.fromJSON(obj);
+      if (!isModelCompatible(candidate)) throw new Error('Model shape mismatch');
+      ActiveModel = candidate;
       return ActiveModel;
     } else {
       const res = await fetch(new URL('../../../data/models/best.json', import.meta.url));
       const obj = await res.json();
-      ActiveModel = MLP.fromJSON(obj);
+      const candidate = MLP.fromJSON(obj);
+      if (!isModelCompatible(candidate)) throw new Error('Model shape mismatch');
+      ActiveModel = candidate;
       return ActiveModel;
     }
   } catch (_) {
     // If missing, create a fresh random model with default sizes
-    ActiveModel = new MLP([38, 64, 64, 1]);
+    ActiveModel = createDefaultModel();
     return ActiveModel;
   }
 }
@@ -65,6 +137,9 @@ function hasKeyword(card, keyword) {
 function summarizeSide(side) {
   const hero = side?.hero || {};
   const heroData = hero.data || {};
+  const heroId = (typeof hero.id === 'string' && hero.id)
+    || (typeof heroData.id === 'string' && heroData.id)
+    || null;
   const battlefield = listCards(side?.battlefield);
   const allies = battlefield.filter(c => c && c.type !== 'equipment' && c.type !== 'quest');
   let attackSum = 0;
@@ -80,6 +155,7 @@ function summarizeSide(side) {
     if (hasKeyword(card, 'Taunt')) tauntCount += 1;
   }
   return {
+    heroId,
     heroHealth: heroData.health ?? hero.health ?? 0,
     heroArmor: heroData.armor ?? hero.armor ?? 0,
     handCount: listCards(side?.hand).length,
@@ -168,7 +244,7 @@ function stateDescriptorFromSnapshot(state = {}) {
 
 function stateFeaturesFromDescriptor(desc = {}) {
   const { player = {}, opponent = {} } = desc;
-  return [
+  const base = [
     clamp01((desc.turn || 0) / 20),
     clamp01((player.heroHealth || 0) / 40),
     clamp01((player.heroArmor || 0) / 20),
@@ -190,6 +266,9 @@ function stateFeaturesFromDescriptor(desc = {}) {
     clamp01((opponent.tauntCount || 0) / 5),
     desc.powerAvailable ? 1 : 0,
   ];
+  const playerHeroVec = heroIdToVector(player.heroId);
+  const opponentHeroVec = heroIdToVector(opponent.heroId);
+  return base.concat(playerHeroVec, opponentHeroVec);
 }
 
 function stateFeatures(state) {
@@ -241,7 +320,7 @@ function actionFeatures(action) {
 
 export class NeuralPolicyValueModel {
   constructor({ model = null, temperature = 1 } = {}) {
-    this.model = model || ActiveModel || new MLP([38, 64, 64, 1]);
+    this.model = resolveModel(model);
     this.temperature = (typeof temperature === 'number' && temperature > 0) ? temperature : 1;
   }
 
@@ -292,7 +371,7 @@ export class NeuralAI {
     this.game = game || null;
     this.resources = resourceSystem;
     this.combat = combatSystem || new CombatSystem();
-    this.model = model || ActiveModel || new MLP([38, 64, 64, 1]);
+    this.model = resolveModel(model);
   }
 
   _legalActions(state) {
