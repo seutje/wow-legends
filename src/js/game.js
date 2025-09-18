@@ -13,6 +13,7 @@ import QuestSystem from './systems/quests.js';
 import { EventBus } from './utils/events.js';
 import { selectTargets } from './systems/targeting.js';
 import { logSecretTriggered } from './utils/combatLog.js';
+import { fillDeckRandomly } from './utils/deckbuilder.js';
 
 export default class Game {
   constructor(rootEl, opts = {}) {
@@ -147,6 +148,21 @@ export default class Game {
     const nonQuestCards = otherCards.filter(c => c.type !== 'quest');
 
     const rng = this.rng;
+    const createRandomDeckState = (excludeHeroId = null) => {
+      const state = { hero: null, cards: [] };
+      fillDeckRandomly(state, this.allCards, rng);
+      const heroMatchesExclude = excludeHeroId && state.hero && state.hero.id === excludeHeroId;
+      if ((!state.hero || heroMatchesExclude) && heroes.length > 0) {
+        const pool = heroes.filter((hero) => !excludeHeroId || hero.id !== excludeHeroId);
+        if (pool.length > 0) {
+          state.hero = rng.pick(pool);
+          state.cards.length = 0;
+          fillDeckRandomly(state, this.allCards, rng);
+        }
+      }
+      return state;
+    };
+
     const aiPlayers = this.aiPlayers instanceof Set ? this.aiPlayers : new Set();
     const playerIsAI = aiPlayers.has('player');
     const opponentIsAI = aiPlayers.has('opponent');
@@ -186,27 +202,64 @@ export default class Game {
         this.player.library.add(new Card(cardData));
       }
     } else {
-      const playerHeroData = rng.pick(heroes);
-      this.player.hero = new Hero(playerHeroData);
-      this.player.hero.owner = this.player;
-      const playerLibData = buildLibraryData(null, !playerIsAI);
+      const playerDeckState = createRandomDeckState();
+      let playerHeroData = playerDeckState.hero;
+      if (!playerHeroData && heroes.length > 0) {
+        playerHeroData = rng.pick(heroes);
+      }
+      if (playerHeroData) {
+        playerDeckState.hero = playerHeroData;
+        validateCardData(playerHeroData);
+        this.player.hero = new Hero(playerHeroData);
+        this.player.hero.owner = this.player;
+      }
+      let playerCards = Array.isArray(playerDeckState.cards) ? playerDeckState.cards : [];
+      if (playerCards.length !== 60 && playerDeckState.hero) {
+        playerDeckState.cards = [];
+        fillDeckRandomly(playerDeckState, this.allCards, rng);
+        playerCards = Array.isArray(playerDeckState.cards) ? playerDeckState.cards : [];
+      }
+      if (playerCards.length === 0) {
+        playerCards = buildLibraryData(null, !playerIsAI);
+      }
       this.player.library.cards = [];
-      for (const cardData of playerLibData) {
+      for (const cardData of playerCards) {
         validateCardData(cardData);
         this.player.library.add(new Card(cardData));
       }
     }
 
     // Assign opponent hero and library
-    let opponentHeroData = rng.pick(heroes);
-    while (opponentHeroData.id === this.player.hero.id) {
+    const opponentDeckState = createRandomDeckState(this.player.hero?.id);
+    let opponentHeroData = opponentDeckState.hero;
+    if (!opponentHeroData && heroes.length > 0) {
       opponentHeroData = rng.pick(heroes);
     }
-    this.opponent.hero = new Hero(opponentHeroData);
-    this.opponent.hero.owner = this.opponent;
-    const opponentLibData = buildLibraryData(null, !opponentIsAI);
+    if (opponentHeroData && this.player?.hero) {
+      const guardLimit = heroes.length > 0 ? heroes.length * 3 : 0;
+      let guard = 0;
+      while (this.player.hero && opponentHeroData?.id === this.player.hero.id && guard < guardLimit) {
+        opponentHeroData = rng.pick(heroes);
+        guard += 1;
+      }
+    }
+    if (opponentHeroData) {
+      opponentDeckState.hero = opponentHeroData;
+      validateCardData(opponentHeroData);
+      this.opponent.hero = new Hero(opponentHeroData);
+      this.opponent.hero.owner = this.opponent;
+    }
+    let opponentCards = Array.isArray(opponentDeckState.cards) ? opponentDeckState.cards : [];
+    if (opponentCards.length !== 60 && opponentDeckState.hero) {
+      opponentDeckState.cards = [];
+      fillDeckRandomly(opponentDeckState, this.allCards, rng);
+      opponentCards = Array.isArray(opponentDeckState.cards) ? opponentDeckState.cards : [];
+    }
+    if (opponentCards.length === 0) {
+      opponentCards = buildLibraryData(null, !opponentIsAI);
+    }
     this.opponent.library.cards = [];
-    for (const cardData of opponentLibData) {
+    for (const cardData of opponentCards) {
       validateCardData(cardData);
       this.opponent.library.add(new Card(cardData));
     }
