@@ -15,8 +15,8 @@ test('creating MCTS for hybrid difficulty injects neural policy model', async ()
   const ai = await game._createMctsAI('hybrid');
 
   expect(ai).toBeInstanceOf(MCTS_AI);
-  expect(ai.iterations).toBe(6500);
-  expect(ai.rolloutDepth).toBe(18);
+  expect(ai.iterations).toBe(10000);
+  expect(ai.rolloutDepth).toBe(20);
   expect(ai.policyValueModel).toBeInstanceOf(NeuralPolicyValueModel);
 
   const activeModel = getActiveModel();
