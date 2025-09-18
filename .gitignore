@@ -24,3 +24,6 @@ yarn-error.log*
 
 # WSL
 *:Zone.Identifier
+
+# Temporary snapshots
+/data/models/model_gen_*.json
