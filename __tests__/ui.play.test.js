@@ -2,6 +2,7 @@
 import { jest } from '@jest/globals';
 import { renderPlay } from '../src/js/ui/play.js';
 import Hero from '../src/js/entities/hero.js';
+import { loadSettings, saveDifficulty } from '../src/js/utils/settings.js';
 
 describe('UI Play', () => {
   test('renders log panes with player and enemy actions', () => {
@@ -290,6 +291,42 @@ describe('UI Play', () => {
     expect(reset).toHaveBeenCalledTimes(1);
     // Expect null/undefined argument to signal random deck
     expect(reset.mock.calls[0][0] == null).toBe(true);
+  });
+
+  test('changing difficulty to hybrid preloads neural model and persists setting', () => {
+    localStorage.removeItem('wow-legends:settings');
+    saveDifficulty('easy');
+
+    const container = document.createElement('div');
+    const playerHero = new Hero({ name: 'Player', data: { health: 10 } });
+    const enemyHero = new Hero({ name: 'Enemy', data: { health: 10 } });
+    const preload = jest.fn(() => ({ catch: () => {} }));
+    const game = {
+      state: { difficulty: 'easy' },
+      player: { hero: playerHero, battlefield: { cards: [] }, hand: { cards: [], size: () => 0 }, log: [] },
+      opponent: { hero: enemyHero, battlefield: { cards: [] }, hand: { cards: [], size: () => 0 }, log: [] },
+      resources: { pool: () => 0, available: () => 0 },
+      draw: jest.fn(), attack: jest.fn(), endTurn: jest.fn(), playFromHand: () => true,
+      preloadNeuralModel: preload,
+    };
+
+    renderPlay(container, game, { onUpdate: jest.fn() });
+
+    const select = container.querySelector('select.select-difficulty');
+    expect(select).toBeTruthy();
+    const options = Array.from(select.options).map(opt => opt.value);
+    expect(options).toContain('hybrid');
+
+    select.value = 'hybrid';
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+
+    expect(game.state.difficulty).toBe('hybrid');
+    expect(preload).toHaveBeenCalledTimes(1);
+    const settings = loadSettings();
+    expect(settings.difficulty).toBe('hybrid');
+
+    saveDifficulty('easy');
+    localStorage.removeItem('wow-legends:settings');
   });
 
   test('shows lose dialog when player hero health is zero', () => {

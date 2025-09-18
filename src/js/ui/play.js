@@ -361,12 +361,15 @@ export function renderPlay(container, game, { onUpdate, onOpenDeckBuilder, onNew
   const initialMount = !controls || !board;
   if (initialMount) {
     container.innerHTML = '';
-    const diffOptions = ['easy', 'medium', 'hard', 'nightmare'];
+    const diffOptions = ['easy', 'medium', 'hard', 'hybrid', 'nightmare'];
     const diffSelect = el('select', {
       class: 'select-difficulty',
       onchange: (e) => {
         const v = e.target.value;
         if (game.state) game.state.difficulty = v;
+        if (v === 'nightmare' || v === 'hybrid') {
+          game.preloadNeuralModel?.();
+        }
         try { saveDifficulty(v); } catch {}
         onUpdate?.();
       }
