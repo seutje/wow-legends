@@ -74,7 +74,7 @@ export default class Game {
         const opponentIsAI = typeof this.aiPlayers?.has === 'function' && this.aiPlayers.has('opponent');
         const aiHandlesDraw = opponentIsAI
           && player === this.opponent
-          && (difficulty === 'medium' || difficulty === 'hard' || difficulty === 'nightmare');
+          && (difficulty === 'medium' || difficulty === 'hard' || difficulty === 'nightmare' || difficulty === 'hybrid');
         if (player && !aiHandlesDraw) this.draw(player, 1);
       });
 
@@ -96,6 +96,7 @@ export default class Game {
     this.opponent = new Player({ name: 'AI' });
 
     this.state = { frame: 0, startedAt: 0, difficulty: 'easy', debug: false };
+    this._nnModelPromise = null;
   }
 
   setUIRerender(fn) {
@@ -221,6 +222,10 @@ export default class Game {
     this.draw(this.opponent, 3);
     this.turns.startTurn();
     this.resources.startTurn(this.player);
+
+    if (this.state?.difficulty === 'hybrid' || this.state?.difficulty === 'nightmare') {
+      this._ensureNNModelLoading();
+    }
   }
 
   draw(player, n = 1) {
@@ -686,6 +691,9 @@ export default class Game {
     this.resources.startTurn(this.opponent);
 
     const diff = this.state?.difficulty || 'easy';
+    if (diff === 'nightmare' || diff === 'hybrid') {
+      this._ensureNNModelLoading();
+    }
     if (diff === 'nightmare') {
       // Neural network AI (nightmare)
       const { default: NeuralAI, loadModelFromDiskOrFetch } = await import('./systems/ai-nn.js');
@@ -700,7 +708,7 @@ export default class Game {
         if (this.state) this.state.aiThinking = false;
         this.bus.emit('ai:thinking', { thinking: false });
       }
-    } else if (diff === 'medium' || diff === 'hard') {
+    } else if (diff === 'medium' || diff === 'hard' || diff === 'hybrid') {
       // Use MCTS for medium/hard; hard uses deeper search
       if (this.state) this.state.aiPending = { type: 'mcts', stage: 'queued' };
       const ai = await this._createMctsAI(diff);
@@ -787,7 +795,7 @@ export default class Game {
     const pending = this.state?.aiPending;
     if (!pending || pending.type !== 'mcts') return false;
     const diff = this.state?.difficulty || 'easy';
-    if (!(diff === 'medium' || diff === 'hard')) {
+    if (!(diff === 'medium' || diff === 'hard' || diff === 'hybrid')) {
       if (this.state) {
         this.state.aiPending = null;
         this.state.aiThinking = false;
@@ -818,6 +826,34 @@ export default class Game {
     return true;
   }
 
+  _ensureNNModelLoading() {
+    if (!this._nnModelPromise) {
+      this._nnModelPromise = (async () => {
+        const { loadModelFromDiskOrFetch } = await import('./systems/ai-nn.js');
+        try {
+          return await loadModelFromDiskOrFetch();
+        } catch (err) {
+          this._nnModelPromise = null;
+          throw err;
+        }
+      })();
+    }
+    return this._nnModelPromise;
+  }
+
+  preloadNeuralModel() {
+    let promise;
+    try {
+      promise = this._ensureNNModelLoading();
+    } catch {
+      return Promise.resolve(null);
+    }
+    if (promise && typeof promise.catch === 'function') {
+      promise.catch(() => {});
+    }
+    return promise;
+  }
+
   async _createMctsAI(diff) {
     if (typeof this.opts?.createMctsAI === 'function') {
       const custom = await this.opts.createMctsAI(diff, this);
@@ -830,6 +866,15 @@ export default class Game {
       game: this,
     };
     if (diff === 'hard') Object.assign(config, { iterations: 10000, rolloutDepth: 20 });
+    if (diff === 'hybrid') {
+      const { NeuralPolicyValueModel } = await import('./systems/ai-nn.js');
+      const model = await this._ensureNNModelLoading();
+      Object.assign(config, {
+        iterations: 6500,
+        rolloutDepth: 18,
+        policyValueModel: new NeuralPolicyValueModel({ model }),
+      });
+    }
     return new MCTS_AI(config);
   }
 

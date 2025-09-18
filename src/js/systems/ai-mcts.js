@@ -1,6 +1,7 @@
 import CombatSystem from './combat.js';
 import { selectTargets } from './targeting.js';
 import { evaluateGameState } from './ai-heuristics.js';
+import { actionSignature } from './ai-signatures.js';
 import Card from '../entities/card.js';
 import Game from '../game.js';
 import Player from '../entities/player.js';
@@ -32,13 +33,14 @@ class MCTSNode {
 }
 
 export class MCTS_AI {
-  constructor({ resourceSystem, combatSystem, game = null, iterations = 500, rolloutDepth = 5, fullSim = false } = {}) {
+  constructor({ resourceSystem, combatSystem, game = null, iterations = 500, rolloutDepth = 5, fullSim = false, policyValueModel = null } = {}) {
     this.resources = resourceSystem;
     this.combat = combatSystem;
     this.game = game; // for applying chosen actions correctly
     this.iterations = iterations;
     this.rolloutDepth = rolloutDepth;
     this.fullSim = !!fullSim;
+    this.policyValueModel = policyValueModel || null;
     // Prefer offloading search to a Web Worker when available (browser only)
     this._canUseWorker = (typeof window !== 'undefined') && (typeof Worker !== 'undefined');
     this._lastTree = null;
@@ -111,6 +113,10 @@ export class MCTS_AI {
       keywords,
       equipment,
     };
+  }
+
+  _actionSignature(action) {
+    return actionSignature(action);
   }
 
   _playerSnapshot(player) {
@@ -668,6 +674,7 @@ export class MCTS_AI {
       s.player.__mctsBaseSpellDamage = s.baseHeroSpellDamage;
     }
     s.player.__mctsTempSpellDamage = s.tempSpellDamage;
+    if ('__policyGuidance' in s) delete s.__policyGuidance;
     return s;
   }
 
@@ -740,7 +747,7 @@ export class MCTS_AI {
     return { terminal: false, state: s };
   }
 
-  _evaluateRolloutState(state) {
+  _heuristicRolloutValue(state) {
     if (!state) return 0;
     const payload = {
       player: state.player,
@@ -755,8 +762,66 @@ export class MCTS_AI {
     return Number.isFinite(score) ? score : 0;
   }
 
-  _scoreRolloutAction(state, action, { baseline = null } = {}) {
-    const base = (typeof baseline === 'number') ? baseline : this._evaluateRolloutState(state);
+  _policyGuidanceFor(state, actions = null) {
+    if (!this.policyValueModel || !state) return null;
+    if (!state.__policyGuidance) {
+      const candidates = Array.isArray(actions) ? actions : this._legalActions(state);
+      if (!Array.isArray(candidates) || candidates.length === 0) {
+        state.__policyGuidance = null;
+        return null;
+      }
+      try {
+        const result = this.policyValueModel.evaluate(state, candidates);
+        if (!result) {
+          state.__policyGuidance = null;
+        } else {
+          const guidance = {
+            stateValue: Number.isFinite(result.stateValue) ? result.stateValue : null,
+            actionValues: new Map(),
+            policy: new Map(),
+          };
+          const actionEntries = result.actionValues instanceof Map
+            ? Array.from(result.actionValues.entries())
+            : Object.entries(result.actionValues || {});
+          for (const [sig, val] of actionEntries) {
+            if (Number.isFinite(val)) guidance.actionValues.set(sig, val);
+          }
+          const policyEntries = result.policy instanceof Map
+            ? Array.from(result.policy.entries())
+            : Object.entries(result.policy || {});
+          for (const [sig, val] of policyEntries) {
+            if (Number.isFinite(val)) guidance.policy.set(sig, val);
+          }
+          state.__policyGuidance = guidance;
+        }
+      } catch (_) {
+        state.__policyGuidance = null;
+      }
+    }
+    return state.__policyGuidance;
+  }
+
+  _evaluateRolloutState(state, { actions = null } = {}) {
+    if (!state) return 0;
+    if (this.policyValueModel) {
+      const guidance = this._policyGuidanceFor(state, actions);
+      if (guidance && Number.isFinite(guidance.stateValue)) {
+        return guidance.stateValue;
+      }
+    }
+    return this._heuristicRolloutValue(state);
+  }
+
+  _scoreRolloutAction(state, action, { baseline = null, actions = null, guidance = null } = {}) {
+    const guide = guidance || this._policyGuidanceFor(state, actions);
+    let base;
+    if (typeof baseline === 'number') {
+      base = baseline;
+    } else if (guide && Number.isFinite(guide.stateValue)) {
+      base = guide.stateValue;
+    } else {
+      base = this._heuristicRolloutValue(state);
+    }
     const outcome = this._applyAction(state, action);
     if (outcome.terminal) {
       const value = Number.isFinite(outcome.value) ? outcome.value : -Infinity;
@@ -767,8 +832,16 @@ export class MCTS_AI {
         outcome,
       };
     }
-    const nextScore = this._evaluateRolloutState(outcome.state);
-    const value = Number.isFinite(nextScore) ? nextScore : 0;
+    let value = null;
+    if (guide) {
+      const sig = this._actionSignature(action);
+      const guided = guide.actionValues?.get?.(sig);
+      if (Number.isFinite(guided)) value = guided;
+    }
+    if (!Number.isFinite(value)) {
+      const nextScore = this._evaluateRolloutState(outcome.state);
+      value = Number.isFinite(nextScore) ? nextScore : 0;
+    }
     return {
       baseline: base,
       value,
@@ -777,7 +850,7 @@ export class MCTS_AI {
     };
   }
 
-  _chooseRolloutAction(entries, explorationChance = 0.2) {
+  _chooseRolloutAction(entries, explorationChance = 0.2, priors = null) {
     if (!Array.isArray(entries) || entries.length === 0) return null;
     if (Math.random() < explorationChance) {
       return entries[Math.floor(Math.random() * entries.length)];
@@ -789,11 +862,20 @@ export class MCTS_AI {
       if (abs > maxAbs) maxAbs = abs;
     }
     if (maxAbs <= 0) maxAbs = 1;
+    const priorMap = priors instanceof Map ? priors : null;
     const weights = entries.map((entry) => {
       const delta = Number.isFinite(entry?.delta) ? entry.delta : 0;
       const normalized = delta / maxAbs;
       const clipped = Math.max(-0.95, Math.min(0.95, normalized));
-      return 1 + clipped;
+      let weight = 1 + clipped;
+      if (priorMap) {
+        const sig = this._actionSignature(entry.action);
+        const prior = priorMap.get(sig);
+        if (Number.isFinite(prior)) {
+          weight *= Math.max(0.05, 0.5 + prior);
+        }
+      }
+      return weight;
     });
     let total = 0;
     for (const weight of weights) total += weight;
@@ -806,6 +888,34 @@ export class MCTS_AI {
       if (r <= 0) return entries[i];
     }
     return entries[entries.length - 1];
+  }
+
+  _pickUntriedAction(node) {
+    if (!node || !Array.isArray(node.untried) || node.untried.length === 0) return null;
+    if (!this.policyValueModel) {
+      const idx = Math.floor(Math.random() * node.untried.length);
+      return node.untried.splice(idx, 1)[0];
+    }
+    const guidance = this._policyGuidanceFor(node.state, node.untried);
+    if (!guidance) {
+      const idx = Math.floor(Math.random() * node.untried.length);
+      return node.untried.splice(idx, 1)[0];
+    }
+    let bestIndex = 0;
+    let bestScore = -Infinity;
+    for (let i = 0; i < node.untried.length; i++) {
+      const action = node.untried[i];
+      const sig = this._actionSignature(action);
+      const prior = Number.isFinite(guidance.policy?.get?.(sig)) ? guidance.policy.get(sig) : 0;
+      const value = Number.isFinite(guidance.actionValues?.get?.(sig)) ? guidance.actionValues.get(sig) : 0;
+      const score = value + prior;
+      if (score > bestScore) {
+        bestScore = score;
+        bestIndex = i;
+      }
+    }
+    const [selected] = node.untried.splice(bestIndex, 1);
+    return selected;
   }
 
   _resolveCombatAndScore(state) {
@@ -886,9 +996,13 @@ export class MCTS_AI {
       // Bias slightly against immediate end unless there are no other actions
       const nonEnd = actions.filter(a => !a.end);
       const pickFrom = nonEnd.length ? nonEnd : actions;
-      const baseline = this._evaluateRolloutState(s);
+      const guidance = this.policyValueModel ? this._policyGuidanceFor(s, actions) : null;
+      const baseScore = guidance && Number.isFinite(guidance.stateValue)
+        ? guidance.stateValue
+        : this._heuristicRolloutValue(s);
+      const baseline = Number.isFinite(baseScore) ? baseScore : 0;
       const scored = pickFrom.map((action) => {
-        const scoredAction = this._scoreRolloutAction(s, action, { baseline });
+        const scoredAction = this._scoreRolloutAction(s, action, { baseline, actions, guidance });
         return {
           action,
           delta: scoredAction.delta,
@@ -897,7 +1011,7 @@ export class MCTS_AI {
         };
       });
       if (!scored.length) break;
-      let choice = this._chooseRolloutAction(scored);
+      let choice = this._chooseRolloutAction(scored, 0.2, guidance?.policy);
       if (!choice) {
         choice = scored[Math.floor(Math.random() * scored.length)];
       }
@@ -1202,8 +1316,7 @@ export class MCTS_AI {
       }
       if (node.untried === null) node.untried = this._legalActions(node.state);
       if (node.untried.length) {
-        const idx = Math.floor(Math.random() * node.untried.length);
-        const action = node.untried.splice(idx, 1)[0];
+        const action = this._pickUntriedAction(node);
         const res = this._applyAction(node.state, action);
         if (res.terminal) {
           // Rollout is trivial: already terminal
@@ -1261,8 +1374,7 @@ export class MCTS_AI {
         }
         if (node.untried === null) node.untried = this._legalActions(node.state);
         if (node.untried.length) {
-          const idx = Math.floor(Math.random() * node.untried.length);
-          const action = node.untried.splice(idx, 1)[0];
+          const action = this._pickUntriedAction(node);
           const res = this._applyAction(node.state, action);
           if (res.terminal) {
             const value = res.value;

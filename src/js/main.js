@@ -22,6 +22,9 @@ try {
   const settings = loadSettings();
   if (settings?.difficulty) {
     game.state.difficulty = settings.difficulty;
+    if (settings.difficulty === 'nightmare' || settings.difficulty === 'hybrid') {
+      game.preloadNeuralModel?.();
+    }
   }
   if (settings?.lastDeck) {
     const deck = rehydrateDeck(settings.lastDeck, game.allCards);
