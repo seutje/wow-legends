@@ -668,12 +668,19 @@ export default class Game {
     let target = null;
     const candidates = [
       defender.hero,
-      ...defender.battlefield.cards.filter(c => c.type !== 'equipment' && c.type !== 'quest')
+      ...defender.battlefield.cards.filter((c) => {
+        if (!c) return false;
+        if (c.type === 'equipment' || c.type === 'quest') return false;
+        const data = c.data || {};
+        const health = typeof data.health === 'number' ? data.health : c.health;
+        if (data.dead || (typeof health === 'number' && health <= 0)) return false;
+        return true;
+      })
     ];
     const legal = selectTargets(candidates);
     // For Rush on the turn it was summoned: require an enemy ally target; if none, the attack is not legal
     const pool = (hasRush && justEntered) ? legal.filter(c => c.id !== defender.hero.id) : legal;
-    if ((hasRush && justEntered) && pool.length === 0) return false;
+    if (pool.length === 0) return false;
     if (pool.length === 1) {
       const only = pool[0];
       if (only.id !== defender.hero.id) target = only;
@@ -688,6 +695,8 @@ export default class Game {
         if (choice && choice.id !== defender.hero.id) target = choice;
       }
     }
+    const heroAllowed = pool.some((c) => c?.id === defender.hero?.id);
+    if (!target && !heroAllowed) return false;
     const actualTarget = target || defender.hero;
     this.combat.clear();
     if (!this.combat.declareAttacker(card, actualTarget)) return false;
