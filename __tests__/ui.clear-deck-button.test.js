@@ -3,10 +3,27 @@ import { jest } from '@jest/globals';
 import { renderDeckBuilder } from '../src/js/ui/deckbuilder.js';
 import { fillDeckRandomly } from '../src/js/utils/deckbuilder.js';
 
-test('clear deck button empties deck and disables use', async () => {
+const createCardPool = () => {
   const hero = { id: 'h1', name: 'Hero', type: 'hero', text: '', data: { armor: 0 } };
-  const ally = { id: 'a1', name: 'Ally', type: 'ally', text: '', cost: 1, data: { attack: 1, health: 1 } };
-  const allCards = [hero, ally];
+  const allies = Array.from({ length: 20 }, (_, i) => ({
+    id: `ally-${i + 1}`,
+    name: `Ally ${i + 1}`,
+    type: 'ally',
+    text: '',
+    cost: 1,
+    data: { attack: 1, health: 1 },
+  }));
+  const spells = Array.from({ length: 10 }, (_, i) => ({
+    id: `spell-${i + 1}`,
+    name: `Spell ${i + 1}`,
+    type: 'spell',
+    text: '',
+  }));
+  return { hero, allCards: [hero, ...allies, ...spells] };
+};
+
+test('clear deck button empties deck and disables use', async () => {
+  const { hero, allCards } = createCardPool();
   const game = { reset: jest.fn().mockResolvedValue(), allCards };
 
   const main = document.createElement('main');
