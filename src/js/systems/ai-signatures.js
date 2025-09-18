@@ -23,9 +23,20 @@ export function cardSignature(card) {
 export function actionSignature(action) {
   if (!action) return 'noop';
   const cardPart = action.card ? cardSignature(action.card) : 'no-card';
+  let attackPart = 'attack:none';
+  if (action.attack) {
+    const attackerId = action.attack.attackerId
+      || action.attack.attacker?.id
+      || 'unknown';
+    const rawTarget = action.attack.targetId
+      ?? action.attack.target?.id
+      ?? null;
+    const targetPart = rawTarget == null ? 'face' : rawTarget;
+    attackPart = `attack:${attackerId}->${targetPart}`;
+  }
   const usePower = action.usePower ? 'power:1' : 'power:0';
   const end = action.end ? 'end:1' : 'end:0';
-  return `${cardPart}|${usePower}|${end}`;
+  return `${cardPart}|${attackPart}|${usePower}|${end}`;
 }
 
 export default actionSignature;

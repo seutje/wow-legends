@@ -166,6 +166,7 @@ export class MCTS_AI {
       ? this.resources.pendingOverload(opponent)
       : (this.resources?._overloadNext?.get?.(opponent) || 0);
     const powerAvailable = !!(player?.hero?.active?.length) && !player?.hero?.powerUsed;
+    const enteredThisTurn = this._collectEnteredThisTurn(player, turn);
     return {
       player,
       opponent,
@@ -174,6 +175,7 @@ export class MCTS_AI {
       powerAvailable,
       overloadNextPlayer: overloadPlayer,
       overloadNextOpponent: overloadOpponent,
+      enteredThisTurn,
     };
   }
 
@@ -191,6 +193,8 @@ export class MCTS_AI {
       ? res.pendingOverload(opp)
       : (res?._overloadNext?.get?.(opp) || 0);
     const powerAvailable = !!(me?.hero?.active?.length) && !me?.hero?.powerUsed;
+    const enteredThisTurn = this._collectEnteredThisTurn(me, turn, sim?.enteredThisTurn);
+    sim.enteredThisTurn = enteredThisTurn;
     return {
       player: me,
       opponent: opp,
@@ -199,6 +203,7 @@ export class MCTS_AI {
       powerAvailable,
       overloadNextPlayer: overloadPlayer,
       overloadNextOpponent: overloadOpponent,
+      enteredThisTurn,
     };
   }
 
@@ -518,6 +523,257 @@ export class MCTS_AI {
     }
   }
 
+  _collectEnteredThisTurn(player, turn, existing = null) {
+    const base = new Set(existing ? Array.from(existing) : []);
+    const cards = Array.isArray(player?.battlefield?.cards) ? player.battlefield.cards : [];
+    const inPlay = new Set();
+    const currentTurn = typeof turn === 'number' ? turn : (this.resources?.turns?.turn ?? null);
+    for (const card of cards) {
+      if (!card?.id) continue;
+      inPlay.add(card.id);
+      const data = card.data || {};
+      if (data.summoningSick) base.add(card.id);
+      const entered = typeof data.enteredTurn === 'number' ? data.enteredTurn : null;
+      if (entered != null && currentTurn != null && entered === currentTurn) base.add(card.id);
+    }
+    for (const id of Array.from(base)) {
+      if (!inPlay.has(id)) base.delete(id);
+    }
+    return base;
+  }
+
+  _ensureOwnerLinksForPlayer(player) {
+    if (!player) return;
+    if (player.hero) {
+      player.hero.owner = player;
+      if (Array.isArray(player.hero.equipment)) {
+        for (const eq of player.hero.equipment) {
+          if (eq) eq.owner = player;
+        }
+      }
+    }
+    const cards = Array.isArray(player?.battlefield?.cards) ? player.battlefield.cards : [];
+    for (const card of cards) {
+      if (!card) continue;
+      card.owner = player;
+    }
+  }
+
+  _isEntityDead(entity) {
+    if (!entity) return true;
+    if (entity?.data?.dead) return true;
+    const health = typeof entity?.data?.health === 'number'
+      ? entity.data.health
+      : (typeof entity?.health === 'number' ? entity.health : 0);
+    return health <= 0;
+  }
+
+  _attacksUsed(entity) {
+    if (!entity?.data) return 0;
+    if (typeof entity.data.attacksUsed === 'number') return entity.data.attacksUsed;
+    return entity.data.attacked ? 1 : 0;
+  }
+
+  _maxAttacksAllowed(entity) {
+    if (entity?.keywords?.includes?.('Windfury')) return 2;
+    return 1;
+  }
+
+  _entityAttackValue(entity) {
+    if (!entity) return 0;
+    if (typeof entity.totalAttack === 'function') {
+      try { return entity.totalAttack(); } catch (_) {}
+    }
+    let value = 0;
+    if (typeof entity?.data?.attack === 'number') value = entity.data.attack;
+    else if (typeof entity?.attack === 'number') value = entity.attack;
+    if (entity?.type === 'hero' && Array.isArray(entity?.equipment)) {
+      for (const eq of entity.equipment) {
+        if (!eq) continue;
+        const bonus = typeof eq?.attack === 'number'
+          ? eq.attack
+          : (typeof eq?.data?.attack === 'number' ? eq.data.attack : 0);
+        value += bonus;
+      }
+    }
+    return value;
+  }
+
+  _livingDefenders(opponent) {
+    const defenders = [];
+    if (opponent?.hero && !this._isEntityDead(opponent.hero)) defenders.push(opponent.hero);
+    for (const card of opponent?.battlefield?.cards || []) {
+      if (!card) continue;
+      if (card.type === 'equipment' || card.type === 'quest') continue;
+      if (this._isEntityDead(card)) continue;
+      defenders.push(card);
+    }
+    return defenders;
+  }
+
+  _attackActionsForAttacker(attacker, player, opponent, turn, enteredSet) {
+    if (!attacker) return [];
+    if (this._isEntityDead(attacker)) return [];
+    if ((attacker?.data?.freezeTurns || 0) > 0) return [];
+    const attackValue = this._entityAttackValue(attacker);
+    if (attackValue <= 0) return [];
+    const used = this._attacksUsed(attacker);
+    const maxAttacks = this._maxAttacksAllowed(attacker);
+    if (used >= maxAttacks) return [];
+    const isHero = attacker === player?.hero;
+    const data = attacker.data || {};
+    const hasCharge = attacker?.keywords?.includes?.('Charge');
+    const hasRush = attacker?.keywords?.includes?.('Rush');
+    if (!isHero) {
+      if (data.dead) return [];
+      if (data.summoningSick && !(hasCharge || hasRush)) return [];
+      const enteredTurn = typeof data.enteredTurn === 'number' ? data.enteredTurn : null;
+      const currentTurn = typeof turn === 'number' ? turn : (this.resources?.turns?.turn ?? null);
+      const flagged = enteredSet?.has?.(attacker.id);
+      const justEntered = flagged || (enteredTurn != null && currentTurn != null && enteredTurn === currentTurn);
+      if (justEntered && !(hasCharge || hasRush)) return [];
+      if (justEntered && hasRush && !hasCharge) {
+        const defenders = this._livingDefenders(opponent);
+        const legal = selectTargets(defenders).filter(t => t?.id !== opponent?.hero?.id);
+        if (!legal.length) return [];
+        return legal.map((target) => ({
+          card: null,
+          usePower: false,
+          end: false,
+          attack: {
+            attackerId: attacker.id,
+            targetId: target?.id ?? null,
+            attackerType: attacker.type || 'ally',
+            targetType: target?.type || (target === opponent?.hero ? 'hero' : null),
+            attacker,
+            target,
+          },
+        }));
+      }
+    }
+    const defenders = this._livingDefenders(opponent);
+    const legal = selectTargets(defenders);
+    if (!legal.length) return [];
+    return legal.map((target) => ({
+      card: null,
+      usePower: false,
+      end: false,
+      attack: {
+        attackerId: attacker.id,
+        targetId: target?.id ?? opponent?.hero?.id ?? null,
+        attackerType: attacker.type || (isHero ? 'hero' : null),
+        targetType: target?.type || (target === opponent?.hero ? 'hero' : null),
+        attacker,
+        target,
+      },
+    }));
+  }
+
+  _enumerateAttackActionsFor(player, opponent, turn, enteredSet) {
+    if (!player || !opponent) return [];
+    const actions = [];
+    const hero = player.hero;
+    if (hero) actions.push(...this._attackActionsForAttacker(hero, player, opponent, turn, enteredSet));
+    for (const card of player?.battlefield?.cards || []) {
+      if (!card) continue;
+      if (card.type === 'equipment' || card.type === 'quest') continue;
+      actions.push(...this._attackActionsForAttacker(card, player, opponent, turn, enteredSet));
+    }
+    return actions;
+  }
+
+  _cleanupDead(state) {
+    if (!state) return;
+    const cleanup = (player, ownerKey) => {
+      const cards = Array.isArray(player?.battlefield?.cards) ? player.battlefield.cards : [];
+      if (!cards.length) return;
+      const survivors = [];
+      for (const card of cards) {
+        const data = card?.data || {};
+        const health = typeof data.health === 'number'
+          ? data.health
+          : (typeof card?.health === 'number' ? card.health : 0);
+        const dead = data.dead || health <= 0;
+        if (dead) {
+          if (state?.enteredThisTurn?.has?.(card.id)) state.enteredThisTurn.delete(card.id);
+          this._clearEnrageTracking(state, ownerKey, card.id);
+          const graveyard = Array.isArray(player?.graveyard?.cards) ? player.graveyard.cards : null;
+          if (graveyard && !graveyard.some(c => c?.id === card.id)) {
+            graveyard.push(card);
+          }
+        } else {
+          survivors.push(card);
+        }
+      }
+      player.battlefield.cards = survivors;
+    };
+    cleanup(state.player, 'player');
+    cleanup(state.opponent, 'opponent');
+  }
+
+  _executeAttackAction(state, attack) {
+    if (!state || !attack) return false;
+    const p = state.player;
+    const o = state.opponent;
+    const enteredSet = this._collectEnteredThisTurn(p, state.turn, state.enteredThisTurn);
+    state.enteredThisTurn = enteredSet;
+    const attackerId = attack.attackerId;
+    const targetId = attack.targetId;
+    if (!attackerId) return false;
+    const attacker = (p.hero && p.hero.id === attackerId)
+      ? p.hero
+      : (p.battlefield?.cards || []).find(c => c?.id === attackerId);
+    if (!attacker) return false;
+    if ((attacker?.data?.freezeTurns || 0) > 0) return false;
+    const attackValue = this._entityAttackValue(attacker);
+    if (attackValue <= 0) return false;
+    const used = this._attacksUsed(attacker);
+    if (used >= this._maxAttacksAllowed(attacker)) return false;
+    const targetHero = o.hero && (targetId == null || targetId === o.hero.id);
+    let target = null;
+    if (targetHero) {
+      target = o.hero;
+    } else {
+      target = (o.battlefield?.cards || []).find(c => c?.id === targetId) || null;
+      if (!target) return false;
+    }
+    const defenders = this._livingDefenders(o);
+    let legal = selectTargets(defenders);
+    if (targetHero) {
+      if (!legal.some(t => t?.id === o.hero?.id)) return false;
+    } else {
+      if (!legal.some(t => t?.id === target?.id)) return false;
+    }
+    const data = attacker.data || (attacker.data = {});
+    if (attacker !== p.hero) {
+      const hasCharge = attacker?.keywords?.includes?.('Charge');
+      const hasRush = attacker?.keywords?.includes?.('Rush');
+      if (data.summoningSick && !(hasCharge || hasRush)) return false;
+      const enteredTurn = typeof data.enteredTurn === 'number' ? data.enteredTurn : null;
+      const currentTurn = typeof state.turn === 'number' ? state.turn : (this.resources?.turns?.turn ?? null);
+      const flagged = enteredSet?.has?.(attacker.id);
+      const justEntered = flagged || (enteredTurn != null && currentTurn != null && enteredTurn === currentTurn);
+      if (justEntered && !(hasCharge || hasRush)) return false;
+      if (justEntered && hasRush && !hasCharge && targetHero) return false;
+    }
+    this._ensureOwnerLinksForPlayer(p);
+    this._ensureOwnerLinksForPlayer(o);
+    data.attack = attackValue;
+    const combat = new CombatSystem();
+    const actualTarget = targetHero ? o.hero : target;
+    if (!combat.declareAttacker(attacker, actualTarget)) return false;
+    if (!targetHero && actualTarget) combat.assignBlocker(attacker.id, actualTarget);
+    combat.setDefenderHero(o.hero || null);
+    const events = combat.resolve();
+    this._processCombatEnrage(events, state, p, o);
+    data.attacked = true;
+    data.attacksUsed = (data.attacksUsed || 0) + 1;
+    if (attacker?.keywords?.includes?.('Stealth')) {
+      attacker.keywords = attacker.keywords.filter(k => k !== 'Stealth');
+    }
+    return true;
+  }
+
   _processCombatEnrage(events, state, player, opponent) {
     if (!Array.isArray(events) || !state) return;
     for (const ev of events) {
@@ -611,6 +867,8 @@ export class MCTS_AI {
             if (!(summoned.keywords?.includes('Rush') || summoned.keywords?.includes('Charge'))) {
               summoned.data.attacked = true;
             }
+            const turnValue = state?.turn ?? (this.resources?.turns?.turn ?? 0);
+            summoned.data.enteredTurn = turnValue;
             player.battlefield.cards.push(summoned);
             // Track entry this turn to enforce sickness in combat filter
             if (this._currentState) {
@@ -674,6 +932,9 @@ export class MCTS_AI {
       s.player.__mctsBaseSpellDamage = s.baseHeroSpellDamage;
     }
     s.player.__mctsTempSpellDamage = s.tempSpellDamage;
+    this._ensureOwnerLinksForPlayer(s.player);
+    this._ensureOwnerLinksForPlayer(s.opponent);
+    s.enteredThisTurn = this._collectEnteredThisTurn(s.player, s.turn, s.enteredThisTurn);
     if ('__policyGuidance' in s) delete s.__policyGuidance;
     return s;
   }
@@ -682,6 +943,8 @@ export class MCTS_AI {
     const actions = [];
     const p = state.player;
     const pool = state.pool;
+    const enteredSet = this._collectEnteredThisTurn(p, state.turn, state.enteredThisTurn);
+    state.enteredThisTurn = enteredSet;
     const canPower = p.hero?.active?.length && state.powerAvailable && pool >= 2
       && !this._effectsAreUseless(p.hero.active, p, { pool, turn: state.turn, powerAvailable: state.powerAvailable });
     if (canPower) actions.push({ card: null, usePower: true, end: false });
@@ -692,6 +955,8 @@ export class MCTS_AI {
       actions.push({ card: c, usePower: false, end: false });
       if (canPower && pool - cost >= 2) actions.push({ card: c, usePower: true, end: false });
     }
+    const attackActions = this._enumerateAttackActionsFor(p, state.opponent, state.turn, enteredSet);
+    for (const attack of attackActions) actions.push(attack);
     // Always allow ending action phase (proceed to attacks)
     actions.push({ card: null, usePower: false, end: true });
     return actions;
@@ -700,8 +965,24 @@ export class MCTS_AI {
   _applyAction(state, action) {
     const s = this._cloneState(state);
     const p = s.player; const o = s.opponent;
+    if (action?.attack) {
+      const ok = this._executeAttackAction(s, action.attack);
+      if (!ok) return { terminal: true, value: -Infinity };
+      this._cleanupDead(s);
+      s.enteredThisTurn = this._collectEnteredThisTurn(p, s.turn, s.enteredThisTurn);
+      return { terminal: false, state: s };
+    }
+
     if (action.end) {
-      return this._resolveCombatAndScore(s);
+      this._cleanupDead(s);
+      s.enteredThisTurn = this._collectEnteredThisTurn(p, s.turn, s.enteredThisTurn);
+      const actions = this._legalActions(s);
+      const nonEnd = actions.filter(a => !a.end);
+      if (!nonEnd.length) {
+        return this._resolveCombatAndScore(s);
+      }
+      const value = this._evaluateRolloutState(s, { actions });
+      return { terminal: true, value: Number.isFinite(value) ? value : 0 };
     }
 
     // Apply card
@@ -719,7 +1000,11 @@ export class MCTS_AI {
           played.data = played.data || {};
           played.data.attacked = true;
         }
-        if (played.type === 'ally') s.enteredThisTurn.add(played.id);
+        if (played.type === 'ally') {
+          played.data = played.data || {};
+          played.data.enteredTurn = s.turn;
+          s.enteredThisTurn.add(played.id);
+        }
       } else {
         p.graveyard.cards.push(played);
       }
@@ -743,7 +1028,8 @@ export class MCTS_AI {
         this._currentState = null;
       }
     }
-
+    this._cleanupDead(s);
+    s.enteredThisTurn = this._collectEnteredThisTurn(p, s.turn, s.enteredThisTurn);
     return { terminal: false, state: s };
   }
 
@@ -919,62 +1205,9 @@ export class MCTS_AI {
   }
 
   _resolveCombatAndScore(state) {
-    // Simulate a simple combat: attack with all ready attackers at opponent hero
+    if (!state) return { terminal: true, value: 0 };
+    this._cleanupDead(state);
     const p = state.player; const o = state.opponent;
-    const combat = new CombatSystem();
-    const attackers = [p.hero, ...(p.battlefield?.cards || [])]
-      .filter(c => {
-        if (c.type === 'equipment') return false;
-        const atk = (typeof c.totalAttack === 'function' ? c.totalAttack() : (c.data?.attack || 0));
-        if (atk <= 0) return false;
-        if (c === p.hero) return !c.data?.attacked; // hero can attack if not already
-        // Allies: enforce summoning sickness guard regardless of flags
-        const entered = state.enteredThisTurn?.has?.(c.id);
-        const rush = !!c.keywords?.includes?.('Rush');
-        const charge = !!c.keywords?.includes?.('Charge');
-        if (entered && !(rush || charge)) return false;
-        return !c.data?.attacked;
-      });
-    for (const a of attackers) {
-      // Assign a blocker obeying Taunt (similar to real flow)
-      const defenders = [
-        o.hero,
-        ...o.battlefield.cards.filter(d => d.type !== 'equipment' && d.type !== 'quest')
-      ];
-      const legal = selectTargets(defenders);
-      const preferFace = this._hasHeroAdvantage(p, o);
-      const heroLegal = legal.some(t => t.id === o.hero.id);
-      let block = null;
-      if (!preferFace || !heroLegal) {
-        if (legal.length === 1) {
-          const only = legal[0];
-          if (only.id !== o.hero.id) block = only;
-        } else if (legal.length > 1) {
-          const choices = legal.filter(t => t.id !== o.hero.id);
-          block = choices[0] || null;
-        }
-      }
-      // Rush restriction on entry: if no non-hero target, skip attack
-      const entered = state.enteredThisTurn?.has?.(a.id);
-      const rush = !!a.keywords?.includes?.('Rush');
-      if (entered && rush && !block) continue;
-      const target = (preferFace && heroLegal) ? o.hero : (block || o.hero);
-      if (!combat.declareAttacker(a, target)) continue;
-      if (a.data) a.data.attacked = true;
-      if (block && target !== o.hero) combat.assignBlocker(a.id, block);
-    }
-    combat.setDefenderHero(o.hero);
-    const events = combat.resolve();
-    this._processCombatEnrage(events, state, p, o);
-
-    for (const pl of [p, o]) {
-      const dead = pl.battlefield.cards.filter(c => c.data?.dead);
-      for (const d of dead) {
-        pl.graveyard.cards.push(d);
-        pl.battlefield.cards = pl.battlefield.cards.filter(c => c.id !== d.id);
-      }
-    }
-
     const score = evaluateGameState({
       player: p,
       opponent: o,
@@ -984,7 +1217,8 @@ export class MCTS_AI {
       overloadNextOpponent: state.overloadNextOpponent,
       enragedOpponentThisTurn: state.enragedOpponentThisTurn,
     });
-    return { terminal: true, value: score };
+    const value = Number.isFinite(score) ? score : 0;
+    return { terminal: true, value };
   }
 
   _randomPlayout(state) {
@@ -1120,6 +1354,9 @@ export class MCTS_AI {
       sim.resources._overloadNext?.set?.(sim.player, myOverload);
       sim.resources._overloadNext?.set?.(sim.opponent, oppOverload);
     }
+    this._ensureOwnerLinksForPlayer(sim.player);
+    this._ensureOwnerLinksForPlayer(sim.opponent);
+    sim.enteredThisTurn = this._collectEnteredThisTurn(sim.player, sim.turns.turn);
     return sim;
   }
 
@@ -1136,6 +1373,8 @@ export class MCTS_AI {
     const canPower = heroPowerAvailable && pool >= 2
       && !this._effectsAreUseless(me.hero?.active, me, { pool, turn, powerAvailable: heroPowerAvailable });
     if (canPower) actions.push({ card: null, usePower: true, end: false });
+    const enteredSet = this._collectEnteredThisTurn(me, turn, sim?.enteredThisTurn);
+    sim.enteredThisTurn = enteredSet;
     for (const c of me.hand.cards) {
       const cost = c.cost || 0;
       if (pool < cost) continue;
@@ -1143,20 +1382,42 @@ export class MCTS_AI {
       actions.push({ card: c, usePower: false, end: false });
       if (canPower && pool - cost >= 2) actions.push({ card: c, usePower: true, end: false });
     }
+    const attackActions = this._enumerateAttackActionsFor(me, sim.opponent, turn, enteredSet);
+    for (const attack of attackActions) actions.push(attack);
     actions.push({ card: null, usePower: false, end: true });
     return actions;
   }
 
   _cloneSim(sim) {
     // Clone from current sim to a fresh sim snapshot
-    return this._buildSimFrom(sim, sim.player, sim.opponent);
+    const cloned = this._buildSimFrom(sim, sim.player, sim.opponent);
+    cloned.enteredThisTurn = this._collectEnteredThisTurn(cloned.player, cloned.turns.turn, sim?.enteredThisTurn);
+    return cloned;
   }
 
   async _applyActionSim(sim, action) {
     const s = this._cloneSim(sim);
     const me = s.player; const opp = s.opponent;
+    if (action?.attack) {
+      const attackerId = action.attack.attackerId;
+      const targetId = action.attack.targetId ?? null;
+      const ok = await s.attack(me, attackerId, targetId);
+      if (!ok) return { terminal: true, value: -Infinity };
+      me.__mctsPool = s.resources?.pool?.(me) ?? me.__mctsPool;
+      s.enteredThisTurn = this._collectEnteredThisTurn(me, s.turns.turn, s.enteredThisTurn);
+      return { terminal: false, state: s };
+    }
     if (action.end) {
-      return await this._resolveCombatAndScoreSim(s);
+      s.enteredThisTurn = this._collectEnteredThisTurn(me, s.turns.turn, s.enteredThisTurn);
+      const actions = this._legalActionsSim(s, me);
+      const nonEnd = actions.filter(a => !a.end);
+      if (!nonEnd.length) {
+        return await this._resolveCombatAndScoreSim(s);
+      }
+      const descriptor = this._stateFromSim(s);
+      const value = this._evaluateRolloutState(descriptor, { actions });
+      const score = Number.isFinite(value) ? value : 0;
+      return { terminal: true, value: score };
     }
     if (action.card) {
       const ok = await s.playFromHand(me, action.card.id);
@@ -1167,31 +1428,29 @@ export class MCTS_AI {
       if (!ok) return { terminal: true, value: -Infinity };
     }
     me.__mctsPool = s.resources?.pool?.(me) ?? me.__mctsPool;
+    s.enteredThisTurn = this._collectEnteredThisTurn(me, s.turns.turn, s.enteredThisTurn);
     return { terminal: false, state: s };
   }
 
   async _resolveCombatAndScoreSim(sim) {
     const me = sim.player; const opp = sim.opponent;
-    // Attack with all ready attackers; let Game decide targets
-    const attackers = [me.hero, ...me.battlefield.cards]
-      .filter(c => (c.type !== 'equipment') && !c.data?.attacked && ((typeof c.totalAttack === 'function' ? c.totalAttack() : c.data?.attack || 0) > 0) && !c.data?.summoningSick);
-    for (const a of attackers) {
-      // Respect Windfury (two attacks)
-      const maxAttacks = a?.keywords?.includes?.('Windfury') ? 2 : 1;
-      for (let i = (a.data?.attacksUsed || 0); i < maxAttacks; i++) {
-        const ok = await sim.attack(me, a.id);
-        if (!ok) break;
-      }
-    }
+    const pool = sim.resources?.pool?.(me) ?? 0;
+    const overloadPlayer = typeof sim.resources?.pendingOverload === 'function'
+      ? sim.resources.pendingOverload(me)
+      : (sim.resources?._overloadNext?.get?.(me) || 0);
+    const overloadOpponent = typeof sim.resources?.pendingOverload === 'function'
+      ? sim.resources.pendingOverload(opp)
+      : (sim.resources?._overloadNext?.get?.(opp) || 0);
     const value = evaluateGameState({
       player: me,
       opponent: opp,
       turn: sim.turns.turn,
-      resources: sim.resources.pool(me),
-      overloadNextPlayer: 0,
-      overloadNextOpponent: 0,
+      resources: pool,
+      overloadNextPlayer: overloadPlayer,
+      overloadNextOpponent: overloadOpponent,
+      enragedOpponentThisTurn: sim.enragedOpponentThisTurn,
     });
-    return { terminal: true, value };
+    return { terminal: true, value: Number.isFinite(value) ? value : 0 };
   }
 
   async _randomPlayoutSim(sim) {
@@ -1485,6 +1744,7 @@ export class MCTS_AI {
       const overloadOpponent = typeof this.resources.pendingOverload === 'function'
         ? this.resources.pendingOverload(opponent)
         : (this.resources._overloadNext?.get?.(opponent) || 0);
+      const enteredThisTurn = this._collectEnteredThisTurn(player, this.resources.turns.turn);
       const rootState = {
         player,
         opponent,
@@ -1493,6 +1753,7 @@ export class MCTS_AI {
         powerAvailable,
         overloadNextPlayer: overloadPlayer,
         overloadNextOpponent: overloadOpponent,
+        enteredThisTurn,
       };
       let action;
       const useSim = this.fullSim && this.game;
@@ -1509,6 +1770,25 @@ export class MCTS_AI {
         break;
       }
       // Apply chosen action to real game state
+      if (action.attack) {
+        let ok = false;
+        if (this.game && typeof this.game.attack === 'function') {
+          ok = await this.game.attack(player, action.attack.attackerId, action.attack.targetId ?? null);
+        } else {
+          const stateView = {
+            player,
+            opponent,
+            turn: this.resources?.turns?.turn || rootState.turn,
+            enteredThisTurn: this._collectEnteredThisTurn(player, rootState.turn, enteredThisTurn),
+          };
+          ok = this._executeAttackAction(stateView, action.attack);
+          if (ok) this._cleanupDead(stateView);
+        }
+        if (!ok) {
+          this._clearLastTree();
+          break;
+        }
+      }
       if (action.card) {
         if (this.game && typeof this.game.playFromHand === 'function') {
           const ok = await this.game.playFromHand(player, action.card.id);
@@ -1556,55 +1836,6 @@ export class MCTS_AI {
       this._advanceLastTreeToChild(searchKind, candidate, descriptor);
       powerAvailable = descriptor.powerAvailable;
     }
-
-    // After actions, perform combat like BasicAI (respect Taunt when selecting targets)
-    if (this.combat && opponent) {
-      this.combat.clear();
-      const attackers = [player.hero, ...player.battlefield.cards]
-        .filter(c => (c.type !== 'equipment') && !c.data?.attacked && ((typeof c.totalAttack === 'function' ? c.totalAttack() : c.data?.attack || 0) > 0));
-      for (const a of attackers) {
-        // Choose a legal defender, honoring Taunt; default to hero if none picked
-        const defenders = [
-          opponent.hero,
-          ...opponent.battlefield.cards.filter(d => d.type !== 'equipment' && d.type !== 'quest')
-        ];
-        const legal = selectTargets(defenders);
-        const preferFace = this._hasHeroAdvantage(player, opponent);
-        const heroLegal = legal.some(t => t.id === opponent.hero.id);
-        let block = null;
-        if (!preferFace || !heroLegal) {
-          if (legal.length === 1) {
-            const only = legal[0];
-            if (only.id !== opponent.hero.id) block = only;
-          } else if (legal.length > 1) {
-            const choices = legal.filter(t => t.id !== opponent.hero.id);
-            // Prefer RNG from game if available for variety
-            block = this.game?.rng?.pick ? this.game.rng.pick(choices) : (choices[0] || null);
-          }
-        }
-        const target = (preferFace && heroLegal) ? opponent.hero : (block || opponent.hero);
-        // If Rush and just entered, skip if no non-hero block target
-        const enteredTurn = a?.data?.enteredTurn;
-        const justEntered = !!(enteredTurn && (enteredTurn === (this.resources?.turns?.turn || 0)));
-        if (a?.keywords?.includes?.('Rush') && justEntered && !block) continue;
-        if (!this.combat.declareAttacker(a, target)) continue;
-        if (a.data) a.data.attacked = true;
-        // Stealth is lost when a unit attacks (AI - MCTS path)
-        if (a?.keywords?.includes?.('Stealth')) {
-          a.keywords = a.keywords.filter(k => k !== 'Stealth');
-        }
-        if (block && target !== opponent.hero) this.combat.assignBlocker(a.id, block);
-        if (player?.log) player.log.push(`Attacked ${target.name} with ${a.name}`);
-      }
-      this.combat.setDefenderHero(opponent.hero);
-      this.combat.resolve();
-
-      for (const p of [player, opponent]) {
-        const dead = p.battlefield.cards.filter(c => c.data?.dead);
-        for (const d of dead) { p.battlefield.moveTo(p.graveyard, d); }
-      }
-    }
-
     return true;
   }
 }

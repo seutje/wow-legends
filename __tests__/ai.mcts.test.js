@@ -54,6 +54,77 @@ test('MCTS can chain multiple plays in a turn', () => {
   });
 });
 
+test('MCTS executes lethal sequences using multiple attacks', async () => {
+  const g = new Game();
+  const ai = new MCTS_AI({ resourceSystem: g.resources, combatSystem: g.combat, game: g, iterations: 400, rolloutDepth: 3 });
+  g.turns.turn = 6;
+  g.turns.setActivePlayer(g.opponent);
+
+  g.player.hero.data.maxHealth = 30;
+  g.player.hero.data.health = 6;
+  g.player.hero.data.armor = 0;
+
+  const raiderA = new Card({ id: 'raider-a', type: 'ally', name: 'Raider A', data: { attack: 3, health: 3, enteredTurn: 1 } });
+  const raiderB = new Card({ id: 'raider-b', type: 'ally', name: 'Raider B', data: { attack: 3, health: 3, enteredTurn: 1 } });
+  raiderA.data.attacked = false;
+  raiderA.data.attacksUsed = 0;
+  raiderB.data.attacked = false;
+  raiderB.data.attacksUsed = 0;
+  g.opponent.battlefield.cards = [raiderA, raiderB];
+  g.opponent.hand.cards = [];
+  g.resources._pool.set(g.opponent, 0);
+
+  const origRandom = Math.random;
+  Math.random = () => 0;
+  try {
+    await ai.takeTurn(g.opponent, g.player, { resume: true });
+  } finally {
+    Math.random = origRandom;
+  }
+
+  expect(g.player.hero.data.health).toBeLessThanOrEqual(0);
+  expect(g.opponent.battlefield.cards.every(c => c.data?.attacked)).toBe(true);
+});
+
+test('MCTS clears taunts before delivering lethal with attacks', async () => {
+  const g = new Game();
+  const ai = new MCTS_AI({ resourceSystem: g.resources, combatSystem: g.combat, game: g, iterations: 500, rolloutDepth: 3 });
+  g.turns.turn = 7;
+  g.turns.setActivePlayer(g.opponent);
+
+  g.player.hero.data.maxHealth = 30;
+  g.player.hero.data.health = 3;
+  g.player.hero.data.armor = 0;
+
+  const tauntA = new Card({ id: 'taunt-a', type: 'ally', name: 'Wall A', keywords: ['Taunt'], data: { attack: 0, health: 2, enteredTurn: 0 } });
+  const tauntB = new Card({ id: 'taunt-b', type: 'ally', name: 'Wall B', keywords: ['Taunt'], data: { attack: 0, health: 2, enteredTurn: 0 } });
+  g.player.battlefield.cards = [tauntA, tauntB];
+
+  const strikerA = new Card({ id: 'striker-a', type: 'ally', name: 'Striker A', data: { attack: 2, health: 2, enteredTurn: 1 } });
+  const strikerB = new Card({ id: 'striker-b', type: 'ally', name: 'Striker B', data: { attack: 2, health: 2, enteredTurn: 1 } });
+  const strikerC = new Card({ id: 'striker-c', type: 'ally', name: 'Striker C', data: { attack: 3, health: 2, enteredTurn: 1 } });
+  for (const card of [strikerA, strikerB, strikerC]) {
+    card.data.attacked = false;
+    card.data.attacksUsed = 0;
+  }
+  g.opponent.battlefield.cards = [strikerA, strikerB, strikerC];
+  g.opponent.hand.cards = [];
+  g.resources._pool.set(g.opponent, 0);
+
+  const origRandom = Math.random;
+  Math.random = () => 0;
+  try {
+    await ai.takeTurn(g.opponent, g.player, { resume: true });
+  } finally {
+    Math.random = origRandom;
+  }
+
+  expect(g.player.hero.data.health).toBeLessThanOrEqual(0);
+  expect(g.player.battlefield.cards.length).toBe(0);
+  expect(g.player.graveyard.cards.some(c => c.id === 'taunt-a')).toBe(true);
+  expect(g.player.graveyard.cards.some(c => c.id === 'taunt-b')).toBe(true);
+});
+
 test('MCTS skips cards with no meaningful effect', async () => {
   const g = new Game();
   const ai = new MCTS_AI({ resourceSystem: g.resources, combatSystem: g.combat, game: g, iterations: 150, rolloutDepth: 3 });
