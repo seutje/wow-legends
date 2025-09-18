@@ -1,5 +1,6 @@
 import CombatSystem from './combat.js';
 import { selectTargets } from './targeting.js';
+import { isTargetable } from './keywords.js';
 import { evaluateGameState } from './ai-heuristics.js';
 import { actionSignature } from './ai-signatures.js';
 import Card from '../entities/card.js';
@@ -504,21 +505,159 @@ export class MCTS_AI {
     }
   }
 
+  _collectFriendlyCharacters(player, { excludeSourceId = null } = {}) {
+    const characters = [];
+    if (player?.hero && !this._isEntityDead(player.hero)) {
+      if ((!excludeSourceId || player.hero.id !== excludeSourceId) && isTargetable(player.hero)) {
+        characters.push(player.hero);
+      }
+    }
+    for (const card of player?.battlefield?.cards || []) {
+      if (!card || card.type === 'quest') continue;
+      if (this._isEntityDead(card)) continue;
+      if (excludeSourceId && card.id === excludeSourceId) continue;
+      if (!isTargetable(card)) continue;
+      characters.push(card);
+    }
+    return characters;
+  }
+
+  _collectFriendlyMinions(player, options = {}) {
+    return this._collectFriendlyCharacters(player, options).filter((c) => c?.type === 'ally');
+  }
+
+  _collectEnemyCharacters(opponent, { excludeSourceId = null } = {}) {
+    const candidates = [];
+    if (opponent?.hero && !this._isEntityDead(opponent.hero)) {
+      if (!excludeSourceId || opponent.hero.id !== excludeSourceId) candidates.push(opponent.hero);
+    }
+    for (const card of opponent?.battlefield?.cards || []) {
+      if (!card || card.type === 'quest') continue;
+      if (this._isEntityDead(card)) continue;
+      if (excludeSourceId && card.id === excludeSourceId) continue;
+      candidates.push(card);
+    }
+    return selectTargets(candidates);
+  }
+
+  _collectEnemyMinions(opponent, { excludeSourceId = null, enforceTaunt = true } = {}) {
+    const minions = [];
+    for (const card of opponent?.battlefield?.cards || []) {
+      if (!card || card.type !== 'ally') continue;
+      if (this._isEntityDead(card)) continue;
+      if (excludeSourceId && card.id === excludeSourceId) continue;
+      minions.push(card);
+    }
+    if (!minions.length) return [];
+    if (!enforceTaunt) {
+      return minions.filter((m) => isTargetable(m));
+    }
+    return selectTargets(minions);
+  }
+
+  _resolveTargetInState(target, player, opponent) {
+    if (!target) return null;
+    const id = target.id;
+    if (id != null) {
+      if (player?.hero?.id === id) return player.hero;
+      if (opponent?.hero?.id === id) return opponent.hero;
+      const findMatch = (cards) => {
+        if (!Array.isArray(cards)) return null;
+        for (const card of cards) {
+          if (card?.id === id) return card;
+        }
+        return null;
+      };
+      const inPlayer = findMatch(player?.battlefield?.cards);
+      if (inPlayer) return inPlayer;
+      const inOpponent = findMatch(opponent?.battlefield?.cards);
+      if (inOpponent) return inOpponent;
+    }
+    if (target === player?.hero) return player.hero;
+    if (target === opponent?.hero) return opponent.hero;
+    return null;
+  }
+
+  _registerActionTarget(action, effect, target, { source = null, index = 0 } = {}) {
+    if (!action) return;
+    const clean = (value) => {
+      if (value == null) return 'none';
+      return String(value).replace(/[|;]/g, '_');
+    };
+    const effectType = clean(effect?.type || 'effect');
+    const scope = clean(effect?.target || 'any');
+    const srcId = source?.id || source?.hero?.id || source?.name || effectType;
+    const entryParts = [
+      `src:${clean(srcId)}`,
+      `idx:${index}`,
+      `eff:${effectType}`,
+      `scope:${scope}`,
+      `tgt:${clean(target?.id || target?.name || null)}`,
+    ];
+    const entry = entryParts.join(',');
+    if (typeof action.__mctsTargetSignature === 'string' && action.__mctsTargetSignature.length) {
+      action.__mctsTargetSignature += `;${entry}`;
+    } else {
+      action.__mctsTargetSignature = entry;
+    }
+  }
+
   _collectDamageTargets(targetType, player, opponent, source = null) {
-    const friendly = [player?.hero, ...(player?.battlefield?.cards || [])].filter(Boolean);
-    const enemy = [opponent?.hero, ...(opponent?.battlefield?.cards || [])].filter(Boolean);
+    const srcId = source?.id || source?.hero?.id || null;
+    const friendlyChars = this._collectFriendlyCharacters(player, { excludeSourceId: srcId });
+    const friendlyMinions = this._collectFriendlyMinions(player, { excludeSourceId: srcId });
+    const enemyChars = this._collectEnemyCharacters(opponent, { excludeSourceId: srcId });
+    const enemyMinions = this._collectEnemyMinions(opponent, { excludeSourceId: srcId });
+    const build = (targets, mode = 'single') => ({ targets, mode });
     switch (targetType) {
       case 'allCharacters':
-        return [...friendly, ...enemy];
-      case 'allOtherCharacters':
-        return [...friendly, ...enemy].filter(t => !source || t.id !== source.id);
+        return build([...friendlyChars, ...enemyChars], 'multi');
+      case 'allOtherCharacters': {
+        const combined = [...friendlyChars, ...enemyChars];
+        return build(combined.filter((t) => !srcId || t?.id !== srcId), 'multi');
+      }
       case 'allies':
       case 'allFriendlies':
-        return friendly;
+        return build(friendlyChars, 'multi');
       case 'allEnemies':
-        return enemy;
+        return build(enemyChars, 'multi');
+      case 'selfHero': {
+        const hero = player?.hero;
+        const targets = (hero && !this._isEntityDead(hero) && (!srcId || hero.id !== srcId)) ? [hero] : [];
+        return build(targets, 'single');
+      }
+      case 'hero': {
+        const targets = [];
+        if (player?.hero && !this._isEntityDead(player.hero) && (!srcId || player.hero.id !== srcId)) targets.push(player.hero);
+        if (opponent?.hero && !this._isEntityDead(opponent.hero) && (!srcId || opponent.hero.id !== srcId)) targets.push(opponent.hero);
+        return build(targets, 'single');
+      }
+      case 'minion': {
+        const targets = [...enemyMinions, ...friendlyMinions];
+        return build(targets, 'single');
+      }
+      case 'enemyHeroOrMinionWithoutTaunt': {
+        const candidates = [];
+        if (opponent?.hero && !this._isEntityDead(opponent.hero) && (!srcId || opponent.hero.id !== srcId)) {
+          candidates.push(opponent.hero);
+        }
+        for (const card of opponent?.battlefield?.cards || []) {
+          if (!card || card.type !== 'ally') continue;
+          if (this._isEntityDead(card)) continue;
+          if (card.keywords?.includes?.('Taunt')) continue;
+          if (!isTargetable(card)) continue;
+          if (srcId && card.id === srcId) continue;
+          candidates.push(card);
+        }
+        return build(candidates, 'single');
+      }
+      case 'any':
+      case 'character': {
+        const combined = [...enemyChars, ...friendlyChars];
+        return build(combined, 'single');
+      }
       default: {
-        return enemy.length ? [enemy[0]] : [];
+        return build(enemyChars.length ? enemyChars : friendlyChars, 'single');
       }
     }
   }
@@ -798,8 +937,9 @@ export class MCTS_AI {
   }
 
   _applySimpleEffects(effects = [], player, opponent, pool, context = {}) {
-    const { source = null, state = null } = context;
-    for (const e of effects) {
+    const { source = null, state = null, action = null } = context;
+    for (let index = 0; index < effects.length; index++) {
+      const e = effects[index];
       const amt = e.amount || 0;
       switch (e.type) {
         case 'heal': {
@@ -821,9 +961,38 @@ export class MCTS_AI {
           if (usesSpellDamage) {
             total += this._estimateSpellDamage(player);
           }
-          const targets = this._collectDamageTargets(e.target, player, opponent, source);
-          for (const target of targets) {
-            this._applyDamageToTarget(target, total, { state, player, opponent });
+          const { targets: damageTargets = [], mode: damageMode = 'single' } = this._collectDamageTargets(e.target, player, opponent, source);
+          if (damageMode === 'single') {
+            if (!damageTargets.length) {
+              this._registerActionTarget(action, e, null, { source, index });
+              break;
+            }
+            let chosen = damageTargets[0];
+            if (damageTargets.length > 1 && state) {
+              let best = null;
+              for (const candidate of damageTargets) {
+                const preview = this._cloneState(state);
+                if (!preview) continue;
+                const branchPlayer = preview.player;
+                const branchOpponent = preview.opponent;
+                const mapped = this._resolveTargetInState(candidate, branchPlayer, branchOpponent);
+                if (!mapped) continue;
+                this._applyDamageToTarget(mapped, total, { state: preview, player: branchPlayer, opponent: branchOpponent });
+                this._cleanupDead(preview);
+                const value = this._evaluateRolloutState(preview);
+                if (!Number.isFinite(value)) continue;
+                if (!best || value > best.value) {
+                  best = { value, target: candidate };
+                }
+              }
+              if (best && best.target) chosen = best.target;
+            }
+            this._applyDamageToTarget(chosen, total, { state, player, opponent });
+            this._registerActionTarget(action, e, chosen, { source, index });
+          } else {
+            for (const target of damageTargets) {
+              this._applyDamageToTarget(target, total, { state, player, opponent });
+            }
           }
           break;
         }
@@ -964,6 +1133,9 @@ export class MCTS_AI {
 
   _applyAction(state, action) {
     const s = this._cloneState(state);
+    if (action && Object.prototype.hasOwnProperty.call(action, '__mctsTargetSignature')) {
+      delete action.__mctsTargetSignature;
+    }
     const p = s.player; const o = s.opponent;
     if (action?.attack) {
       const ok = this._executeAttackAction(s, action.attack);
@@ -1012,7 +1184,7 @@ export class MCTS_AI {
         // set current state for summon tracking inside effects
         this._currentState = s;
         for (const e of played.effects) { if (e.type === 'overload') s.overloadNextPlayer += (e.amount || 1); }
-        s.pool = this._applySimpleEffects(played.effects, p, o, s.pool, { source: played, state: s });
+        s.pool = this._applySimpleEffects(played.effects, p, o, s.pool, { source: played, state: s, action });
         this._currentState = null;
       }
     }
@@ -1024,7 +1196,7 @@ export class MCTS_AI {
         this._currentState = s;
         for (const e of p.hero.active) { if (e.type === 'overload') s.overloadNextPlayer += (e.amount || 1); }
         const source = { type: 'heroPower', hero: p.hero };
-        s.pool = this._applySimpleEffects(p.hero.active, p, o, s.pool, { source, state: s });
+        s.pool = this._applySimpleEffects(p.hero.active, p, o, s.pool, { source, state: s, action });
         this._currentState = null;
       }
     }
