@@ -255,7 +255,9 @@
           "name": "Spirit Wolf",
           "attack": 2,
           "health": 3,
-          "keywords": []
+          "keywords": [
+            "Taunt"
+          ]
         },
         "count": 2
       },
