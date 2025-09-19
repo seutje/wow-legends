@@ -2,10 +2,43 @@ import fs from 'fs';
 import Game from '../src/js/game.js';
 import { RNG } from '../src/js/utils/rng.js';
 
-const deckDefinitions = [1, 2, 3, 4, 5]
-  .map((idx) => {
+const deckDirUrl = new URL('../data/decks/', import.meta.url);
+
+function sanitizeNames(input) {
+  if (!Array.isArray(input)) return [];
+  const seen = new Set();
+  for (const value of input) {
+    if (typeof value !== 'string') continue;
+    let trimmed = value.trim();
+    if (!trimmed) continue;
+    if (trimmed.toLowerCase().endsWith('.json')) trimmed = trimmed.slice(0, -5);
+    if (!trimmed) continue;
+    seen.add(trimmed);
+  }
+  return Array.from(seen).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+}
+
+function loadDeckNames() {
+  try {
+    const indexUrl = new URL('../data/decks/index.json', import.meta.url);
+    const raw = JSON.parse(fs.readFileSync(indexUrl, 'utf8'));
+    const names = sanitizeNames(raw);
+    if (names.length) return names;
+  } catch {}
+
+  try {
+    const files = fs.readdirSync(deckDirUrl);
+    const names = sanitizeNames(files);
+    if (names.length) return names;
+  } catch {}
+
+  return ['deck1', 'deck2', 'deck3', 'deck4', 'deck5'];
+}
+
+const deckDefinitions = loadDeckNames()
+  .map((name) => {
     try {
-      const url = new URL(`../data/decks/deck${idx}.json`, import.meta.url);
+      const url = new URL(`../data/decks/${name}.json`, import.meta.url);
       const raw = JSON.parse(fs.readFileSync(url, 'utf8'));
       if (!raw || typeof raw.hero !== 'string' || !Array.isArray(raw.cards)) return null;
       const counts = new Map();

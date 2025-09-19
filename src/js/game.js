@@ -364,20 +364,67 @@ export default class Game {
   async _loadAIDeckTemplates() {
     if (Array.isArray(this._aiDeckTemplates)) return this._aiDeckTemplates;
 
-    const deckNames = ['deck1', 'deck2', 'deck3', 'deck4', 'deck5'];
-    const entries = [];
+    const sanitizeDeckNames = (input) => {
+      if (!Array.isArray(input)) return [];
+      const seen = new Set();
+      for (const value of input) {
+        if (typeof value !== 'string') continue;
+        let trimmed = value.trim();
+        if (!trimmed) continue;
+        if (trimmed.toLowerCase().endsWith('.json')) trimmed = trimmed.slice(0, -5);
+        if (!trimmed) continue;
+        seen.add(trimmed);
+      }
+      return Array.from(seen).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+    };
 
+    let deckNames = [];
+    let fsModule = null;
     if (typeof window === 'undefined') {
       try {
-        const fs = await import('fs/promises');
-        for (const name of deckNames) {
+        fsModule = await import('fs/promises');
+        try {
+          const indexUrl = new URL('../../data/decks/index.json', import.meta.url);
+          const rawIndex = JSON.parse(await fsModule.readFile(indexUrl, 'utf8'));
+          deckNames = sanitizeDeckNames(rawIndex);
+        } catch {}
+        if (!deckNames.length) {
           try {
-            const url = new URL(`../../data/decks/${name}.json`, import.meta.url);
-            const txt = await fs.readFile(url, 'utf8');
-            entries.push({ name, data: JSON.parse(txt) });
+            const dirUrl = new URL('../../data/decks/', import.meta.url);
+            const files = await fsModule.readdir(dirUrl);
+            deckNames = sanitizeDeckNames(files);
           } catch {}
         }
       } catch {}
+    } else {
+      try {
+        const indexRes = await fetch(new URL('../../data/decks/index.json', import.meta.url)).catch(() => null);
+        if (indexRes && indexRes.ok) {
+          try {
+            const rawIndex = await indexRes.json();
+            deckNames = sanitizeDeckNames(rawIndex);
+          } catch {}
+        }
+      } catch {}
+    }
+
+    if (!deckNames.length) deckNames = ['deck1', 'deck2', 'deck3', 'deck4', 'deck5'];
+
+    const entries = [];
+
+    if (typeof window === 'undefined') {
+      if (!fsModule) {
+        try { fsModule = await import('fs/promises'); } catch {}
+      }
+      if (fsModule) {
+        for (const name of deckNames) {
+          try {
+            const url = new URL(`../../data/decks/${name}.json`, import.meta.url);
+            const txt = await fsModule.readFile(url, 'utf8');
+            entries.push({ name, data: JSON.parse(txt) });
+          } catch {}
+        }
+      }
     } else {
       const fetches = deckNames.map((name) => fetch(new URL(`../../data/decks/${name}.json`, import.meta.url)).catch(() => null));
       const results = await Promise.all(fetches);
