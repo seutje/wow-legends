@@ -4,6 +4,7 @@ import { rememberSecretToken, enrichSecretToken } from '../utils/savegame.js';
 import { logSecretTriggered } from '../utils/combatLog.js';
 import { freezeTarget, getSpellDamageBonus, computeSpellDamage, isTargetable } from './keywords.js';
 import { selectTargets } from './targeting.js';
+import { getCardInstanceId, matchesCardIdentifier } from '../utils/card.js';
 
 export class EffectSystem {
   constructor(game) {
@@ -432,12 +433,12 @@ export class EffectSystem {
     const { game, player, card } = context;
 
     const applyBuff = (unit) => {
-      const equipped = Array.isArray(player.hero.equipment) && player.hero.equipment.some(eq => {
-        if (eq === card) return true;
-        if (eq?.id && card?.id && eq.id === card.id) return true;
-        if (eq?.name && card?.name && eq.name === card.name) return true;
-        return false;
-      });
+        const equipped = Array.isArray(player.hero.equipment) && player.hero.equipment.some(eq => {
+          if (eq === card) return true;
+          if (matchesCardIdentifier(eq, card)) return true;
+          if (eq?.name && card?.name && eq.name === card.name) return true;
+          return false;
+        });
       if (!equipped) return;
       if (!unit.keywords?.includes(keyword)) return;
       unit.data = unit.data || {};
@@ -478,13 +479,13 @@ export class EffectSystem {
     const attackKey = `${keyBase}:attack`;
     const healthKey = `${keyBase}:health`;
 
-    const matchesEquipment = (eq) => {
-      if (!eq) return false;
-      if (eq === card) return true;
-      if (card.id && eq.id === card.id) return true;
-      if (card.name && eq.name === card.name) return true;
-      return false;
-    };
+      const matchesEquipment = (eq) => {
+        if (!eq) return false;
+        if (eq === card) return true;
+        if (matchesCardIdentifier(eq, card)) return true;
+        if (card.name && eq.name === card.name) return true;
+        return false;
+      };
 
     const isEquipped = () => {
       const eqList = Array.isArray(player?.hero?.equipment) ? player.hero.equipment : [];
@@ -598,13 +599,13 @@ export class EffectSystem {
       }
     }));
 
-    track(game.bus.on('cardReturned', ({ card: returned }) => {
-      if (disposed) return;
-      if (returned === card || (returned?.id && returned.id === card.id)) {
-        if (wasActive) clearAura();
-        cleanup();
-      }
-    }));
+      track(game.bus.on('cardReturned', ({ card: returned }) => {
+        if (disposed) return;
+        if (matchesCardIdentifier(returned, card)) {
+          if (wasActive) clearAura();
+          cleanup();
+        }
+      }));
 
     track(game.turns.bus.on('turn:start', ({ player: turnPlayer }) => {
       if (turnPlayer !== player) return;
@@ -1437,11 +1438,12 @@ export class EffectSystem {
     const consumables = player.library.cards.filter(c => c.type === 'consumable');
     if (!consumables.length) return;
     const card = game.rng.pick(consumables);
-    player.library.removeById(card.id);
+    player.library.remove(card);
     player.hand.add(card);
     const originalCost = card.cost || 0;
     card.cost = 0;
-    await game.playFromHand(player, card.id);
+    const cardRef = getCardInstanceId(card) ?? card;
+    await game.playFromHand(player, cardRef);
     card.cost = originalCost;
   }
 
@@ -1727,7 +1729,7 @@ export class EffectSystem {
   spellDamageNextSpell(effect, context) {
     const { amount = 1, eachTurn = false } = effect;
     const { player, card } = context;
-    const sourceCardId = card?.type === 'equipment' ? card.id : null;
+    const sourceCardId = card?.type === 'equipment' ? getCardInstanceId(card) : null;
     player.hero.data.nextSpellDamageBonus = {
       amount,
       used: false,

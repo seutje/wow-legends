@@ -6,6 +6,7 @@ import CombatSystem from './combat.js';
 import { selectTargets } from './targeting.js';
 import MLP from './nn.js';
 import { actionSignature } from './ai-signatures.js';
+import { getCardInstanceId, matchesCardIdentifier } from '../utils/card.js';
 
 export const HERO_ID_VOCAB = Object.freeze([
   'hero-anduin-wrynn-high-king-priest',
@@ -444,7 +445,8 @@ export class NeuralAI {
       const action = this._chooseAction(state);
       if (!action || action.end) break;
       if (action.card) {
-        const ok = await (this.game?.playFromHand?.(player, action.card.id) ?? false);
+        const cardRef = getCardInstanceId(action.card) ?? action.card;
+        const ok = await (this.game?.playFromHand?.(player, cardRef) ?? false);
         if (!ok) break;
       }
       if (action.usePower) {
@@ -487,11 +489,11 @@ export class NeuralAI {
 
       let block = null;
       if (legal.length > 1) {
-        const nonHero = legal.filter(t => t.id !== opponent.hero.id);
+        const nonHero = legal.filter(t => !matchesCardIdentifier(t, opponent.hero));
         const taunts = nonHero.filter(t => t.keywords?.includes('Taunt'));
         const poolChoices = (taunts.length ? taunts : nonHero);
         block = poolChoices.sort((x, y) => (x.data?.health || 0) - (y.data?.health || 0))[0] || null;
-      } else if (legal.length === 1 && legal[0].id !== opponent.hero.id) {
+      } else if (legal.length === 1 && !matchesCardIdentifier(legal[0], opponent.hero)) {
         block = legal[0];
       }
       const target = block || opponent.hero;
@@ -503,7 +505,7 @@ export class NeuralAI {
       data.attacked = true;
       data.attacksUsed = (data.attacksUsed || 0) + 1;
       if (attacker?.keywords?.includes?.('Stealth')) attacker.keywords = attacker.keywords.filter(k => k !== 'Stealth');
-      if (block) this.combat.assignBlocker(attacker.id, block);
+      if (block) this.combat.assignBlocker(getCardInstanceId(attacker), block);
       player.log.push(`Attacked ${target.name} with ${attacker.name}`);
 
       this.combat.setDefenderHero(opponent.hero);

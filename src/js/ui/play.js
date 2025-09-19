@@ -1,4 +1,5 @@
 // No HUD title import needed
+import { matchesCardIdentifier } from '../utils/card.js';
 
 function el(tag, attrs = {}, ...children) {
   const e = document.createElement(tag);
@@ -88,7 +89,7 @@ function buildCardEl(card, { owner } = {}) {
     let eqAttack = card.attack;
     let eqDurability = card.durability;
     if (owner && owner.hero?.equipment) {
-      const eq = owner.hero.equipment.find(e => e?.id === card.id || e?.name === card.name);
+      const eq = owner.hero.equipment.find((e) => matchesCardIdentifier(e, card) || (card.name && e?.name === card.name));
       if (eq) { eqAttack = (eq.attack ?? eqAttack); eqDurability = (eq.durability ?? eqDurability); }
     }
     if (eqAttack != null) wrap.append(el('div', { class: 'stat attack' }, eqAttack));
@@ -107,10 +108,13 @@ function zoneCards(title, cards, { clickCard, owner } = {}) {
   const wrap = el('div', { class: 'cards' });
   const counts = new Map();
   for (const c of cards) {
-    const n = (counts.get(c.id) || 0) + 1; counts.set(c.id, n);
-    const key = `${c.id}#${n}`;
+    const baseKey = c.instanceId || c.id || 'card';
+    const n = (counts.get(baseKey) || 0) + 1; counts.set(baseKey, n);
+    const key = c.instanceId || `${baseKey}#${n}`;
     const cardEl = buildCardEl(c, { owner });
-    cardEl.dataset.cardId = c.id;
+    const instanceId = c.instanceId || c.id;
+    if (instanceId != null) cardEl.dataset.cardId = String(instanceId);
+    if (c.id != null) cardEl.dataset.templateId = String(c.id);
     cardEl.dataset.key = key;
     if (clickCard) cardEl.addEventListener('click', async () => { await clickCard(c); });
     wrap.append(cardEl);
@@ -148,6 +152,9 @@ function logPane(title, entries = []) {
 function updateCardEl(cardEl, card, { owner } = {}) {
   if (!cardEl) return;
   const tooltipCard = card.summonedBy || card;
+  const instanceId = card.instanceId || card.id;
+  if (instanceId != null) cardEl.dataset.cardId = String(instanceId);
+  if (card.id != null) cardEl.dataset.templateId = String(card.id);
   // Keep dataset type in sync for this node
   cardEl.dataset.type = card.type;
   // Update images if needed
@@ -255,13 +262,16 @@ function syncCardsSection(sectionEl, cards, { clickCard, owner } = {}) {
   const counts = new Map();
   let lastNode = null;
   for (const c of cards) {
-    const n = (counts.get(c.id) || 0) + 1; counts.set(c.id, n);
-    const key = `${c.id}#${n}`;
+    const baseKey = c.instanceId || c.id || 'card';
+    const n = (counts.get(baseKey) || 0) + 1; counts.set(baseKey, n);
+    const key = c.instanceId || `${baseKey}#${n}`;
     seen.add(key);
     let node = byKey.get(key);
     if (!node) {
       node = buildCardEl(c, { owner });
-      node.dataset.cardId = c.id;
+      const instanceId = c.instanceId || c.id;
+      if (instanceId != null) node.dataset.cardId = String(instanceId);
+      if (c.id != null) node.dataset.templateId = String(c.id);
       node.dataset.key = key;
       if (clickCard && !node.dataset.clickAttached) {
         node.addEventListener('click', async () => { await clickCard(c); });
@@ -270,6 +280,7 @@ function syncCardsSection(sectionEl, cards, { clickCard, owner } = {}) {
     } else {
       updateCardEl(node, c, { owner });
       byKey.delete(key);
+      node.dataset.key = key;
     }
     if (lastNode) {
       if (node.previousSibling !== lastNode) list.insertBefore(node, lastNode.nextSibling);
@@ -446,13 +457,13 @@ export function renderPlay(container, game, { onUpdate, onOpenDeckBuilder, onNew
     const pHero = el('div', { class: 'slot p-hero' }, el('h3', {}, 'Player hero'), buildCardEl(p.hero));
     const heroEl = pHero.querySelector('.card-tooltip');
     if (heroEl && !heroEl.dataset.clickAttached) {
-      heroEl.addEventListener('click', async () => { await game.attack(game.player, game.player.hero.id); onUpdate?.(); });
+      heroEl.addEventListener('click', async () => { await game.attack(game.player, game.player.hero); onUpdate?.(); });
       heroEl.dataset.clickAttached = '1';
     }
     const pMana = el('div', { class: 'slot p-mana' }, el('h3', {}, 'Mana'), el('div', { class: 'mana' }, `${game.resources.pool(p)} / ${game.resources.available(p)}`));
     const pLog = logPane('Player Log', p.log); pLog.classList.add('p-log');
-    const pField = zoneCards('Player Battlefield', p.battlefield.cards, { owner: p, clickCard: async (c)=>{ await game.attack(game.player, c.id); onUpdate?.(); } }); pField.classList.add('p-field');
-    const pHand = zoneCards('Player Hand', p.hand.cards, { owner: p, clickCard: async (c)=>{ if (!await game.playFromHand(game.player, c.id)) { /* ignore */ } onUpdate?.(); } }); pHand.classList.add('p-hand');
+    const pField = zoneCards('Player Battlefield', p.battlefield.cards, { owner: p, clickCard: async (c)=>{ await game.attack(game.player, c); onUpdate?.(); } }); pField.classList.add('p-field');
+    const pHand = zoneCards('Player Hand', p.hand.cards, { owner: p, clickCard: async (c)=>{ if (!await game.playFromHand(game.player, c)) { /* ignore */ } onUpdate?.(); } }); pHand.classList.add('p-hand');
 
     board.append(aiHero, aiMana, aiHand, aiField, aiLog, pHero, pMana, pField, pHand, pLog);
     container.append(controls, board);
@@ -486,8 +497,8 @@ export function renderPlay(container, game, { onUpdate, onOpenDeckBuilder, onNew
 
   // Update zones
   syncCardsSection(board.querySelector('.ai-field'), e.battlefield.cards, { owner: e });
-  syncCardsSection(board.querySelector('.p-field'), p.battlefield.cards, { owner: p, clickCard: async (c)=>{ await game.attack(game.player, c.id); onUpdate?.(); } });
-  syncCardsSection(board.querySelector('.p-hand'), p.hand.cards, { owner: p, clickCard: async (c)=>{ if (!await game.playFromHand(game.player, c.id)) { /* ignore */ } onUpdate?.(); } });
+  syncCardsSection(board.querySelector('.p-field'), p.battlefield.cards, { owner: p, clickCard: async (c)=>{ await game.attack(game.player, c); onUpdate?.(); } });
+  syncCardsSection(board.querySelector('.p-hand'), p.hand.cards, { owner: p, clickCard: async (c)=>{ if (!await game.playFromHand(game.player, c)) { /* ignore */ } onUpdate?.(); } });
   let aiHandSection = board.querySelector('.ai-hand');
   if (!aiHandSection || ((aiHandSection.dataset?.debugView === '1') !== debugEnabled)) {
     const replacement = buildAiHandZone(e.hand, { owner: e, debugOn: debugEnabled });

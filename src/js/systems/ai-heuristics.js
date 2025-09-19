@@ -1,3 +1,5 @@
+import { getCardInstanceId } from '../utils/card.js';
+
 export const TURN_WEIGHT = 0.1;
 export const AI_HEALTH_WEIGHT = 5;
 export const PLAYER_HEALTH_WEIGHT = -5;
@@ -89,7 +91,8 @@ export function evaluateGameState({
   const enemyEnraged = toMap(enragedOpponentThisTurn);
   if (enemyEnraged.size > 0) {
     for (const card of opponent.battlefield?.cards || []) {
-      if (!enemyEnraged.has(card.id)) continue;
+      const key = getCardInstanceId(card);
+      if (!key || !enemyEnraged.has(key)) continue;
       const health = card?.data?.health ?? 0;
       if (health <= 0) continue;
       const effects = Array.isArray(card?.effects)
@@ -97,7 +100,7 @@ export function evaluateGameState({
         : [];
       if (!effects.length) continue;
       const attackGain = effects.reduce((sum, fx) => sum + (fx.attack || 0), 0);
-      const triggers = Math.max(1, enemyEnraged.get(card.id) || 1);
+      const triggers = Math.max(1, enemyEnraged.get(key) || 1);
       const penalty = (ENEMY_ENRAGED_BASE_PENALTY + Math.max(0, attackGain) * ENEMY_ENRAGED_ATTACK_WEIGHT) * triggers;
       score -= penalty;
     }

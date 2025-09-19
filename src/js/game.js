@@ -14,6 +14,7 @@ import { EventBus } from './utils/events.js';
 import { selectTargets } from './systems/targeting.js';
 import { logSecretTriggered } from './utils/combatLog.js';
 import { fillDeckRandomly } from './utils/deckbuilder.js';
+import { getCardInstanceId, matchesCardIdentifier } from './utils/card.js';
 
 function buildDeckFromTemplate(template, cardById) {
   if (!template || typeof template !== 'object') return null;
@@ -578,8 +579,13 @@ export default class Game {
 
   
 
-  async playFromHand(player, cardId) {
-    const card = player.hand.cards.find(c => c.id === cardId);
+  async playFromHand(player, cardRef) {
+    let card = null;
+    if (cardRef && typeof cardRef === 'object') {
+      card = player.hand.cards.find((c) => matchesCardIdentifier(c, cardRef)) || null;
+    } else if (cardRef != null) {
+      card = player.hand.cards.find((c) => matchesCardIdentifier(c, cardRef)) || null;
+    }
     if (!card) return false;
     const cost = card.cost || 0;
     if (!this.resources.pay(player, cost)) return false;
@@ -726,7 +732,11 @@ export default class Game {
     if (tempSpellDamage) {
       if (bonusSourceId) {
         const eqList = Array.isArray(player.hero.equipment) ? player.hero.equipment : [];
-        const eq = eqList.find(e => e?.id === bonusSourceId);
+        const eq = eqList.find(e => matchesCardIdentifier(e, bonusSourceId));
+        const storedSourceId = player?.hero?.data?.nextSpellDamageBonus?.sourceCardId ?? null;
+        const storedMatchesBonusSource = storedSourceId != null
+          ? matchesCardIdentifier({ instanceId: storedSourceId, id: storedSourceId }, bonusSourceId)
+          : false;
         if (eq && typeof eq.durability === 'number') {
           eq.durability -= 1;
           if (player?.log) player.log.push(`${eq.name} empowered a spell (-1 durability).`);
@@ -740,12 +750,12 @@ export default class Game {
             if (!moved && player?.graveyard?.add) {
               player.graveyard.add(eq);
             }
-            if (player?.hero?.data?.nextSpellDamageBonus?.sourceCardId === bonusSourceId) {
+            if (storedMatchesBonusSource) {
               delete player.hero.data.nextSpellDamageBonus;
             }
           }
           player.hero.equipment = eqList.filter(e => (e?.durability ?? 1) > 0);
-        } else if (player?.hero?.data?.nextSpellDamageBonus?.sourceCardId === bonusSourceId) {
+        } else if (storedMatchesBonusSource) {
           delete player.hero.data.nextSpellDamageBonus;
         }
       }
@@ -898,9 +908,15 @@ export default class Game {
     });
   }
 
-  async attack(player, cardId, targetId = null) {
+  async attack(player, cardRef, targetRef = null) {
     const defender = player === this.player ? this.opponent : this.player;
-    const card = [player.hero, ...player.battlefield.cards].find(c => c.id === cardId);
+    const candidatesForAttack = [player.hero, ...player.battlefield.cards];
+    let card = null;
+    if (cardRef && typeof cardRef === 'object') {
+      card = candidatesForAttack.find((c) => matchesCardIdentifier(c, cardRef)) || null;
+    } else if (cardRef != null) {
+      card = candidatesForAttack.find((c) => matchesCardIdentifier(c, cardRef)) || null;
+    }
     if (!card) return false;
     if ((card?.data?.freezeTurns || 0) > 0) return false;
     const atk = typeof card.totalAttack === 'function' ? card.totalAttack() : (card.data?.attack ?? 0);
@@ -927,29 +943,31 @@ export default class Game {
     ];
     const legal = selectTargets(candidates);
     // For Rush on the turn it was summoned: require an enemy ally target; if none, the attack is not legal
-    const pool = (hasRush && justEntered) ? legal.filter(c => c.id !== defender.hero.id) : legal;
+    const pool = (hasRush && justEntered)
+      ? legal.filter(c => !matchesCardIdentifier(c, defender.hero))
+      : legal;
     if (pool.length === 0) return false;
     if (pool.length === 1) {
       const only = pool[0];
-      if (only.id !== defender.hero.id) target = only;
+      if (only !== defender.hero) target = only;
     } else if (pool.length > 1) {
-      if (targetId) {
-        target = pool.find(c => c.id === targetId) || null;
-        if (target?.id === defender.hero.id) target = null;
+      if (targetRef) {
+        const chosen = pool.find((c) => matchesCardIdentifier(c, targetRef)) || null;
+        if (chosen && chosen !== defender.hero) target = chosen;
       } else {
         const choice = await this.promptTarget(pool);
         if (choice === this.CANCEL) return false; // respect cancel
         // If the enemy hero was chosen, leave target null to attack hero directly
-        if (choice && choice.id !== defender.hero.id) target = choice;
+        if (choice && choice !== defender.hero) target = choice;
       }
     }
-    const heroAllowed = pool.some((c) => c?.id === defender.hero?.id);
+    const heroAllowed = pool.some((c) => c === defender.hero);
     if (!target && !heroAllowed) return false;
     const actualTarget = target || defender.hero;
     this.combat.clear();
     if (!this.combat.declareAttacker(card, actualTarget)) return false;
     this.combat.setDefenderHero(defender.hero);
-    if (target) this.combat.assignBlocker(card.id, target);
+    if (target) this.combat.assignBlocker(getCardInstanceId(card), target);
     const events = this.combat.resolve();
     for (const ev of events) {
       const srcOwner = [player.hero, ...player.battlefield.cards].includes(ev.source) ? player : defender;
@@ -1039,7 +1057,7 @@ export default class Game {
       const affordable = this.opponent.hand.cards
         .filter(c => this.canPlay(this.opponent, c))
         .sort((a,b)=> (a.cost||0)-(b.cost||0));
-      if (affordable[0]) await this.playFromHand(this.opponent, affordable[0].id);
+      if (affordable[0]) await this.playFromHand(this.opponent, affordable[0]);
       const attackers = this.opponent.battlefield.cards.filter(c => {
         if (!(c.type === 'ally' || c.type === 'equipment')) return false;
         const atk = typeof c.totalAttack === 'function' ? c.totalAttack() : (c.data?.attack || 0);
@@ -1059,15 +1077,15 @@ export default class Game {
         const legal = selectTargets(defenders);
         // If Rush on entry and no non-hero targets, skip attacking with this unit
         if (hasRush && justEntered) {
-          const nonHero = legal.filter(t => t.id !== this.player.hero.id);
+          const nonHero = legal.filter(t => !matchesCardIdentifier(t, this.player.hero));
           if (nonHero.length === 0) continue;
         }
         let block = null;
         if (legal.length === 1) {
           const only = legal[0];
-          if (only.id !== this.player.hero.id) block = only;
+          if (!matchesCardIdentifier(only, this.player.hero)) block = only;
         } else if (legal.length > 1) {
-          const choices = legal.filter(t => t.id !== this.player.hero.id);
+          const choices = legal.filter(t => !matchesCardIdentifier(t, this.player.hero));
           block = this.rng.pick(choices);
         }
         const target = block || this.player.hero;
@@ -1080,7 +1098,7 @@ export default class Game {
         if (c?.keywords?.includes?.('Stealth')) {
           c.keywords = c.keywords.filter(k => k !== 'Stealth');
         }
-        if (block) this.combat.assignBlocker(c.id, block);
+        if (block) this.combat.assignBlocker(getCardInstanceId(c), block);
         this.opponent.log.push(`Attacked ${target.name} with ${c.name}`);
       }
       this.combat.setDefenderHero(this.player.hero);

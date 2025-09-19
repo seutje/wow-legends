@@ -37,6 +37,43 @@ test('AI trades a smaller ally into a dangerous threat', () => {
   expect(g.opponent.hero.data.health).toBe(startingEnemyHealth);
 });
 
+test('Basic AI attacks with multiple identical allies', () => {
+  const g = new Game();
+  const ai = new BasicAI({ resourceSystem: g.resources, combatSystem: g.combat });
+
+  g.turns.turn = 3;
+  g.turns.setActivePlayer(g.player);
+  g.player.library.cards = [];
+  g.opponent.library.cards = [];
+
+  g.player.hero.data.health = 20;
+  g.opponent.hero.data.health = 20;
+
+  const makeShieldbearer = () => new Card({
+    id: 'ally-shoal-shieldbearer',
+    name: 'Shoal Shieldbearer',
+    type: 'ally',
+    data: { attack: 2, health: 4 },
+    keywords: ['Murloc'],
+  });
+
+  const first = makeShieldbearer();
+  const second = makeShieldbearer();
+  first.owner = g.player;
+  second.owner = g.player;
+
+  g.player.battlefield.cards = [first, second];
+  g.opponent.battlefield.cards = [];
+
+  const startingEnemyHealth = g.opponent.hero.data.health;
+
+  ai.takeTurn(g.player, g.opponent);
+
+  expect(first.data.attacked).toBe(true);
+  expect(second.data.attacked).toBe(true);
+  expect(g.opponent.hero.data.health).toBe(startingEnemyHealth - 4);
+});
+
 test('MCTS AI trades a smaller ally into a dangerous threat', async () => {
   const g = new Game();
   const ai = new MCTS_AI({

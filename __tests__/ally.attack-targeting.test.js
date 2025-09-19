@@ -1,6 +1,7 @@
 import Game from '../src/js/game.js';
 import Hero from '../src/js/entities/hero.js';
 import Card from '../src/js/entities/card.js';
+import { getCardInstanceId } from '../src/js/utils/card.js';
 
 // Equipment should not be selectable as a target when attacking with an ally.
 test('equipment cannot be targeted by ally attacks', async () => {
@@ -58,4 +59,42 @@ test('taunt forces attacks to target taunt ally', async () => {
 
   expect(g.opponent.hero.data.health).toBe(initial);
   expect(g.opponent.graveyard.cards).toContain(taunt);
+});
+
+test('identical allies attack independently using instance ids', async () => {
+  const g = new Game();
+  g.player.hero = new Hero({ name: 'Hero', data: { health: 20 } });
+  g.opponent.hero = new Hero({ name: 'Enemy', data: { health: 20 } });
+
+  const makeShieldbearer = () => new Card({
+    id: 'ally-shoal-shieldbearer',
+    name: 'Shoal Shieldbearer',
+    type: 'ally',
+    data: { attack: 2, health: 4 },
+    keywords: ['Murloc'],
+  });
+
+  const first = makeShieldbearer();
+  const second = makeShieldbearer();
+
+  g.player.battlefield.cards = [first, second];
+
+  g.turns.setActivePlayer(g.player);
+  g.turns.startTurn();
+
+  const firstId = getCardInstanceId(first);
+  const secondId = getCardInstanceId(second);
+
+  const initialHealth = g.opponent.hero.data.health;
+  const okFirst = await g.attack(g.player, firstId);
+  expect(okFirst).toBe(true);
+  expect(first.data.attacked).toBe(true);
+  expect(second.data.attacked).not.toBe(true);
+  expect(g.opponent.hero.data.health).toBe(initialHealth - 2);
+
+  const healthAfterFirst = g.opponent.hero.data.health;
+  const okSecond = await g.attack(g.player, secondId);
+  expect(okSecond).toBe(true);
+  expect(second.data.attacked).toBe(true);
+  expect(g.opponent.hero.data.health).toBe(healthAfterFirst - 2);
 });
