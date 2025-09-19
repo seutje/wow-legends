@@ -236,6 +236,27 @@ export class CombatSystem {
       }
       if (ev.source?.keywords?.includes?.('Freeze') && newHp > 0) freezeTarget(ev.target, 1);
       if (newHp <= 0) setStat(ev.target, 'dead', true);
+
+      if (!ev.isReflect && ev.amount > 0) {
+        const tgt = ev.target;
+        const src = ev.source;
+        const hasKeywordReflect = tgt?.keywords?.includes?.('Reflect');
+        const tempReflectCount = tgt?.data?.tempKeywordCounts?.Reflect || 0;
+        const targetIsReflectiveAlly = tgt?.type === 'ally' && (hasKeywordReflect || tempReflectCount > 0);
+        const sourceIsCharacter = src && (src.type === 'ally' || src.type === 'hero');
+        if (targetIsReflectiveAlly && sourceIsCharacter && src !== tgt) {
+          const attackValue = getStat(tgt, 'attack', 0);
+          const reflectAmount = Math.max(0, attackValue + ev.amount);
+          if (reflectAmount > 0) {
+            events.push({
+              target: src,
+              amount: reflectAmount,
+              source: tgt,
+              isReflect: true,
+            });
+          }
+        }
+      }
     }
 
     this.clear();

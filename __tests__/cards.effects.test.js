@@ -424,6 +424,23 @@ describe.each(effectCards)('$id executes its effect', (card) => {
         if (effect.keywords?.includes('Rush')) expect(beast.keywords).toContain('Rush');
         break;
       }
+      case 'grantKeyword': {
+        const ally = new Card({ name: 'Keyword Target', type: 'ally', data: { attack: 2, health: 3 }, keywords: [] });
+        g.player.battlefield.add(ally);
+        g.promptTarget = async () => ally;
+        await g.playFromHand(g.player, card.id);
+        expect(ally.keywords).toContain(effect.keyword);
+        if (effect.duration === 'untilYourNextTurn') {
+          g.turns.bus.emit('turn:start', { player: g.opponent });
+          expect(ally.keywords).toContain(effect.keyword);
+          g.turns.bus.emit('turn:start', { player: g.player });
+          expect(ally.keywords).not.toContain(effect.keyword);
+        } else if (effect.duration === 'thisTurn') {
+          g.effects.cleanupTemporaryEffects();
+          expect(ally.keywords).not.toContain(effect.keyword);
+        }
+        break;
+      }
       case 'buffTribe': {
         const tribe = effect.tribe || 'Murloc';
         const friendly = new Card({

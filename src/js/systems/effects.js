@@ -200,6 +200,9 @@ export class EffectSystem {
         case 'vengefulSpirit':
           this.vengefulSpirit(effect, context);
           break;
+        case 'grantKeyword':
+          await this.grantKeyword(effect, context);
+          break;
         case 'chooseOne':
           await this.handleChooseOne(effect, context);
           break;
@@ -1663,6 +1666,116 @@ export class EffectSystem {
         t.data.spellDamage = (t.data.spellDamage || 0) + amount;
       }
       console.log(`Applied +${amount} ${property} to ${t.name}.`);
+    }
+  }
+
+  async grantKeyword(effect, context, forcedTarget = null) {
+    const { target, keyword, duration, allowHero = true } = effect;
+    if (!keyword) return;
+
+    const { player, game } = context;
+    const opponent = player === game.player ? game.opponent : game.player;
+    const isTemporary = duration === 'thisTurn' || duration === 'untilYourNextTurn';
+
+    let actualTargets = [];
+
+    switch (target) {
+      case 'allies': {
+        if (allowHero) actualTargets.push(player.hero);
+        actualTargets.push(
+          ...player.battlefield.cards
+            .filter(c => c.type !== 'quest')
+            .filter(isTargetable)
+        );
+        break;
+      }
+      case 'hero':
+        actualTargets.push(player.hero);
+        break;
+      case 'character': {
+        if (forcedTarget) {
+          if (!allowHero && forcedTarget?.type === 'hero') return;
+          actualTargets.push(forcedTarget);
+        } else {
+          const friendly = [
+            ...(allowHero ? [player.hero] : []),
+            ...player.battlefield.cards.filter(c => c.type !== 'quest')
+          ].filter(isTargetable);
+
+          const chosen = await game.promptTarget(friendly);
+          if (chosen === game.CANCEL) throw game.CANCEL;
+          if (chosen) actualTargets.push(chosen);
+        }
+        break;
+      }
+      case 'enemyCharacter': {
+        const candidates = selectTargets([
+          opponent.hero,
+          ...opponent.battlefield.cards.filter(c => c.type !== 'quest')
+        ]).filter(isTargetable);
+        const chosen = await game.promptTarget(candidates);
+        if (chosen === game.CANCEL) throw game.CANCEL;
+        if (chosen) actualTargets.push(chosen);
+        break;
+      }
+      default:
+        console.warn(`Unknown keyword grant target: ${target}`);
+        return;
+    }
+
+    const seen = new Set();
+    actualTargets = actualTargets.filter((t) => {
+      if (!t) return false;
+      if (seen.has(t)) return false;
+      seen.add(t);
+      return true;
+    });
+
+    for (const t of actualTargets) {
+      this._recordTarget(context, t);
+      if (!Array.isArray(t.keywords)) t.keywords = [];
+      const hasKeyword = t.keywords.includes(keyword);
+      if (!hasKeyword) t.keywords.push(keyword);
+
+      if (isTemporary) {
+        if (!t.data) t.data = {};
+        const tempCounts = t.data.tempKeywordCounts || (t.data.tempKeywordCounts = {});
+        const prevCount = tempCounts[keyword] || 0;
+        tempCounts[keyword] = prevCount + 1;
+
+        const revertKeyword = () => {
+          const counts = t.data?.tempKeywordCounts;
+          if (!counts) return;
+          const current = counts[keyword] || 0;
+          const next = current - 1;
+          if (next <= 0) {
+            delete counts[keyword];
+            const baseHas = Array.isArray(t.baseKeywords) && t.baseKeywords.includes(keyword);
+            if (!baseHas && Array.isArray(t.keywords)) {
+              t.keywords = t.keywords.filter((k) => k !== keyword);
+            }
+          } else {
+            counts[keyword] = next;
+          }
+        };
+
+        if (duration === 'thisTurn') {
+          this.temporaryEffects.push({ revert: revertKeyword });
+        } else if (duration === 'untilYourNextTurn') {
+          let off = null;
+          const handler = ({ player: turnPlayer }) => {
+            if (turnPlayer !== player) return;
+            try {
+              revertKeyword();
+            } finally {
+              if (off) off();
+            }
+          };
+          off = this._trackCleanup(game.turns.bus.on('turn:start', handler));
+        }
+      }
+
+      console.log(`Granted ${keyword} to ${t.name}.`);
     }
   }
 
