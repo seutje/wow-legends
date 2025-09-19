@@ -117,12 +117,69 @@ if (!sidebar.parentElement) root.appendChild(sidebar);
 // Hide aside by default; only visible while deck builder is open
 sidebar.style.display = 'none';
 
-const deckState = { hero: null, cards: [] };
+const deckState = { hero: null, cards: [], selectedPrebuiltDeck: null };
+let availablePrebuiltDecks = [];
+let prebuiltDecksPromise = null;
+
+function handleSelectPrebuilt(deckName) {
+  const normalized = deckName || null;
+  if (!normalized) {
+    if (deckState.selectedPrebuiltDeck) {
+      deckState.selectedPrebuiltDeck = null;
+      rerenderDeck();
+    }
+    return;
+  }
+  const pool = Array.isArray(availablePrebuiltDecks) ? availablePrebuiltDecks : [];
+  const match = pool.find((deck) => deck?.name === normalized) || null;
+  if (!match) {
+    if (deckState.selectedPrebuiltDeck) {
+      deckState.selectedPrebuiltDeck = null;
+      rerenderDeck();
+    }
+    return;
+  }
+  deckState.hero = match.hero || null;
+  deckState.cards = Array.isArray(match.cards) ? match.cards.slice() : [];
+  deckState.selectedPrebuiltDeck = match.name || normalized;
+  rerenderDeck();
+}
+
+async function ensurePrebuiltDecksLoaded() {
+  if (Array.isArray(availablePrebuiltDecks) && availablePrebuiltDecks.length > 0) {
+    return availablePrebuiltDecks;
+  }
+  if (prebuiltDecksPromise) return prebuiltDecksPromise;
+  if (typeof game.getPrebuiltDecks !== 'function') {
+    availablePrebuiltDecks = [];
+    return availablePrebuiltDecks;
+  }
+  prebuiltDecksPromise = (async () => {
+    try {
+      const decks = await game.getPrebuiltDecks();
+      availablePrebuiltDecks = Array.isArray(decks) ? decks : [];
+      rerenderDeck();
+    } catch {
+      availablePrebuiltDecks = [];
+    } finally {
+      prebuiltDecksPromise = null;
+    }
+    return availablePrebuiltDecks;
+  })();
+  return prebuiltDecksPromise;
+}
+
 function updateUseDeckBtn() {
   useDeckBtn.disabled = !(deckState.hero && deckState.cards.length === 60);
 }
 const rerenderDeck = () => {
-  renderDeckBuilder(deckRoot, { state: deckState, allCards: game.allCards, onChange: rerenderDeck });
+  renderDeckBuilder(deckRoot, {
+    state: deckState,
+    allCards: game.allCards,
+    onChange: rerenderDeck,
+    prebuiltDecks: availablePrebuiltDecks,
+    onSelectPrebuilt: handleSelectPrebuilt,
+  });
   updateUseDeckBtn();
 };
 function openDeckBuilder() {
@@ -133,18 +190,22 @@ function openDeckBuilder() {
     if (cur.hero) deckState.hero = cur.hero;
     deckState.cards = Array.isArray(cur.cards) ? Array.from(cur.cards) : [];
   } catch {}
+  deckState.selectedPrebuiltDeck = null;
   deckRoot.style.display = 'block';
   sidebar.style.display = 'block';
   toggleGameVisible(false);
   rerenderDeck();
+  ensurePrebuiltDecksLoaded();
 }
 fillRandomBtn.addEventListener('click', () => {
+  deckState.selectedPrebuiltDeck = null;
   fillDeckRandomly(deckState, game.allCards, game.rng);
   rerenderDeck();
 });
 clearDeckBtn.addEventListener('click', () => {
   deckState.cards.length = 0;
   deckState.hero = null;
+  deckState.selectedPrebuiltDeck = null;
   rerenderDeck();
 });
   useDeckBtn.addEventListener('click', async () => {
@@ -161,7 +222,7 @@ clearDeckBtn.addEventListener('click', () => {
     // No RAF loop; state updates via DOM events
   });
 let logsOn = true;
-renderOptions(optsRoot, { onReset: async () => { deckState.cards.length = 0; deckState.hero = null; rerenderDeck(); clearSavedGameState(); await game.reset(); saveGameState(game); rerender(); } });
+renderOptions(optsRoot, { onReset: async () => { deckState.cards.length = 0; deckState.hero = null; deckState.selectedPrebuiltDeck = null; rerenderDeck(); clearSavedGameState(); await game.reset(); saveGameState(game); rerender(); } });
 
 // Ensure logs mirror saved preference (defaults to false)
 setDebugLogging(!!game.state?.debug);

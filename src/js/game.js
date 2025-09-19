@@ -15,6 +15,36 @@ import { selectTargets } from './systems/targeting.js';
 import { logSecretTriggered } from './utils/combatLog.js';
 import { fillDeckRandomly } from './utils/deckbuilder.js';
 
+function buildDeckFromTemplate(template, cardById) {
+  if (!template || typeof template !== 'object') return null;
+  if (!(cardById instanceof Map)) return null;
+  const heroData = template.heroId ? cardById.get(template.heroId) : null;
+  if (!heroData || heroData.type !== 'hero') return null;
+  const sourceCards = Array.isArray(template.cards) ? template.cards : [];
+  const counts = new Map();
+  const equipmentIds = new Set();
+  const cards = [];
+  for (const cardId of sourceCards) {
+    const cardData = cardById.get(cardId);
+    if (!cardData || cardData.type === 'hero') continue;
+    if (cardData.type === 'quest') return null;
+    const current = counts.get(cardData.id) || 0;
+    if (current >= 3) return null;
+    counts.set(cardData.id, current + 1);
+    if (cardData.type === 'equipment') equipmentIds.add(cardData.id);
+    cards.push(cardData);
+  }
+  if (cards.length !== sourceCards.length) return null;
+  if (cards.length !== 60) return null;
+  let allyCount = 0;
+  for (const c of cards) {
+    if (c.type === 'ally') allyCount += 1;
+  }
+  if (allyCount < 30) return null;
+  if (equipmentIds.size > 1) return null;
+  return { hero: heroData, cards, name: template.name || null };
+}
+
 export default class Game {
   constructor(rootEl, opts = {}) {
     this.rootEl = rootEl;
@@ -108,6 +138,8 @@ export default class Game {
     this.state = { frame: 0, startedAt: 0, difficulty: 'easy', debug: false };
     this._nnModelPromise = null;
     this._aiDeckTemplates = null;
+    this._playerDeckTemplates = null;
+    this._cardIndex = null;
   }
 
   setUIRerender(fn) {
@@ -157,6 +189,8 @@ export default class Game {
     const otherCards = this.allCards.filter(c => c.type !== 'hero');
     const nonQuestCards = otherCards.filter(c => c.type !== 'quest');
     const cardById = new Map(this.allCards.map((card) => [card.id, card]));
+    this._cardIndex = cardById;
+    this._playerDeckTemplates = null;
 
     const rng = this.rng;
     const createRandomDeckState = (excludeHeroId = null) => {
@@ -183,32 +217,14 @@ export default class Game {
       try {
         const templates = await this._loadAIDeckTemplates();
         if (Array.isArray(templates) && templates.length > 0) {
-          prebuiltDeckPool = templates.map((template) => {
-            const heroData = template.heroId ? cardById.get(template.heroId) : null;
-            if (!heroData || heroData.type !== 'hero') return null;
-            const counts = new Map();
-            const equipmentIds = new Set();
-            const cards = [];
-            for (const cardId of template.cards) {
-              const cardData = cardById.get(cardId);
-              if (!cardData || cardData.type === 'hero') continue;
-              if (cardData.type === 'quest') return null;
-              const current = counts.get(cardData.id) || 0;
-              if (current >= 3) return null;
-              counts.set(cardData.id, current + 1);
-              if (cardData.type === 'equipment') equipmentIds.add(cardData.id);
-              cards.push(cardData);
-            }
-            if (cards.length !== template.cards.length) return null;
-            if (cards.length !== 60) return null;
-            let allyCount = 0;
-            for (const c of cards) {
-              if (c.type === 'ally') allyCount += 1;
-            }
-            if (allyCount < 30) return null;
-            if (equipmentIds.size > 1) return null;
-            return { hero: heroData, cards, name: template.name || null };
-          }).filter(Boolean);
+          prebuiltDeckPool = templates.map((template) => buildDeckFromTemplate(template, cardById)).filter(Boolean);
+          if (prebuiltDeckPool.length > 0) {
+            this._playerDeckTemplates = prebuiltDeckPool.map((deck) => ({
+              hero: deck.hero,
+              cards: deck.cards.slice(),
+              name: deck.name || null,
+            }));
+          }
         }
       } catch {
         prebuiltDeckPool = [];
@@ -467,6 +483,50 @@ export default class Game {
 
     this._aiDeckTemplates = normalized;
     return this._aiDeckTemplates;
+  }
+
+  async getPrebuiltDecks() {
+    if (Array.isArray(this._playerDeckTemplates)) {
+      return this._playerDeckTemplates.map((deck) => ({
+        name: deck.name || null,
+        hero: deck.hero || null,
+        cards: Array.isArray(deck.cards) ? deck.cards.slice() : [],
+      }));
+    }
+
+    let templates = [];
+    try {
+      templates = await this._loadAIDeckTemplates();
+    } catch {
+      templates = [];
+    }
+    if (!Array.isArray(templates) || templates.length === 0) {
+      this._playerDeckTemplates = [];
+      return [];
+    }
+
+    let cardById = this._cardIndex;
+    if (!(cardById instanceof Map) || cardById.size === 0) {
+      cardById = new Map(Array.isArray(this.allCards) ? this.allCards.map((card) => [card.id, card]) : []);
+      this._cardIndex = cardById;
+    }
+
+    const decks = [];
+    for (const template of templates) {
+      const deck = buildDeckFromTemplate(template, cardById);
+      if (!deck) continue;
+      decks.push({
+        name: deck.name || null,
+        hero: deck.hero || null,
+        cards: deck.cards.slice(),
+      });
+    }
+    this._playerDeckTemplates = decks;
+    return decks.map((deck) => ({
+      name: deck.name || null,
+      hero: deck.hero || null,
+      cards: deck.cards.slice(),
+    }));
   }
 
   draw(player, n = 1) {
