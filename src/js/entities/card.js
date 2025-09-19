@@ -19,6 +19,7 @@ export class CardEntity {
     // Copy common top-level stats for non-ally types (e.g., equipment)
     if (props.attack != null) this.attack = props.attack;
     if (props.durability != null) this.durability = props.durability;
+    this.baseKeywords = props.keywords ? Array.from(props.keywords) : [];
     this.keywords = props.keywords ? Array.from(props.keywords) : [];
     this.data = props.data ? { ...props.data } : {};
     // Ensure allies and other characters have a stable maxHealth baseline

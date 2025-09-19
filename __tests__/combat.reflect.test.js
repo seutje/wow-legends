@@ -64,4 +64,30 @@ describe('Combat reflection from player equipment', () => {
     expect(player.hero.equipment.length).toBe(0);
     expect(player.graveyard.cards).toContain(weapon);
   });
+
+  test('ally with Reflect retaliates with attack plus received damage', () => {
+    const attacker = new Card({ id: 'attacker', name: 'Enemy Raider', type: 'ally', data: { attack: 4, health: 5 } });
+    const defender = new Card({
+      id: 'defender',
+      name: 'Thorned Guardian',
+      type: 'ally',
+      data: { attack: 3, health: 3 },
+      keywords: ['Reflect'],
+    });
+
+    const combat = new CombatSystem();
+    expect(combat.declareAttacker(attacker)).toBe(true);
+    combat.assignBlocker(attacker.id, defender);
+    const events = combat.resolve();
+
+    // Defender takes lethal damage but still reflects
+    expect(defender.data.health).toBe(0);
+    expect(defender.data.dead).toBe(true);
+    expect(attacker.data.health).toBe(0);
+    expect(attacker.data.dead).toBe(true);
+
+    const reflectEvents = events.filter(ev => ev.source === defender && ev.target === attacker && ev.isReflect);
+    expect(reflectEvents).toHaveLength(1);
+    expect(reflectEvents[0].amount).toBe(7);
+  });
 });

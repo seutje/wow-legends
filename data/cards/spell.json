@@ -927,8 +927,11 @@
     "cost": 1,
     "effects": [
       {
-        "type": "rawText",
-        "text": "Give a character ‘Damage Reflect (1) this turn.’"
+        "type": "grantKeyword",
+        "target": "character",
+        "allowHero": false,
+        "keyword": "Reflect",
+        "duration": "untilYourNextTurn"
       }
     ],
     "keywords": [
@@ -936,7 +939,7 @@
       "Buff"
     ],
     "data": {},
-    "text": "Give a character ‘Damage Reflect (1) this turn.’",
+    "text": "Give an ally ‘Damage Reflect (1)’ until your next turn.",
     "prompt": "Barbed vines coil around a guardian, spikes poised to lash at attackers."
   }
 ]
