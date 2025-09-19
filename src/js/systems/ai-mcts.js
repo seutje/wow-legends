@@ -738,6 +738,56 @@ export class MCTS_AI {
     return value;
   }
 
+  _entityHealthValue(entity) {
+    if (!entity) return 0;
+    if (typeof entity?.data?.health === 'number') return entity.data.health;
+    if (typeof entity?.health === 'number') return entity.health;
+    return 0;
+  }
+
+  _scoreHeroAttack(attacker, hero) {
+    if (!attacker || !hero) return -Infinity;
+    const attack = this._entityAttackValue(attacker);
+    if (attack <= 0) return -Infinity;
+    const heroHealth = this._entityHealthValue(hero);
+    let score = attack * 6;
+    if (heroHealth <= attack) {
+      score += 120;
+    } else if (heroHealth <= attack * 2) {
+      score += 25;
+    }
+    return score;
+  }
+
+  _scoreAllyTrade(attacker, defender) {
+    if (!attacker || !defender) return -Infinity;
+    const attack = this._entityAttackValue(attacker);
+    if (attack <= 0) return -Infinity;
+    const attackerHealth = this._entityHealthValue(attacker);
+    const defenderHealth = this._entityHealthValue(defender);
+    const defenderAttack = this._entityAttackValue(defender);
+    if (defenderHealth <= 0) return -Infinity;
+
+    let score = defenderAttack * 8;
+    if (defender?.keywords?.includes?.('Taunt')) score += 25;
+    if (defender?.keywords?.includes?.('Lethal')) score += 40;
+
+    const kills = attack >= defenderHealth;
+    const dies = defenderAttack >= attackerHealth && attackerHealth > 0;
+
+    if (kills) score += 45;
+    else score -= 25;
+
+    if (!dies) score += 20;
+    else score -= 25;
+
+    if (kills && dies) score += 5;
+    if (kills && !dies) score += 15;
+    if (!kills && dies) score -= 30;
+
+    return score;
+  }
+
   _livingDefenders(opponent) {
     const defenders = [];
     if (opponent?.hero && !this._isEntityDead(opponent.hero)) defenders.push(opponent.hero);
@@ -748,6 +798,63 @@ export class MCTS_AI {
       defenders.push(card);
     }
     return defenders;
+  }
+
+  _canAttackHero(attacker, player, turn, enteredSet) {
+    if (!attacker) return false;
+    if (attacker === player?.hero) return true;
+    const data = attacker.data || {};
+    if (data.summoningSick) return false;
+    const hasCharge = attacker?.keywords?.includes?.('Charge');
+    const hasRush = attacker?.keywords?.includes?.('Rush');
+    const enteredTurn = typeof data.enteredTurn === 'number' ? data.enteredTurn : null;
+    const currentTurn = typeof turn === 'number' ? turn : (this.resources?.turns?.turn ?? null);
+    const flagged = enteredSet?.has?.(attacker.id);
+    const justEntered = flagged || (enteredTurn != null && currentTurn != null && enteredTurn === currentTurn);
+    if (justEntered && hasRush && !hasCharge) return false;
+    if (justEntered && !(hasCharge || hasRush)) return false;
+    return true;
+  }
+
+  _chooseAttackTarget(attacker, player, opponent, turn, enteredSet, { legalTargets = null, heroAllowed = null } = {}) {
+    const provided = Array.isArray(legalTargets) ? legalTargets : null;
+    const defenders = provided || selectTargets(this._livingDefenders(opponent));
+    if (!defenders.length) return null;
+
+    const hero = opponent?.hero || null;
+    const heroId = hero?.id ?? null;
+    const heroInPool = defenders.some((t) => t?.id === heroId);
+    const heroEligible = (() => {
+      if (!heroInPool) return false;
+      if (heroAllowed != null) return heroAllowed;
+      return this._canAttackHero(attacker, player, turn, enteredSet);
+    })();
+
+    let bestTarget = null;
+    let bestScore = -Infinity;
+
+    if (heroEligible && hero) {
+      bestTarget = hero;
+      bestScore = this._scoreHeroAttack(attacker, hero);
+    }
+
+    for (const enemy of defenders) {
+      if (!enemy || enemy?.id === heroId) continue;
+      const score = this._scoreAllyTrade(attacker, enemy);
+      if (!heroEligible && !bestTarget) {
+        bestTarget = enemy;
+        bestScore = score;
+        continue;
+      }
+      if (score > bestScore) {
+        bestScore = score;
+        bestTarget = enemy;
+      }
+    }
+
+    if (!bestTarget && heroEligible && hero) return hero;
+    if (!bestTarget) return defenders[0] || null;
+    return bestTarget;
   }
 
   _attackActionsForAttacker(attacker, player, opponent, turn, enteredSet) {
@@ -771,41 +878,41 @@ export class MCTS_AI {
       const flagged = enteredSet?.has?.(attacker.id);
       const justEntered = flagged || (enteredTurn != null && currentTurn != null && enteredTurn === currentTurn);
       if (justEntered && !(hasCharge || hasRush)) return [];
-      if (justEntered && hasRush && !hasCharge) {
-        const defenders = this._livingDefenders(opponent);
-        const legal = selectTargets(defenders).filter(t => t?.id !== opponent?.hero?.id);
-        if (!legal.length) return [];
-        return legal.map((target) => ({
-          card: null,
-          usePower: false,
-          end: false,
-          attack: {
-            attackerId: attacker.id,
-            targetId: target?.id ?? null,
-            attackerType: attacker.type || 'ally',
-            targetType: target?.type || (target === opponent?.hero ? 'hero' : null),
-            attacker,
-            target,
-          },
-        }));
-      }
     }
     const defenders = this._livingDefenders(opponent);
     const legal = selectTargets(defenders);
     if (!legal.length) return [];
-    return legal.map((target) => ({
+    const hero = opponent?.hero || null;
+    const heroId = hero?.id ?? null;
+    const heroAllowed = legal.some((t) => t?.id === heroId)
+      && this._canAttackHero(attacker, player, turn, enteredSet);
+    const pool = heroAllowed ? legal : legal.filter((t) => t?.id !== heroId);
+    if (!pool.length) return [];
+
+    const preferred = this._chooseAttackTarget(attacker, player, opponent, turn, enteredSet, {
+      legalTargets: pool,
+      heroAllowed,
+    });
+
+    const chosen = preferred || pool[0] || null;
+    if (!chosen) return [];
+    const targetHero = chosen === hero;
+    const targetId = chosen?.id ?? (targetHero ? hero?.id ?? null : opponent?.hero?.id ?? null);
+    const targetType = chosen?.type || (targetHero ? 'hero' : null);
+    const attackerType = attacker.type || (isHero ? 'hero' : null);
+    return [{
       card: null,
       usePower: false,
       end: false,
       attack: {
         attackerId: attacker.id,
-        targetId: target?.id ?? opponent?.hero?.id ?? null,
-        attackerType: attacker.type || (isHero ? 'hero' : null),
-        targetType: target?.type || (target === opponent?.hero ? 'hero' : null),
+        targetId,
+        attackerType,
+        targetType,
         attacker,
-        target,
+        target: chosen,
       },
-    }));
+    }];
   }
 
   _enumerateAttackActionsFor(player, opponent, turn, enteredSet) {
@@ -2007,6 +2114,40 @@ export class MCTS_AI {
       const descriptor = this._stateFromLive(player, opponent);
       this._advanceLastTreeToChild(searchKind, candidate, descriptor);
       powerAvailable = descriptor.powerAvailable;
+    }
+
+    if (opponent) {
+      let combat = this.combat || null;
+      const temporaryCombat = !combat;
+      if (temporaryCombat) combat = new CombatSystem();
+      if (combat) {
+        combat.clear();
+        const enteredSet = this._collectEnteredThisTurn(player, this.resources.turns.turn);
+        const attackers = [player.hero, ...player.battlefield.cards]
+          .filter((c) => (c?.type !== 'equipment') && !c?.data?.attacked && (this._entityAttackValue(c) > 0));
+        let declared = false;
+        for (const attacker of attackers) {
+          const target = this._chooseAttackTarget(attacker, player, opponent, this.resources.turns.turn, enteredSet);
+          if (!target) continue;
+          if (!combat.declareAttacker(attacker, target)) continue;
+          if (target?.id && target.id !== opponent.hero?.id) combat.assignBlocker(attacker.id, target);
+          if (attacker?.data) {
+            attacker.data.attacked = true;
+            attacker.data.attacksUsed = (attacker.data.attacksUsed || 0) + 1;
+          }
+          declared = true;
+        }
+        if (declared) {
+          combat.setDefenderHero(opponent.hero);
+          combat.resolve();
+          for (const p of [player, opponent]) {
+            const dead = p.battlefield.cards.filter(c => c.data?.dead);
+            for (const d of dead) {
+              p.battlefield.moveTo(p.graveyard, d);
+            }
+          }
+        }
+      }
     }
     return true;
   }

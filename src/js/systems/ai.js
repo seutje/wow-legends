@@ -1,5 +1,6 @@
 import CombatSystem from './combat.js';
 import { evaluateGameState } from './ai-heuristics.js';
+import { selectTargets } from './targeting.js';
 import Card from '../entities/card.js';
 
 export class BasicAI {
@@ -93,6 +94,137 @@ export class BasicAI {
     return pool;
   }
 
+  _entityAttackValue(card) {
+    if (!card) return 0;
+    if (typeof card.totalAttack === 'function') {
+      try {
+        return card.totalAttack();
+      } catch {
+        // ignore – fallback to stored stats below
+      }
+    }
+    if (typeof card?.data?.attack === 'number') return card.data.attack;
+    if (typeof card?.attack === 'number') return card.attack;
+    return 0;
+  }
+
+  _entityHealthValue(card) {
+    if (!card) return 0;
+    if (typeof card?.data?.health === 'number') return card.data.health;
+    if (typeof card?.health === 'number') return card.health;
+    return 0;
+  }
+
+  _isLivingDefender(card) {
+    if (!card) return false;
+    if (card.type === 'equipment' || card.type === 'quest') return false;
+    const data = card.data || {};
+    if (data.dead) return false;
+    const health = this._entityHealthValue(card);
+    if (typeof health === 'number' && health <= 0) return false;
+    return true;
+  }
+
+  _scoreHeroAttack(attacker, hero) {
+    if (!attacker || !hero) return -Infinity;
+    const attack = this._entityAttackValue(attacker);
+    if (attack <= 0) return -Infinity;
+    const heroHealth = this._entityHealthValue(hero);
+    let score = attack * 6;
+    if (heroHealth <= attack) {
+      score += 120;
+    } else if (heroHealth <= attack * 2) {
+      score += 25;
+    }
+    return score;
+  }
+
+  _scoreAllyTrade(attacker, defender) {
+    if (!attacker || !defender) return -Infinity;
+    const attack = this._entityAttackValue(attacker);
+    if (attack <= 0) return -Infinity;
+    const attackerHealth = this._entityHealthValue(attacker);
+    const defenderHealth = this._entityHealthValue(defender);
+    const defenderAttack = this._entityAttackValue(defender);
+    if (defenderHealth <= 0) return -Infinity;
+
+    let score = defenderAttack * 8;
+    if (defender?.keywords?.includes?.('Taunt')) score += 25;
+    if (defender?.keywords?.includes?.('Lethal')) score += 40;
+
+    const kills = attack >= defenderHealth;
+    const dies = defenderAttack >= attackerHealth && attackerHealth > 0;
+
+    if (kills) score += 45;
+    else score -= 25;
+
+    if (!dies) score += 20;
+    else score -= 25;
+
+    if (kills && dies) score += 5;
+    if (kills && !dies) score += 15;
+    if (!kills && dies) score -= 30;
+
+    return score;
+  }
+
+  _collectDefenders(opponent) {
+    const defenders = [];
+    if (opponent?.hero) defenders.push(opponent.hero);
+    const pool = opponent?.battlefield?.cards || [];
+    for (const card of pool) {
+      if (this._isLivingDefender(card)) defenders.push(card);
+    }
+    return defenders;
+  }
+
+  _canAttackHero(attacker, player) {
+    if (!attacker) return false;
+    if (attacker === player?.hero) return true;
+    const data = attacker.data || {};
+    if (data.summoningSick) return false;
+    const hasRush = !!attacker?.keywords?.includes?.('Rush');
+    const hasCharge = !!attacker?.keywords?.includes?.('Charge');
+    const currentTurn = this.resources?.turns?.turn ?? null;
+    const enteredTurn = typeof data.enteredTurn === 'number' ? data.enteredTurn : null;
+    const justEntered = enteredTurn != null && currentTurn != null && enteredTurn === currentTurn;
+    if (hasRush && justEntered && !hasCharge) return false;
+    return true;
+  }
+
+  _chooseAttackTarget(attacker, player, opponent) {
+    const defenders = this._collectDefenders(opponent);
+    if (!defenders.length) return null;
+    const legal = selectTargets(defenders);
+    if (!legal.length) return null;
+
+    const hero = opponent?.hero || null;
+    const heroId = hero?.id;
+    const heroInPool = legal.some(t => t?.id === heroId);
+    const heroAllowed = heroInPool && this._canAttackHero(attacker, player);
+
+    let bestTarget = heroAllowed ? hero : null;
+    let bestScore = heroAllowed ? this._scoreHeroAttack(attacker, hero) : -Infinity;
+
+    const enemies = legal.filter(t => t?.id !== heroId);
+    for (const enemy of enemies) {
+      const score = this._scoreAllyTrade(attacker, enemy);
+      if (!heroAllowed && !bestTarget) {
+        bestTarget = enemy;
+        bestScore = score;
+        continue;
+      }
+      if (score > bestScore) {
+        bestScore = score;
+        bestTarget = enemy;
+      }
+    }
+
+    if (!bestTarget && heroAllowed) return hero;
+    if (!bestTarget && enemies.length) return enemies[0];
+    return bestTarget;
+  }
+
   _simulateAction(player, opponent, { card = null, usePower = false } = {}, pool = 0) {
     const p = structuredClone(player);
     const o = structuredClone(opponent);
@@ -108,9 +240,12 @@ export class BasicAI {
         if (played.type === 'equipment') {
           p.hero.equipment = [played];
         }
-        if (played.type === 'ally' && !played.keywords?.includes('Rush')) {
+        if (played.type === 'ally') {
           played.data = played.data || {};
-          played.data.attacked = true;
+          played.data.enteredTurn = this.resources?.turns?.turn ?? 0;
+          if (!played.keywords?.includes('Rush')) {
+            played.data.attacked = true;
+          }
         }
       } else {
         p.graveyard.cards.push(played);
@@ -138,9 +273,12 @@ export class BasicAI {
 
     const combat = new CombatSystem();
     const attackers = [p.hero, ...(p.battlefield?.cards || [])]
-      .filter(c => (c.type !== 'equipment') && !c.data?.attacked && ((typeof c.totalAttack === 'function' ? c.totalAttack() : c.data?.attack || 0) > 0));
+      .filter(c => (c.type !== 'equipment') && !c.data?.attacked && (this._entityAttackValue(c) > 0));
     for (const a of attackers) {
-      if (combat.declareAttacker(a)) {
+      const target = this._chooseAttackTarget(a, p, o);
+      if (!target) continue;
+      if (combat.declareAttacker(a, target)) {
+        if (target?.id && target.id !== o.hero?.id) combat.assignBlocker(a.id, target);
         if (a.data) a.data.attacked = true;
       }
     }
@@ -198,9 +336,12 @@ export class BasicAI {
       if (best.card.type === 'ally' || best.card.type === 'equipment' || best.card.type === 'quest') {
         player.hand.moveTo(player.battlefield, best.card);
         if (best.card.type === 'equipment') player.hero.equipment = [best.card];
-        if (best.card.type === 'ally' && !best.card.keywords?.includes('Rush')) {
+        if (best.card.type === 'ally') {
           best.card.data = best.card.data || {};
-          best.card.data.attacked = true;
+          best.card.data.enteredTurn = this.resources?.turns?.turn ?? 0;
+          if (!best.card.keywords?.includes('Rush')) {
+            best.card.data.attacked = true;
+          }
         }
       } else {
         player.hand.moveTo(player.graveyard, best.card);
@@ -218,9 +359,12 @@ export class BasicAI {
     if (this.combat && opponent) {
       this.combat.clear();
       const attackers = [player.hero, ...player.battlefield.cards]
-        .filter(c => (c.type !== 'equipment') && !c.data?.attacked && ((typeof c.totalAttack === 'function' ? c.totalAttack() : c.data?.attack || 0) > 0));
+        .filter(c => (c.type !== 'equipment') && !c.data?.attacked && (this._entityAttackValue(c) > 0));
       for (const a of attackers) {
-        if (this.combat.declareAttacker(a)) {
+        const target = this._chooseAttackTarget(a, player, opponent);
+        if (!target) continue;
+        if (this.combat.declareAttacker(a, target)) {
+          if (target?.id && target.id !== opponent.hero?.id) this.combat.assignBlocker(a.id, target);
           if (a.data) a.data.attacked = true;
         }
       }
