@@ -534,7 +534,7 @@ export function renderPlay(container, game, { onUpdate, onOpenDeckBuilder, onNew
   const thinking = !!(game.state?.aiThinking);
   let aiOverlay = container.querySelector('.ai-overlay');
   if (thinking) {
-    const pct = Math.round(((game.state?.aiProgress ?? 0) * 100));
+    const pct = Math.max(0, Math.min(100, (game.state?.aiProgress ?? 0) * 100));
     if (!aiOverlay) {
       aiOverlay = el('div', { class: 'ai-overlay' },
         el('div', { class: 'panel' },

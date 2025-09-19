@@ -71,17 +71,126 @@ rerender();
 
 game.setUIRerender(rerender);
 
+// Helpers to smooth AI thinking progress in the browser
+const nowMs = () => {
+  if (typeof performance !== 'undefined' && typeof performance.now === 'function') {
+    return performance.now();
+  }
+  return Date.now();
+};
+const requestFrame = (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function')
+  ? window.requestAnimationFrame.bind(window)
+  : (cb) => setTimeout(() => cb(nowMs()), 16);
+const cancelFrame = (typeof window !== 'undefined' && typeof window.cancelAnimationFrame === 'function')
+  ? window.cancelAnimationFrame.bind(window)
+  : (id) => clearTimeout(id);
+
+let aiThinkingStartedAt = 0;
+let aiProgressFillFrame = 0;
+let aiThinkingHoldTimer = null;
+
+const cancelAiProgressFill = () => {
+  if (aiProgressFillFrame) {
+    cancelFrame(aiProgressFillFrame);
+    aiProgressFillFrame = 0;
+  }
+};
+
+const clearAiThinkingHoldTimer = () => {
+  if (aiThinkingHoldTimer) {
+    clearTimeout(aiThinkingHoldTimer);
+    aiThinkingHoldTimer = null;
+  }
+};
+
+const animateAiProgressFill = (durationMs, startProgress) => {
+  const total = Math.max(0, durationMs);
+  const initial = Math.max(0, Math.min(1, startProgress ?? 0));
+  if (!game.state) return;
+  if (total === 0 || initial >= 1) {
+    if (game.state.aiProgress !== 1) {
+      game.state.aiProgress = 1;
+      rerender();
+    }
+    return;
+  }
+  const startTs = nowMs();
+  const step = () => {
+    aiProgressFillFrame = 0;
+    const elapsed = Math.max(0, nowMs() - startTs);
+    const t = total > 0 ? Math.min(1, elapsed / total) : 1;
+    if (game.state) {
+      const current = game.state.aiProgress ?? 0;
+      const target = initial + ((1 - initial) * t);
+      if (t >= 1 || target - current > 0.001) {
+        game.state.aiProgress = target;
+        rerender();
+      }
+    }
+    if (t < 1) {
+      aiProgressFillFrame = requestFrame(step);
+    }
+  };
+  step();
+};
+
 // Reflect AI thinking/progress to UI state and trigger rerenders
 game.bus.on('ai:thinking', ({ thinking }) => {
+  const now = nowMs();
+  if (thinking) {
+    aiThinkingStartedAt = now;
+    clearAiThinkingHoldTimer();
+    cancelAiProgressFill();
+    if (game.state) {
+      game.state.aiThinking = true;
+      game.state.aiProgress = 0;
+    }
+    rerender();
+    return;
+  }
+
+  const elapsed = now - aiThinkingStartedAt;
+  if (elapsed < 1000) {
+    const remaining = Math.max(0, 1000 - elapsed);
+    const startProgress = Math.max(0, Math.min(1, game.state?.aiProgress ?? 0));
+    if (game.state) game.state.aiThinking = true;
+    cancelAiProgressFill();
+    animateAiProgressFill(remaining, startProgress);
+    clearAiThinkingHoldTimer();
+    aiThinkingHoldTimer = setTimeout(() => {
+      aiThinkingHoldTimer = null;
+      cancelAiProgressFill();
+      if (game.state) {
+        game.state.aiProgress = 1;
+        game.state.aiThinking = false;
+      }
+      rerender();
+    }, remaining);
+    return;
+  }
+
+  clearAiThinkingHoldTimer();
+  cancelAiProgressFill();
   if (game.state) {
-    game.state.aiThinking = !!thinking;
-    if (thinking) game.state.aiProgress = 0;
+    game.state.aiThinking = false;
+    game.state.aiProgress = 1;
   }
   rerender();
 });
+
 game.bus.on('ai:progress', ({ progress }) => {
-  if (game.state) game.state.aiProgress = Math.max(0, Math.min(1, progress ?? 0));
-  rerender();
+  if (!game.state) return;
+  const clamped = Math.max(0, Math.min(1, progress ?? 0));
+  const current = game.state.aiProgress ?? 0;
+  if (clamped >= 1 && current < 1) {
+    game.state.aiProgress = 1;
+    rerender();
+    return;
+  }
+  if (clamped > current + 0.001) {
+    game.state.aiProgress = clamped;
+    rerender();
+  }
 });
 
 if (loadedFromSave && game.state?.aiThinking && game.state?.aiPending?.type === 'mcts') {
