@@ -592,9 +592,20 @@ export default class Game {
     const cost = 2;
     if (!this.resources.pay(player, cost)) return false;
     const finishTargetCapture = this._pushActionTargetScope();
+    const loggedTargets = new Set();
+    const context = {
+      game: this,
+      player,
+      card: hero,
+      recordLogTarget: (target) => {
+        if (!target) return;
+        loggedTargets.add(target);
+        try { this.recordActionTarget?.(target); } catch {}
+      },
+    };
     let logTargets = [];
     try {
-      await this.effects.execute(hero.active, { game: this, player, card: hero });
+      await this.effects.execute(hero.active, context);
       logTargets = finishTargetCapture();
     } catch (err) {
       finishTargetCapture({ discard: true });
@@ -602,6 +613,9 @@ export default class Game {
     }
     hero.powerUsed = true;
     if (Array.isArray(player?.log)) {
+      if ((!Array.isArray(logTargets) || logTargets.length === 0) && loggedTargets.size > 0) {
+        logTargets = Array.from(loggedTargets);
+      }
       const msg = this._formatLogWithTargets('Used hero power', logTargets, { preposition: 'on' });
       player.log.push(msg);
     }
@@ -686,7 +700,18 @@ export default class Game {
     }
 
     const comboActive = player.cardsPlayedThisTurn > 0;
-    const context = { game: this, player, card, comboActive };
+    const loggedTargets = new Set();
+    const context = {
+      game: this,
+      player,
+      card,
+      comboActive,
+      recordLogTarget: (target) => {
+        if (!target) return;
+        loggedTargets.add(target);
+        try { this.recordActionTarget?.(target); } catch {}
+      },
+    };
 
     let primaryEffects = card.effects;
     let comboEffects = comboActive && card.combo && card.combo.length > 0 ? card.combo : null;
@@ -848,7 +873,10 @@ export default class Game {
     }
 
     this.bus.emit('cardPlayed', { player, card });
-    const targetsForLog = finishTargetCapture();
+    let targetsForLog = finishTargetCapture();
+    if ((!Array.isArray(targetsForLog) || targetsForLog.length === 0) && loggedTargets.size > 0) {
+      targetsForLog = Array.from(loggedTargets);
+    }
     const logMessage = this._formatLogWithTargets(`Played ${card.name}`, targetsForLog);
     player.log.push(logMessage);
     player.cardsPlayedThisTurn += 1;
