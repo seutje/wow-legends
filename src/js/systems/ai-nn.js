@@ -456,11 +456,35 @@ export class NeuralAI {
     }
 
     this.combat.clear();
-    const attackers = [player.hero, ...player.battlefield.cards]
-      .filter(c => (c.type !== 'equipment') && !c.data?.attacked && ((typeof c.totalAttack === 'function' ? c.totalAttack() : c.data?.attack || 0) > 0));
-    for (const a of attackers) {
+    const attackValue = (entity) => {
+      if (!entity) return 0;
+      if (typeof entity.totalAttack === 'function') return entity.totalAttack();
+      return entity?.data?.attack || 0;
+    };
+    const maxAttacksFor = (entity) => (entity?.keywords?.includes?.('Windfury') ? 2 : 1);
+    const attacksUsedFor = (entity) => (entity?.data?.attacksUsed || 0);
+    const canSwing = (entity) => {
+      if (!entity) return false;
+      if (entity.type === 'equipment') return false;
+      if (entity !== player.hero && !player.battlefield.cards.includes(entity)) return false;
+      if (entity?.data?.dead) return false;
+      if ((entity?.data?.freezeTurns || 0) > 0) return false;
+      if (entity?.data?.summoningSick) return false;
+      return attackValue(entity) > 0 && attacksUsedFor(entity) < maxAttacksFor(entity);
+    };
+
+    const queue = [player.hero, ...player.battlefield.cards]
+      .filter(c => c && c.type !== 'equipment')
+      .filter(canSwing);
+
+    while (queue.length) {
+      const attacker = queue.shift();
+      if (!canSwing(attacker)) continue;
+
       const defenders = [opponent.hero, ...opponent.battlefield.cards.filter(d => d.type !== 'equipment' && d.type !== 'quest')];
       const legal = selectTargets(defenders);
+      if (!legal.length) continue;
+
       let block = null;
       if (legal.length > 1) {
         const nonHero = legal.filter(t => t.id !== opponent.hero.id);
@@ -471,20 +495,31 @@ export class NeuralAI {
         block = legal[0];
       }
       const target = block || opponent.hero;
-      if (!this.combat.declareAttacker(a, target)) continue;
-      if (a.data) a.data.attacked = true;
-      if (a?.keywords?.includes?.('Stealth')) a.keywords = a.keywords.filter(k => k !== 'Stealth');
-      if (block) this.combat.assignBlocker(a.id, block);
-      player.log.push(`Attacked ${target.name} with ${a.name}`);
+
+      this.combat.clear();
+      if (!this.combat.declareAttacker(attacker, target)) continue;
+
+      const data = attacker.data || (attacker.data = {});
+      data.attacked = true;
+      data.attacksUsed = (data.attacksUsed || 0) + 1;
+      if (attacker?.keywords?.includes?.('Stealth')) attacker.keywords = attacker.keywords.filter(k => k !== 'Stealth');
+      if (block) this.combat.assignBlocker(attacker.id, block);
+      player.log.push(`Attacked ${target.name} with ${attacker.name}`);
+
+      this.combat.setDefenderHero(opponent.hero);
+      const events = this.combat.resolve();
+      for (const ev of events) {
+        const srcOwner = [player.hero, ...player.battlefield.cards].includes(ev.source) ? player : opponent;
+        this.game?.bus?.emit?.('damageDealt', { player: srcOwner, source: ev.source, amount: ev.amount, target: ev.target });
+      }
+      if (this.game?._uiRerender) {
+        try { this.game._uiRerender(); } catch {}
+      }
+      await this.game?.cleanupDeaths?.(player, opponent);
+      await this.game?.cleanupDeaths?.(opponent, player);
+
+      if (canSwing(attacker)) queue.push(attacker);
     }
-    this.combat.setDefenderHero(opponent.hero);
-    const events = this.combat.resolve();
-    for (const ev of events) {
-      const srcOwner = [player.hero, ...player.battlefield.cards].includes(ev.source) ? player : opponent;
-      this.game?.bus?.emit?.('damageDealt', { player: srcOwner, source: ev.source, amount: ev.amount, target: ev.target });
-    }
-    await this.game?.cleanupDeaths?.(player, opponent);
-    await this.game?.cleanupDeaths?.(opponent, player);
     return true;
   }
 }
