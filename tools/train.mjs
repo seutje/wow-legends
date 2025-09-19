@@ -283,7 +283,7 @@ function pickCurriculumStage(schedule, score) {
   return chosen;
 }
 
-async function evalCandidate(model, { games = 5, maxRounds = 20, opponentConfig = null } = {}) {
+async function evalCandidate(model, { games = 20, maxRounds = 20, opponentConfig = null } = {}) {
   const config = opponentConfig || { mode: 'mcts', iterations: 5000, rolloutDepth: 10, fullSim: true };
   const baselineModel = (config.mode === 'best' && config.modelJSON)
     ? MLP.fromJSON(config.modelJSON)
