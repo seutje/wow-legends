@@ -709,6 +709,12 @@ export default class Game {
     if (counterIdx >= 0) {
       // Consume the counter secret and fizzle the spell
       const tok = oppSecrets.splice(counterIdx, 1)[0] || null;
+      // Ensure the caster does not retain a phantom secret indicator for the countered card
+      const casterSecrets = Array.isArray(player?.hero?.data?.secrets) ? player.hero.data.secrets : null;
+      if (casterSecrets?.length && card?.instanceId != null) {
+        const pendingIdx = casterSecrets.findIndex((t) => t?.cardInstanceId === card.instanceId);
+        if (pendingIdx >= 0) casterSecrets.splice(pendingIdx, 1);
+      }
       const searchZones = [
         defender.hand,
         defender.graveyard,
@@ -716,8 +722,19 @@ export default class Game {
         defender.library,
         defender.removed,
       ];
-      const secretCard = tok?.cardId
-        ? searchZones.map((zone) => zone?.cards?.find?.((c) => c.id === tok.cardId)).find(Boolean) || null
+      const secretCard = tok
+        ? searchZones.map((zone) => {
+          const cards = zone?.cards;
+          if (!Array.isArray(cards)) return null;
+          if (tok.cardInstanceId != null) {
+            const byInstance = cards.find((c) => c?.instanceId === tok.cardInstanceId);
+            if (byInstance) return byInstance;
+          }
+          if (tok.cardId != null) {
+            return cards.find((c) => c?.id === tok.cardId) || null;
+          }
+          return null;
+        }).find(Boolean) || null
         : null;
       logSecretTriggered(this, defender, { card: secretCard, token: tok });
       try { this.bus.emit('secret:removed', { player: defender, card: null }); } catch {}

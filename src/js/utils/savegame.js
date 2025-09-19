@@ -261,12 +261,20 @@ function restoreResources(game, snapshot) {
   }
 }
 
-function findCardInstance(player, cardId) {
-  if (!player || !cardId) return null;
+function findCardInstance(player, cardId, cardInstanceId = null) {
+  if (!player) return null;
   const zones = [player.hand, player.library, player.battlefield, player.graveyard, player.removed];
   for (const zone of zones) {
-    const found = zone?.cards?.find?.((c) => c.id === cardId);
-    if (found) return found;
+    const cards = zone?.cards;
+    if (!Array.isArray(cards)) continue;
+    if (cardInstanceId != null) {
+      const byInstance = cards.find((c) => c?.instanceId === cardInstanceId);
+      if (byInstance) return byInstance;
+    }
+    if (cardId != null) {
+      const byId = cards.find((c) => c?.id === cardId);
+      if (byId) return byId;
+    }
   }
   return null;
 }
@@ -278,7 +286,7 @@ function cloneEffectData(effect) {
 function reactivateSecret(game, player, token) {
   if (!token || !player?.hero?.data?.secrets) return;
   const effect = token.effect || { type: token.type };
-  const card = findCardInstance(player, token.cardId) || null;
+  const card = findCardInstance(player, token.cardId, token.cardInstanceId) || null;
   switch (token.type) {
     case 'explosiveTrap':
       game.effects.explosiveTrap(effect, { game, player, card }, { restoreToken: token, skipEmit: true });
@@ -444,6 +452,7 @@ export function rememberSecretToken(effect, context, token) {
   if (!token) return token;
   token.effect = token.effect || cloneEffectData(effect);
   token.cardId = token.cardId || context?.card?.id || null;
+  token.cardInstanceId = token.cardInstanceId || context?.card?.instanceId || null;
   return token;
 }
 
@@ -451,6 +460,7 @@ export function enrichSecretToken(token) {
   if (!token) return token;
   token.effect = token.effect || null;
   token.cardId = token.cardId || null;
+  token.cardInstanceId = token.cardInstanceId || null;
   return token;
 }
 
