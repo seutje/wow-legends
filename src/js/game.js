@@ -141,10 +141,58 @@ export default class Game {
     this._aiDeckTemplates = null;
     this._playerDeckTemplates = null;
     this._cardIndex = null;
+    this._actionTargetStack = [];
   }
 
   setUIRerender(fn) {
     this._uiRerender = fn;
+  }
+
+  _closeActionTargetScope({ discard = false } = {}) {
+    if (!Array.isArray(this._actionTargetStack) || this._actionTargetStack.length === 0) {
+      return [];
+    }
+    const scope = this._actionTargetStack.pop();
+    if (!(scope instanceof Set) || discard) return [];
+    return Array.from(scope);
+  }
+
+  _pushActionTargetScope() {
+    if (!Array.isArray(this._actionTargetStack)) this._actionTargetStack = [];
+    const scope = new Set();
+    this._actionTargetStack.push(scope);
+    let closed = false;
+    return ({ discard = false } = {}) => {
+      if (closed) return [];
+      closed = true;
+      return this._closeActionTargetScope({ discard });
+    };
+  }
+
+  recordActionTarget(target) {
+    if (!target) return;
+    if (!Array.isArray(this._actionTargetStack) || this._actionTargetStack.length === 0) return;
+    const current = this._actionTargetStack[this._actionTargetStack.length - 1];
+    if (current instanceof Set) current.add(target);
+  }
+
+  _formatLogWithTargets(base, targets, { preposition = 'targeting' } = {}) {
+    const list = Array.isArray(targets) ? targets : [];
+    const names = [];
+    const seen = new Set();
+    for (const t of list) {
+      const name = (typeof t?.name === 'string') ? t.name.trim() : '';
+      if (!name || seen.has(name)) continue;
+      seen.add(name);
+      names.push(name);
+    }
+    if (names.length === 0) return base;
+    let formatted;
+    if (names.length === 1) formatted = names[0];
+    else if (names.length === 2) formatted = `${names[0]} and ${names[1]}`;
+    else formatted = `${names.slice(0, -1).join(', ')}, and ${names[names.length - 1]}`;
+    const connector = preposition ? ` ${preposition} ` : ' ';
+    return `${base}${connector}${formatted}`;
   }
 
   async init() {
@@ -543,10 +591,20 @@ export default class Game {
     if (!hero.active?.length) return false;
     const cost = 2;
     if (!this.resources.pay(player, cost)) return false;
-    await this.effects.execute(hero.active, { game: this, player, card: hero });
+    const finishTargetCapture = this._pushActionTargetScope();
+    let logTargets = [];
+    try {
+      await this.effects.execute(hero.active, { game: this, player, card: hero });
+      logTargets = finishTargetCapture();
+    } catch (err) {
+      finishTargetCapture({ discard: true });
+      throw err;
+    }
     hero.powerUsed = true;
-    // Combat log indicator for hero power usage
-    if (player?.log) player.log.push('Used hero power');
+    if (Array.isArray(player?.log)) {
+      const msg = this._formatLogWithTargets('Used hero power', logTargets, { preposition: 'on' });
+      player.log.push(msg);
+    }
     return true;
   }
 
@@ -619,6 +677,7 @@ export default class Game {
     let tempSpellDamage = 0;
     const bonus = player.hero.data.nextSpellDamageBonus;
     let bonusSourceId = null;
+    const finishTargetCapture = this._pushActionTargetScope();
     if (card.type === 'spell' && bonus && !bonus.used) {
       player.hero.data.spellDamage = (player.hero.data.spellDamage || 0) + bonus.amount;
       bonus.used = true;
@@ -723,9 +782,11 @@ export default class Game {
           player.hero.data.spellDamage -= tempSpellDamage;
           if (bonus) bonus.used = false;
         }
+        finishTargetCapture({ discard: true });
         return false;
       }
       restoreAllyPlacement();
+      finishTargetCapture({ discard: true });
       throw err;
     }
 
@@ -787,7 +848,9 @@ export default class Game {
     }
 
     this.bus.emit('cardPlayed', { player, card });
-    player.log.push(`Played ${card.name}`);
+    const targetsForLog = finishTargetCapture();
+    const logMessage = this._formatLogWithTargets(`Played ${card.name}`, targetsForLog);
+    player.log.push(logMessage);
     player.cardsPlayedThisTurn += 1;
 
     return true;
@@ -805,11 +868,15 @@ export default class Game {
         c => c === enemy.hero || enemy.battlefield.cards.includes(c)
       );
       const pool = enemyTargets.length ? enemyTargets : candidates;
-      return this.rng.pick(pool);
+      const picked = this.rng.pick(pool);
+      if (picked) this.recordActionTarget(picked);
+      return picked;
     }
 
     if (typeof document === 'undefined') {
-      return candidates[0];
+      const chosen = candidates[0] ?? null;
+      if (chosen) this.recordActionTarget(chosen);
+      return chosen;
     }
 
     return new Promise((resolve) => {
@@ -837,13 +904,18 @@ export default class Game {
         if (!ordered.includes(c)) ordered.push(c);
       }
 
+      const finish = (value) => {
+        if (value && value !== this.CANCEL) this.recordActionTarget(value);
+        resolve(value);
+      };
+
       ordered.forEach((t) => {
         const li = document.createElement('li');
         const isEnemy = (t === enemy.hero) || enemy.battlefield.cards.includes(t);
         li.textContent = isEnemy ? `${t.name} (AI)` : t.name;
         li.addEventListener('click', () => {
           document.body.removeChild(overlay);
-          resolve(t);
+          finish(t);
         });
         list.appendChild(li);
       });
@@ -855,7 +927,7 @@ export default class Game {
         done.textContent = 'No more targets';
         done.addEventListener('click', () => {
           document.body.removeChild(overlay);
-          resolve(null);
+          finish(null);
         });
         overlay.appendChild(done);
       }
@@ -865,7 +937,7 @@ export default class Game {
       cancel.textContent = 'Cancel';
       cancel.addEventListener('click', () => {
         document.body.removeChild(overlay);
-        resolve(this.CANCEL);
+        finish(this.CANCEL);
       });
       overlay.appendChild(cancel);
 

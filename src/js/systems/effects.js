@@ -322,6 +322,7 @@ export class EffectSystem {
     }
 
     for (const t of actualTargets) {
+      if (typeof game?.recordActionTarget === 'function') game.recordActionTarget(t);
       // Divine Shield absorbs one instance of damage (for shielded minions)
       if (t?.data?.divineShield) {
         t.data.divineShield = false;
@@ -652,6 +653,7 @@ export class EffectSystem {
     }
 
     for (const t of actualTargets) {
+      if (typeof game?.recordActionTarget === 'function') game.recordActionTarget(t);
       // Determine max health with sensible fallbacks (heroes default to 30)
       const cur = t?.data?.health ?? t?.health;
       const max = (t?.data?.maxHealth ?? t?.maxHealth ?? (t?.type === 'hero' ? 30 : cur));
@@ -1193,6 +1195,7 @@ export class EffectSystem {
       return;
     }
 
+    if (typeof game?.recordActionTarget === 'function') game.recordActionTarget(chosen);
     owner.battlefield.moveTo(owner.graveyard, chosen);
     console.log(`Destroyed ${chosen.name}.`);
   }
@@ -1238,6 +1241,7 @@ export class EffectSystem {
                 : null;
     if (!owner) return;
 
+    if (typeof game?.recordActionTarget === 'function') game.recordActionTarget(chosen);
     owner.battlefield.moveTo(owner.hand, chosen);
     chosen.cost = (chosen.cost || 0) + costIncrease;
     console.log(`Returned ${chosen.name} to hand. New cost: ${chosen.cost}`);
@@ -1401,6 +1405,7 @@ export class EffectSystem {
 
     if (pool.length > 0) {
       const allyToTransform = game.rng.pick(pool);
+      if (typeof game?.recordActionTarget === 'function') game.recordActionTarget(allyToTransform);
       const originalData = { ...allyToTransform.data };
       const originalKeywords = [...(allyToTransform.keywords || [])];
       const originalName = allyToTransform.name; // Store original name
@@ -1503,6 +1508,7 @@ export class EffectSystem {
     }
 
     for (const t of actualTargets) {
+      if (typeof game?.recordActionTarget === 'function') game.recordActionTarget(t);
       const scheduleRevert = (revertFn) => {
         if (!duration) return;
         if (duration === 'thisTurn') {
