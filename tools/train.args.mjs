@@ -49,6 +49,11 @@ export function parseTrainArgs(argv = process.argv) {
     const n = Number.parseInt(v, 10);
     return Number.isFinite(n) ? n : undefined;
   };
+  const toFloat = (v) => {
+    if (v == null) return undefined;
+    const n = Number.parseFloat(v);
+    return Number.isFinite(n) ? n : undefined;
+  };
   const toBool = (v) => {
     if (typeof v !== 'string') return Boolean(v);
     return /^(true|1|yes|y)$/i.test(v);
@@ -136,6 +141,9 @@ export function parseTrainArgs(argv = process.argv) {
     curriculum = null;
   }
 
-  return { pop, gens, reset, opponent, curriculum };
+  const lambdaDecor = toFloat(getFlag('lambda-decor', 'lambdaDecor', 'lambda1', 'decor-lambda')) ?? 0;
+  const lambdaL2 = toFloat(getFlag('lambda-l2', 'lambdaL2', 'lambda2', 'l2-lambda')) ?? 0;
+
+  return { pop, gens, reset, opponent, curriculum, lambdaDecor, lambdaL2 };
 }
 

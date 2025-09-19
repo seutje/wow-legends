@@ -82,6 +82,10 @@ function formatIterations(iterations) {
     : String(iterations);
 }
 
+function formatScore(value, digits = 3) {
+  return Number.isFinite(value) ? value.toFixed(digits) : String(value);
+}
+
 function shapesMatch(actual, expected) {
   if (!Array.isArray(actual) || !Array.isArray(expected)) return false;
   if (actual.length !== expected.length) return false;
@@ -376,12 +380,12 @@ async function evalCandidate(model, { games = 20, maxRounds = 20, opponentConfig
 }
 
 // Parallel evaluation with worker pool
-async function evalPopulationParallel(population, { games = 1, maxRounds = 16, concurrency = Math.max(1, (os.cpus()?.length || 2) - 1), opponentConfig = null } = {}) {
+async function evalPopulationParallel(population, { games = 1, maxRounds = 16, concurrency = Math.max(1, (os.cpus()?.length || 2) - 1), opponentConfig = null, lambdaDecor = 0, lambdaL2 = 0 } = {}) {
   const workerURL = new URL('./train.worker.mjs', import.meta.url);
   const poolSize = Math.max(1, Number(process.env.TRAIN_WORKERS) || concurrency);
   const workers = Array.from({ length: poolSize }, () => new Worker(workerURL, { type: 'module' }));
   let nextTask = 0;
-  const scores = new Array(population.length);
+  const results = new Array(population.length);
   let completed = 0;
 
   function runTaskOn(worker, idx) {
@@ -396,7 +400,7 @@ async function evalPopulationParallel(population, { games = 1, maxRounds = 16, c
       worker.postMessage({
         id,
         cmd: 'eval',
-        payload: { modelJSON: population[idx].toJSON(), games, maxRounds, opponentConfig }
+        payload: { modelJSON: population[idx].toJSON(), games, maxRounds, opponentConfig, lambdaDecor, lambdaL2 }
       });
     });
   }
@@ -406,8 +410,8 @@ async function evalPopulationParallel(population, { games = 1, maxRounds = 16, c
       const idx = nextTask++;
       if (idx >= population.length) break;
       const res = await runTaskOn(worker, idx);
-      if (res?.ok) scores[idx] = res.result;
-      else scores[idx] = -Infinity;
+      if (res?.ok) results[idx] = res.result;
+      else results[idx] = null;
       completed++;
       if (completed % 50 === 0) progress(`[${now()}] Evaluated ${completed}/${population.length}`);
     }
@@ -415,11 +419,28 @@ async function evalPopulationParallel(population, { games = 1, maxRounds = 16, c
 
   await Promise.all(workers.map(w => workerLoop(w)));
   await Promise.all(workers.map(w => w.terminate()));
-  return scores.map((score, idx) => ({ idx, score }));
+  return results.map((data, idx) => {
+    const rawScore = Number.isFinite(data?.rawScore) ? data.rawScore : -Infinity;
+    const regularizedScore = Number.isFinite(data?.regularizedScore) ? data.regularizedScore : -Infinity;
+    const penalty = Number.isFinite(data?.penalty) ? data.penalty : 0;
+    const decorrelation = Number.isFinite(data?.decorrelation) ? data.decorrelation : 0;
+    const l2 = Number.isFinite(data?.l2) ? data.l2 : 0;
+    const decorrelationLayers = Array.isArray(data?.decorrelationLayers) ? data.decorrelationLayers : [];
+    return {
+      idx,
+      score: regularizedScore,
+      regularizedScore,
+      rawScore,
+      penalty,
+      decorrelation,
+      l2,
+      decorrelationLayers
+    };
+  });
 }
 
 async function main() {
-  const { pop: POP, gens: GENS, reset, opponent, curriculum } = parseTrainArgs();
+  const { pop: POP, gens: GENS, reset, opponent, curriculum, lambdaDecor, lambdaL2 } = parseTrainArgs();
   await fs.mkdir(MODELS_DIR, { recursive: true });
   try {
     await loadAutoencoder();
@@ -441,6 +462,7 @@ async function main() {
   const mutationSigma = (generationIndex) => 0.1 * (1 - generationIndex / effectiveGens) + 0.02;
   let best = base.clone();
   let bestScore = -Infinity;
+  let bestRawScore = -Infinity;
   let population = [];
   const initialSigma = mutationSigma(0);
   const plateauThreshold = Math.max(3, Math.min(10, Math.floor(effectiveGens * 0.1)));
@@ -478,6 +500,7 @@ async function main() {
   let encounteredBestOpponent = activeOpponentConfig.mode === 'best';
 
   progress(`[${now()}] Starting training: pop=${POP}, gens=${GENS}, reset=${Boolean(reset)}, opponent=${activeOpponentConfig.label}`);
+  progress(`[${now()}] Regularization lambdas: decor=${lambdaDecor}, l2=${lambdaL2}`);
   if (curriculumSchedule) {
     const summary = describeCurriculum(curriculumSchedule, scheduleContext);
     progress(`[${now()}] Opponent curriculum (${curriculum}): ${summary}`);
@@ -488,7 +511,7 @@ async function main() {
       encounteredBestOpponent = true;
     }
     // Evaluate in parallel using worker threads
-    const scores = await evalPopulationParallel(population, { games: 5, maxRounds: 16, opponentConfig: activeOpponentConfig });
+    const scores = await evalPopulationParallel(population, { games: 5, maxRounds: 16, opponentConfig: activeOpponentConfig, lambdaDecor, lambdaL2 });
     scores.sort((a,b)=> b.score - a.score);
     const top = scores.slice(0, KEEP);
     const parents = top.map(({ idx }) => population[idx].clone());
@@ -497,9 +520,14 @@ async function main() {
       break;
     }
     const genBest = parents[0];
-    const genBestScore = top[0].score;
+    const genBestEntry = top[0];
+    const genBestScore = genBestEntry.score;
+    const genBestRaw = genBestEntry.rawScore;
+    const genBestPenalty = genBestEntry.penalty;
+    const genBestDecor = genBestEntry.decorrelation;
+    const genBestL2 = genBestEntry.l2;
     const improved = genBestScore > bestScore;
-    if (improved) { best = genBest.clone(); bestScore = genBestScore; }
+    if (improved) { best = genBest.clone(); bestScore = genBestScore; bestRawScore = genBestRaw; }
 
     const wasPlateau = plateauActive;
     if (improved) {
@@ -521,9 +549,9 @@ async function main() {
       const genPath = path.join(MODELS_DIR, `model_gen_${gen+1}.json`);
       const genJSON = JSON.stringify(genBest.toJSON(), null, 2);
       await fs.writeFile(genPath, genJSON, 'utf8');
-      progress(`[${now()}] Gen ${gen+1}/${GENS} best=${genBestScore.toFixed(3)} overall=${bestScore.toFixed(3)} | opponent=${activeOpponentConfig.label} | saved ${genPath}`);
+      progress(`[${now()}] Gen ${gen+1}/${GENS} raw=${formatScore(genBestRaw)} reg=${formatScore(genBestScore)} overallRaw=${formatScore(bestRawScore)} overallReg=${formatScore(bestScore)} | penalty=${formatScore(genBestPenalty)} decor=${formatScore(genBestDecor)} l2=${formatScore(genBestL2)} | opponent=${activeOpponentConfig.label} | saved ${genPath}`);
     } catch (e) {
-      progress(`[${now()}] Gen ${gen+1}/${GENS} best=${genBestScore.toFixed(3)} overall=${bestScore.toFixed(3)} | opponent=${activeOpponentConfig.label} | failed to save generation model: ${e?.message || e}`);
+      progress(`[${now()}] Gen ${gen+1}/${GENS} raw=${formatScore(genBestRaw)} reg=${formatScore(genBestScore)} overallRaw=${formatScore(bestRawScore)} overallReg=${formatScore(bestScore)} | opponent=${activeOpponentConfig.label} | failed to save generation model: ${e?.message || e}`);
     }
 
     if (curriculumSchedule) {
@@ -574,10 +602,10 @@ async function main() {
   if (shouldSaveBest) {
     const json = JSON.stringify(best.toJSON(), null, 2);
     await fs.writeFile(MODEL_PATH, json, 'utf8');
-    progress(`[${now()}] Saved best model to ${MODEL_PATH}`);
+    progress(`[${now()}] Saved best model to ${MODEL_PATH} (raw=${formatScore(bestRawScore)}, reg=${formatScore(bestScore)})`);
   } else {
     const formattedScore = Number.isFinite(bestScore) ? bestScore.toFixed(3) : String(bestScore);
-    progress(`[${now()}] Best score ${formattedScore} did not exceed 2.000 against saved opponent; skipping save to ${MODEL_PATH}`);
+    progress(`[${now()}] Best regularized score ${formattedScore} (raw=${formatScore(bestRawScore)}) did not exceed 2.000 against saved opponent; skipping save to ${MODEL_PATH}`);
   }
 }
 
