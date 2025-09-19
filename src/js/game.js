@@ -16,6 +16,8 @@ import { logSecretTriggered } from './utils/combatLog.js';
 import { fillDeckRandomly } from './utils/deckbuilder.js';
 import { getCardInstanceId, matchesCardIdentifier } from './utils/card.js';
 
+const DEFAULT_AI_ACTION_DELAY_MS = 1000;
+
 function buildDeckFromTemplate(template, cardById) {
   if (!template || typeof template !== 'object') return null;
   if (!(cardById instanceof Map)) return null;
@@ -57,6 +59,12 @@ export default class Game {
     else if (typeof aiHint === 'string') aiList = [aiHint];
     else aiList = (typeof window === 'undefined') ? ['player', 'opponent'] : ['opponent'];
     this.aiPlayers = new Set(aiList.filter((p) => p === 'player' || p === 'opponent'));
+    this._isBrowserEnv = typeof window !== 'undefined' && typeof document !== 'undefined';
+    const rawDelay = Number.isFinite(opts?.aiActionDelayMs)
+      ? Math.max(0, opts.aiActionDelayMs)
+      : DEFAULT_AI_ACTION_DELAY_MS;
+    this._aiActionDelayMs = rawDelay;
+    this._shouldThrottleAI = !!rootEl && this._isBrowserEnv;
     this.running = false;
     this._raf = 0;
     this._lastTs = 0;
@@ -146,6 +154,37 @@ export default class Game {
 
   setUIRerender(fn) {
     this._uiRerender = fn;
+  }
+
+  _playerRole(player) {
+    if (!player) return null;
+    if (player === this.player) return 'player';
+    if (player === this.opponent) return 'opponent';
+    return null;
+  }
+
+  _isAIControlled(player) {
+    const role = this._playerRole(player);
+    if (!role) return false;
+    const pool = this.aiPlayers;
+    if (!pool || typeof pool.has !== 'function') return false;
+    return pool.has(role);
+  }
+
+  async throttleAIAction(player) {
+    if (!this._shouldThrottleAI) return;
+    if (!this._isAIControlled(player)) return;
+    const delay = this._aiActionDelayMs;
+    if (!(delay > 0)) return;
+    await new Promise((resolve) => {
+      if (typeof globalThis === 'object' && typeof globalThis.setTimeout === 'function') {
+        globalThis.setTimeout(resolve, delay);
+      } else if (typeof setTimeout === 'function') {
+        setTimeout(resolve, delay);
+      } else {
+        resolve();
+      }
+    });
   }
 
   _closeActionTargetScope({ discard = false } = {}) {
@@ -591,6 +630,7 @@ export default class Game {
     if (!hero.active?.length) return false;
     const cost = 2;
     if (!this.resources.pay(player, cost)) return false;
+    await this.throttleAIAction(player);
     const finishTargetCapture = this._pushActionTargetScope();
     const loggedTargets = new Set();
     const context = {
@@ -661,6 +701,7 @@ export default class Game {
     if (!card) return false;
     const cost = card.cost || 0;
     if (!this.resources.pay(player, cost)) return false;
+    await this.throttleAIAction(player);
     // Check opponent secrets that may counter spells before any effects resolve
     const defender = (player === this.player) ? this.opponent : this.player;
     const oppSecrets = Array.isArray(defender?.hero?.data?.secrets) ? defender.hero.data.secrets : [];
@@ -1064,6 +1105,7 @@ export default class Game {
     const heroAllowed = pool.some((c) => c === defender.hero);
     if (!target && !heroAllowed) return false;
     const actualTarget = target || defender.hero;
+    await this.throttleAIAction(player);
     this.combat.clear();
     if (!this.combat.declareAttacker(card, actualTarget)) return false;
     this.combat.setDefenderHero(defender.hero);
@@ -1189,6 +1231,7 @@ export default class Game {
           block = this.rng.pick(choices);
         }
         const target = block || this.player.hero;
+        await this.throttleAIAction(this.opponent);
         const declared = this.combat.declareAttacker(c, target);
         if (!declared) continue;
         if (c.data) {

@@ -498,6 +498,8 @@ export class NeuralAI {
       }
       const target = block || opponent.hero;
 
+      await this.game?.throttleAIAction?.(player);
+
       this.combat.clear();
       if (!this.combat.declareAttacker(attacker, target)) continue;
 
