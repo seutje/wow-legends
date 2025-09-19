@@ -80,15 +80,17 @@ export class EffectSystem {
         const opponent = player === game.player ? game.opponent : game.player;
         // If any grouped buff has a negative amount, treat it as a debuff and allow enemy targets
         const isDebuff = grouped.some(g => typeof g.amount === 'number' && g.amount < 0);
+        const allowHeroTargets = grouped.every(g => g.allowHero !== false);
 
+        const friendlyAllies = player.battlefield.cards.filter(c => c.type !== 'quest');
         let candidates = [
-          player.hero,
-          ...player.battlefield.cards.filter(c => c.type !== 'quest')
+          ...(allowHeroTargets ? [player.hero] : []),
+          ...friendlyAllies
         ].filter(isTargetable);
 
         if (isDebuff) {
           const enemy = selectTargets([
-            opponent.hero,
+            ...(allowHeroTargets ? [opponent.hero] : []),
             ...opponent.battlefield.cards.filter(c => c.type !== 'quest'),
           ]);
           candidates = [...candidates, ...enemy];
@@ -1482,6 +1484,7 @@ export class EffectSystem {
 
   async applyBuff(effect, context, forcedTarget = null) {
     const { target, property, amount, duration } = effect;
+    const allowHeroTargets = effect.allowHero !== false;
     const { player, game } = context;
     const opponent = player === game.player ? game.opponent : game.player;
 
@@ -1497,17 +1500,21 @@ export class EffectSystem {
         break;
       case 'character': {
         if (forcedTarget) {
+          if (!allowHeroTargets && forcedTarget?.type === 'hero') {
+            return;
+          }
           actualTargets.push(forcedTarget);
         } else {
           // Allow enemy targets when this is a debuff (negative amount)
           const isDebuff = typeof amount === 'number' && amount < 0;
+          const friendlyAllies = player.battlefield.cards.filter(c => c.type !== 'quest');
           let candidates = [
-            player.hero,
-            ...player.battlefield.cards.filter(c => c.type !== 'quest')
+            ...(allowHeroTargets ? [player.hero] : []),
+            ...friendlyAllies
           ].filter(isTargetable);
           if (isDebuff) {
             const enemy = selectTargets([
-              opponent.hero,
+              ...(allowHeroTargets ? [opponent.hero] : []),
               ...opponent.battlefield.cards.filter(c => c.type !== 'quest'),
             ]);
             candidates = [...candidates, ...enemy];
