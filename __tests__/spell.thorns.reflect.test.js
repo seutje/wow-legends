@@ -45,4 +45,50 @@ describe('Thorns reflect effect', () => {
     g.turns.bus.emit('turn:start', { player: g.player });
     expect(defender.keywords).not.toContain('Reflect');
   });
+
+  test('Thorns on divine shield ally does not reflect when damage is absorbed', async () => {
+    const g = new Game();
+    await g.setupMatch();
+
+    g.player.battlefield.cards = [];
+    g.opponent.battlefield.cards = [];
+    g.resources._pool.set(g.player, 10);
+    g.resources._pool.set(g.opponent, 10);
+
+    const crusaderData = g.allCards.find(c => c.id === 'ally-scarlet-crusader');
+    expect(crusaderData).toBeTruthy();
+    const crusader = new Card(crusaderData);
+    crusader.owner = g.player;
+    crusader.data.divineShield = true;
+
+    const attacker = new Card({
+      id: 'attacker',
+      name: 'Enemy',
+      type: 'ally',
+      data: { attack: 3, health: 5 },
+      keywords: [],
+    });
+    attacker.owner = g.opponent;
+
+    g.player.battlefield.add(crusader);
+    g.opponent.battlefield.add(attacker);
+
+    g.addCardToHand('spell-thorns');
+    g.promptTarget = async () => crusader;
+    await g.playFromHand(g.player, 'spell-thorns');
+
+    expect(crusader.keywords).toContain('Reflect');
+    expect(crusader.data.divineShield).toBe(true);
+
+    const combat = g.combat;
+    expect(combat.declareAttacker(attacker)).toBe(true);
+    combat.assignBlocker(attacker.id, crusader);
+    const events = combat.resolve();
+
+    const reflectEvents = events.filter(ev => ev.source === crusader && ev.isReflect);
+    expect(reflectEvents).toHaveLength(0);
+    expect(attacker.data.health).toBe(2);
+    expect(crusader.data.health).toBe(1);
+    expect(crusader.data.divineShield).toBe(false);
+  });
 });
