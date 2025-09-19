@@ -12,6 +12,7 @@ export class CardEntity {
    */
   constructor(props) {
     this.id = props.id || shortId('card');
+    this.instanceId = props.instanceId || shortId('cardinst');
     this.type = props.type;
     this.name = props.name;
     this.cost = props.cost ?? 0;

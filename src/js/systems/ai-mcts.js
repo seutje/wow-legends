@@ -7,6 +7,7 @@ import Card from '../entities/card.js';
 import Game from '../game.js';
 import Player from '../entities/player.js';
 import Hero from '../entities/hero.js';
+import { cardsMatch, getCardInstanceId, matchesCardIdentifier } from '../utils/card.js';
 
 // Simple Monte Carlo Tree Search AI
 // - Explores sequences of actions (play card / use hero power / end)
@@ -98,8 +99,8 @@ export class MCTS_AI {
         const armor = eq.armor ?? eqData.armor ?? '';
         const durability = eq.durability ?? eqData.durability ?? '';
         const name = eq.name || '';
-        const id = eq.id || '';
-        return `${name}|${id}|${attack}|${armor}|${durability}`;
+        const instanceId = getCardInstanceId(eq) || '';
+        return `${name}|${instanceId}|${attack}|${armor}|${durability}`;
       }).join('|')
       : '';
     const keywords = Array.isArray(hero.keywords) ? [...hero.keywords].sort().join('.') : '';
@@ -347,7 +348,7 @@ export class MCTS_AI {
             const poolAfter = Math.max(0, poolRemaining - cardCost);
             const hasFollowupSpell = player?.hand?.cards?.some((c) => {
               if (!c) return false;
-              if (card && c.id === card.id) return false;
+              if (card && cardsMatch(c, card)) return false;
               const cCost = c.cost || 0;
               if (cCost > poolAfter) return false;
               if (c.type === 'spell') return true;
@@ -412,16 +413,16 @@ export class MCTS_AI {
     return this._totalHeroHealth(player) > this._totalHeroHealth(opponent);
   }
 
-  _determineOwner(entity, player, opponent) {
-    if (!entity) return null;
-    if (entity.id && player?.hero?.id === entity.id) return 'player';
-    if (entity.id && opponent?.hero?.id === entity.id) return 'opponent';
-    const playerCards = player?.battlefield?.cards || [];
-    if (playerCards.some(c => c?.id === entity.id)) return 'player';
-    const opponentCards = opponent?.battlefield?.cards || [];
-    if (opponentCards.some(c => c?.id === entity.id)) return 'opponent';
-    return null;
-  }
+    _determineOwner(entity, player, opponent) {
+      if (!entity) return null;
+      if (player?.hero && matchesCardIdentifier(player.hero, entity)) return 'player';
+      if (opponent?.hero && matchesCardIdentifier(opponent.hero, entity)) return 'opponent';
+      const playerCards = player?.battlefield?.cards || [];
+      if (playerCards.some((c) => matchesCardIdentifier(c, entity))) return 'player';
+      const opponentCards = opponent?.battlefield?.cards || [];
+      if (opponentCards.some((c) => matchesCardIdentifier(c, entity))) return 'opponent';
+      return null;
+    }
 
   _getEnrageEffects(card) {
     if (!card?.effects?.length) return [];
@@ -442,18 +443,24 @@ export class MCTS_AI {
   }
 
   _recordEnrageTrigger(state, owner, card) {
-    if (!card?.id) return;
+    const key = getCardInstanceId(card);
+    if (!key) return;
     const tracker = this._getEnrageTracker(state, owner);
     if (!tracker) return;
-    const prev = tracker.get(card.id) || 0;
-    tracker.set(card.id, prev + 1);
+    const prev = tracker.get(key) || 0;
+    tracker.set(key, prev + 1);
   }
 
-  _clearEnrageTracking(state, owner, cardId) {
-    if (!cardId) return;
+  _clearEnrageTracking(state, owner, cardRef) {
     const tracker = this._getEnrageTracker(state, owner);
     if (!tracker) return;
-    tracker.delete(cardId);
+    if (cardRef && typeof cardRef === 'object') {
+      const key = getCardInstanceId(cardRef);
+      if (key) tracker.delete(key);
+      return;
+    }
+    if (cardRef == null) return;
+    tracker.delete(String(cardRef));
   }
 
   _applyEnrageBuff(card, state, owner) {
@@ -496,9 +503,9 @@ export class MCTS_AI {
     data.health = newHealth;
     const owner = this._determineOwner(target, player, opponent);
     if (owner && state) {
-      if (newHealth <= 0) {
-        if (target.type === 'ally') data.dead = true;
-        this._clearEnrageTracking(state, owner, target.id);
+        if (newHealth <= 0) {
+          if (target.type === 'ally') data.dead = true;
+          this._clearEnrageTracking(state, owner, target);
       } else if (newHealth < prevHealth) {
         this._triggerEnrageIfPresent(target, owner, state);
       }
@@ -523,13 +530,13 @@ export class MCTS_AI {
       || actualDuration === 'untilYourNextTurn';
     const trackTemporary = () => {
       if (!isTemporary) return;
-      const entry = {
-        property,
-        amount: actualAmount,
-        duration: actualDuration,
-        turn: state?.turn ?? null,
-        sourceId: source?.id ?? null,
-      };
+        const entry = {
+          property,
+          amount: actualAmount,
+          duration: actualDuration,
+          turn: state?.turn ?? null,
+          sourceId: getCardInstanceId(source) ?? null,
+        };
       if (Array.isArray(data.__mctsTempBuffs)) {
         data.__mctsTempBuffs.push(entry);
       } else {
@@ -646,15 +653,20 @@ export class MCTS_AI {
 
   _collectFriendlyCharacters(player, { excludeSourceId = null } = {}) {
     const characters = [];
+    const shouldExclude = (entity) => {
+      if (!excludeSourceId) return false;
+      if (typeof excludeSourceId === 'object') return cardsMatch(entity, excludeSourceId);
+      return getCardInstanceId(entity) === excludeSourceId;
+    };
     if (player?.hero && !this._isEntityDead(player.hero)) {
-      if ((!excludeSourceId || player.hero.id !== excludeSourceId) && isTargetable(player.hero)) {
+      if (!shouldExclude(player.hero) && isTargetable(player.hero)) {
         characters.push(player.hero);
       }
     }
     for (const card of player?.battlefield?.cards || []) {
       if (!card || card.type === 'quest') continue;
       if (this._isEntityDead(card)) continue;
-      if (excludeSourceId && card.id === excludeSourceId) continue;
+      if (shouldExclude(card)) continue;
       if (!isTargetable(card)) continue;
       characters.push(card);
     }
@@ -667,13 +679,18 @@ export class MCTS_AI {
 
   _collectEnemyCharacters(opponent, { excludeSourceId = null } = {}) {
     const candidates = [];
+    const shouldExclude = (entity) => {
+      if (!excludeSourceId) return false;
+      if (typeof excludeSourceId === 'object') return cardsMatch(entity, excludeSourceId);
+      return getCardInstanceId(entity) === excludeSourceId;
+    };
     if (opponent?.hero && !this._isEntityDead(opponent.hero)) {
-      if (!excludeSourceId || opponent.hero.id !== excludeSourceId) candidates.push(opponent.hero);
+      if (!shouldExclude(opponent.hero)) candidates.push(opponent.hero);
     }
     for (const card of opponent?.battlefield?.cards || []) {
       if (!card || card.type === 'quest') continue;
       if (this._isEntityDead(card)) continue;
-      if (excludeSourceId && card.id === excludeSourceId) continue;
+      if (shouldExclude(card)) continue;
       candidates.push(card);
     }
     return selectTargets(candidates);
@@ -681,10 +698,15 @@ export class MCTS_AI {
 
   _collectEnemyMinions(opponent, { excludeSourceId = null, enforceTaunt = true } = {}) {
     const minions = [];
+    const shouldExclude = (entity) => {
+      if (!excludeSourceId) return false;
+      if (typeof excludeSourceId === 'object') return cardsMatch(entity, excludeSourceId);
+      return getCardInstanceId(entity) === excludeSourceId;
+    };
     for (const card of opponent?.battlefield?.cards || []) {
       if (!card || card.type !== 'ally') continue;
       if (this._isEntityDead(card)) continue;
-      if (excludeSourceId && card.id === excludeSourceId) continue;
+      if (shouldExclude(card)) continue;
       minions.push(card);
     }
     if (!minions.length) return [];
@@ -696,22 +718,19 @@ export class MCTS_AI {
 
   _resolveTargetInState(target, player, opponent) {
     if (!target) return null;
-    const id = target.id;
-    if (id != null) {
-      if (player?.hero?.id === id) return player.hero;
-      if (opponent?.hero?.id === id) return opponent.hero;
-      const findMatch = (cards) => {
-        if (!Array.isArray(cards)) return null;
-        for (const card of cards) {
-          if (card?.id === id) return card;
-        }
-        return null;
-      };
-      const inPlayer = findMatch(player?.battlefield?.cards);
-      if (inPlayer) return inPlayer;
-      const inOpponent = findMatch(opponent?.battlefield?.cards);
-      if (inOpponent) return inOpponent;
-    }
+    if (player?.hero && matchesCardIdentifier(player.hero, target)) return player.hero;
+    if (opponent?.hero && matchesCardIdentifier(opponent.hero, target)) return opponent.hero;
+    const findMatch = (cards) => {
+      if (!Array.isArray(cards)) return null;
+      for (const card of cards) {
+        if (matchesCardIdentifier(card, target)) return card;
+      }
+      return null;
+    };
+    const inPlayer = findMatch(player?.battlefield?.cards);
+    if (inPlayer) return inPlayer;
+    const inOpponent = findMatch(opponent?.battlefield?.cards);
+    if (inOpponent) return inOpponent;
     if (target === player?.hero) return player.hero;
     if (target === opponent?.hero) return opponent.hero;
     return null;
@@ -725,13 +744,23 @@ export class MCTS_AI {
     };
     const effectType = clean(effect?.type || 'effect');
     const scope = clean(effect?.target || 'any');
-    const srcId = source?.id || source?.hero?.id || source?.name || effectType;
+      const srcInstance = getCardInstanceId(source) || getCardInstanceId(source?.hero) || null;
+      const srcTemplate = (source && typeof source.id === 'string') ? source.id : null;
+      const rawSource = srcInstance && srcTemplate && srcInstance !== srcTemplate
+        ? `${srcInstance}:${srcTemplate}`
+        : (srcInstance || srcTemplate || source?.name || effectType);
+      const srcId = rawSource;
+      const targetInstance = getCardInstanceId(target);
+      const targetTemplate = (target && typeof target.id === 'string') ? target.id : null;
+      const rawTarget = targetInstance && targetTemplate && targetInstance !== targetTemplate
+        ? `${targetInstance}:${targetTemplate}`
+        : (targetInstance || targetTemplate || target?.name || null);
     const entryParts = [
       `src:${clean(srcId)}`,
       `idx:${index}`,
       `eff:${effectType}`,
       `scope:${scope}`,
-      `tgt:${clean(target?.id || target?.name || null)}`,
+      `tgt:${clean(rawTarget)}`,
     ];
     const entry = entryParts.join(',');
     if (typeof action.__mctsTargetSignature === 'string' && action.__mctsTargetSignature.length) {
@@ -742,7 +771,7 @@ export class MCTS_AI {
   }
 
   _collectDamageTargets(targetType, player, opponent, source = null) {
-    const srcId = source?.id || source?.hero?.id || null;
+    const srcId = getCardInstanceId(source) || getCardInstanceId(source?.hero) || null;
     const friendlyChars = this._collectFriendlyCharacters(player, { excludeSourceId: srcId });
     const friendlyMinions = this._collectFriendlyMinions(player, { excludeSourceId: srcId });
     const enemyChars = this._collectEnemyCharacters(opponent, { excludeSourceId: srcId });
@@ -751,10 +780,10 @@ export class MCTS_AI {
     switch (targetType) {
       case 'allCharacters':
         return build([...friendlyChars, ...enemyChars], 'multi');
-      case 'allOtherCharacters': {
-        const combined = [...friendlyChars, ...enemyChars];
-        return build(combined.filter((t) => !srcId || t?.id !== srcId), 'multi');
-      }
+        case 'allOtherCharacters': {
+          const combined = [...friendlyChars, ...enemyChars];
+          return build(combined.filter((t) => !srcId || !matchesCardIdentifier(t, srcId)), 'multi');
+        }
       case 'allies':
       case 'allFriendlies':
         return build(friendlyChars, 'multi');
@@ -762,13 +791,13 @@ export class MCTS_AI {
         return build(enemyChars, 'multi');
       case 'selfHero': {
         const hero = player?.hero;
-        const targets = (hero && !this._isEntityDead(hero) && (!srcId || hero.id !== srcId)) ? [hero] : [];
+          const targets = (hero && !this._isEntityDead(hero) && (!srcId || !matchesCardIdentifier(hero, srcId))) ? [hero] : [];
         return build(targets, 'single');
       }
       case 'hero': {
         const targets = [];
-        if (player?.hero && !this._isEntityDead(player.hero) && (!srcId || player.hero.id !== srcId)) targets.push(player.hero);
-        if (opponent?.hero && !this._isEntityDead(opponent.hero) && (!srcId || opponent.hero.id !== srcId)) targets.push(opponent.hero);
+          if (player?.hero && !this._isEntityDead(player.hero) && (!srcId || !matchesCardIdentifier(player.hero, srcId))) targets.push(player.hero);
+          if (opponent?.hero && !this._isEntityDead(opponent.hero) && (!srcId || !matchesCardIdentifier(opponent.hero, srcId))) targets.push(opponent.hero);
         return build(targets, 'single');
       }
       case 'minion': {
@@ -777,17 +806,17 @@ export class MCTS_AI {
       }
       case 'enemyHeroOrMinionWithoutTaunt': {
         const candidates = [];
-        if (opponent?.hero && !this._isEntityDead(opponent.hero) && (!srcId || opponent.hero.id !== srcId)) {
-          candidates.push(opponent.hero);
-        }
-        for (const card of opponent?.battlefield?.cards || []) {
-          if (!card || card.type !== 'ally') continue;
-          if (this._isEntityDead(card)) continue;
-          if (card.keywords?.includes?.('Taunt')) continue;
-          if (!isTargetable(card)) continue;
-          if (srcId && card.id === srcId) continue;
-          candidates.push(card);
-        }
+          if (opponent?.hero && !this._isEntityDead(opponent.hero) && (!srcId || !matchesCardIdentifier(opponent.hero, srcId))) {
+            candidates.push(opponent.hero);
+          }
+          for (const card of opponent?.battlefield?.cards || []) {
+            if (!card || card.type !== 'ally') continue;
+            if (this._isEntityDead(card)) continue;
+            if (card.keywords?.includes?.('Taunt')) continue;
+            if (!isTargetable(card)) continue;
+            if (srcId && matchesCardIdentifier(card, srcId)) continue;
+            candidates.push(card);
+          }
         return build(candidates, 'single');
       }
       case 'any':
@@ -806,14 +835,15 @@ export class MCTS_AI {
     const cards = Array.isArray(player?.battlefield?.cards) ? player.battlefield.cards : [];
     const inPlay = new Set();
     const currentTurn = typeof turn === 'number' ? turn : (this.resources?.turns?.turn ?? null);
-    for (const card of cards) {
-      if (!card?.id) continue;
-      inPlay.add(card.id);
-      const data = card.data || {};
-      if (data.summoningSick) base.add(card.id);
-      const entered = typeof data.enteredTurn === 'number' ? data.enteredTurn : null;
-      if (entered != null && currentTurn != null && entered === currentTurn) base.add(card.id);
-    }
+      for (const card of cards) {
+        const instanceKey = getCardInstanceId(card);
+        if (!instanceKey) continue;
+        inPlay.add(instanceKey);
+        const data = card.data || {};
+        if (data.summoningSick) base.add(instanceKey);
+        const entered = typeof data.enteredTurn === 'number' ? data.enteredTurn : null;
+        if (entered != null && currentTurn != null && entered === currentTurn) base.add(instanceKey);
+      }
     for (const id of Array.from(base)) {
       if (!inPlay.has(id)) base.delete(id);
     }
@@ -948,7 +978,8 @@ export class MCTS_AI {
     const hasRush = attacker?.keywords?.includes?.('Rush');
     const enteredTurn = typeof data.enteredTurn === 'number' ? data.enteredTurn : null;
     const currentTurn = typeof turn === 'number' ? turn : (this.resources?.turns?.turn ?? null);
-    const flagged = enteredSet?.has?.(attacker.id);
+    const attackerKey = getCardInstanceId(attacker);
+    const flagged = attackerKey ? enteredSet?.has?.(attackerKey) : false;
     const justEntered = flagged || (enteredTurn != null && currentTurn != null && enteredTurn === currentTurn);
     if (justEntered && hasRush && !hasCharge) return false;
     if (justEntered && !(hasCharge || hasRush)) return false;
@@ -961,8 +992,7 @@ export class MCTS_AI {
     if (!defenders.length) return null;
 
     const hero = opponent?.hero || null;
-    const heroId = hero?.id ?? null;
-    const heroInPool = defenders.some((t) => t?.id === heroId);
+    const heroInPool = defenders.some((t) => matchesCardIdentifier(t, hero));
     const heroEligible = (() => {
       if (!heroInPool) return false;
       if (heroAllowed != null) return heroAllowed;
@@ -978,7 +1008,7 @@ export class MCTS_AI {
     }
 
     for (const enemy of defenders) {
-      if (!enemy || enemy?.id === heroId) continue;
+      if (!enemy || matchesCardIdentifier(enemy, hero)) continue;
       const score = this._scoreAllyTrade(attacker, enemy);
       if (!heroEligible && !bestTarget) {
         bestTarget = enemy;
@@ -1014,7 +1044,8 @@ export class MCTS_AI {
       if (data.summoningSick && !(hasCharge || hasRush)) return [];
       const enteredTurn = typeof data.enteredTurn === 'number' ? data.enteredTurn : null;
       const currentTurn = typeof turn === 'number' ? turn : (this.resources?.turns?.turn ?? null);
-      const flagged = enteredSet?.has?.(attacker.id);
+      const attackerKey = getCardInstanceId(attacker);
+      const flagged = attackerKey ? enteredSet?.has?.(attackerKey) : false;
       const justEntered = flagged || (enteredTurn != null && currentTurn != null && enteredTurn === currentTurn);
       if (justEntered && !(hasCharge || hasRush)) return [];
     }
@@ -1022,10 +1053,9 @@ export class MCTS_AI {
     const legal = selectTargets(defenders);
     if (!legal.length) return [];
     const hero = opponent?.hero || null;
-    const heroId = hero?.id ?? null;
-    const heroAllowed = legal.some((t) => t?.id === heroId)
+    const heroAllowed = legal.some((t) => matchesCardIdentifier(t, hero))
       && this._canAttackHero(attacker, player, turn, enteredSet);
-    const pool = heroAllowed ? legal : legal.filter((t) => t?.id !== heroId);
+    const pool = heroAllowed ? legal : legal.filter((t) => !matchesCardIdentifier(t, hero));
     if (!pool.length) return [];
 
     const preferred = this._chooseAttackTarget(attacker, player, opponent, turn, enteredSet, {
@@ -1035,17 +1065,19 @@ export class MCTS_AI {
 
     const chosen = preferred || pool[0] || null;
     if (!chosen) return [];
-    const targetHero = chosen === hero;
-    const targetId = chosen?.id ?? (targetHero ? hero?.id ?? null : opponent?.hero?.id ?? null);
+    const targetHero = hero ? matchesCardIdentifier(chosen, hero) : false;
+    const targetId = targetHero
+      ? (getCardInstanceId(hero) || hero?.id || null)
+      : (getCardInstanceId(chosen) || chosen?.id || null);
     const targetType = chosen?.type || (targetHero ? 'hero' : null);
     const attackerType = attacker.type || (isHero ? 'hero' : null);
-    return [{
-      card: null,
-      usePower: false,
-      end: false,
-      attack: {
-        attackerId: attacker.id,
-        targetId,
+      return [{
+        card: null,
+        usePower: false,
+        end: false,
+        attack: {
+          attackerId: getCardInstanceId(attacker),
+          targetId,
         attackerType,
         targetType,
         attacker,
@@ -1073,22 +1105,23 @@ export class MCTS_AI {
       const cards = Array.isArray(player?.battlefield?.cards) ? player.battlefield.cards : [];
       if (!cards.length) return;
       const survivors = [];
-      for (const card of cards) {
-        const data = card?.data || {};
-        const health = typeof data.health === 'number'
-          ? data.health
-          : (typeof card?.health === 'number' ? card.health : 0);
-        const dead = data.dead || health <= 0;
-        if (dead) {
-          if (state?.enteredThisTurn?.has?.(card.id)) state.enteredThisTurn.delete(card.id);
-          this._clearEnrageTracking(state, ownerKey, card.id);
-          const graveyard = Array.isArray(player?.graveyard?.cards) ? player.graveyard.cards : null;
-          if (graveyard && !graveyard.some(c => c?.id === card.id)) {
-            graveyard.push(card);
+        for (const card of cards) {
+          const data = card?.data || {};
+          const health = typeof data.health === 'number'
+            ? data.health
+            : (typeof card?.health === 'number' ? card.health : 0);
+          const dead = data.dead || health <= 0;
+          if (dead) {
+            const instanceKey = getCardInstanceId(card);
+            if (instanceKey && state?.enteredThisTurn?.has?.(instanceKey)) state.enteredThisTurn.delete(instanceKey);
+            this._clearEnrageTracking(state, ownerKey, card);
+            const graveyard = Array.isArray(player?.graveyard?.cards) ? player.graveyard.cards : null;
+            if (graveyard && (!instanceKey || !graveyard.some(c => matchesCardIdentifier(c, instanceKey)))) {
+              graveyard.push(card);
+            }
+          } else {
+            survivors.push(card);
           }
-        } else {
-          survivors.push(card);
-        }
       }
       player.battlefield.cards = survivors;
     };
@@ -1105,30 +1138,31 @@ export class MCTS_AI {
     const attackerId = attack.attackerId;
     const targetId = attack.targetId;
     if (!attackerId) return false;
-    const attacker = (p.hero && p.hero.id === attackerId)
+    const attacker = matchesCardIdentifier(p.hero, attackerId)
       ? p.hero
-      : (p.battlefield?.cards || []).find(c => c?.id === attackerId);
+      : (p.battlefield?.cards || []).find(c => matchesCardIdentifier(c, attackerId));
     if (!attacker) return false;
     if ((attacker?.data?.freezeTurns || 0) > 0) return false;
     const attackValue = this._entityAttackValue(attacker);
     if (attackValue <= 0) return false;
     const used = this._attacksUsed(attacker);
     if (used >= this._maxAttacksAllowed(attacker)) return false;
-    const targetHero = o.hero && (targetId == null || targetId === o.hero.id);
+    const targetHero = o.hero && (targetId == null || matchesCardIdentifier(o.hero, targetId));
     let target = null;
     if (targetHero) {
       target = o.hero;
     } else {
-      target = (o.battlefield?.cards || []).find(c => c?.id === targetId) || null;
+      target = (o.battlefield?.cards || []).find(c => matchesCardIdentifier(c, targetId)) || null;
       if (!target) return false;
     }
     const defenders = this._livingDefenders(o);
     let legal = selectTargets(defenders);
     if (targetHero) {
-      if (!legal.some(t => t?.id === o.hero?.id)) return false;
+      if (!legal.some(t => matchesCardIdentifier(t, o.hero))) return false;
     } else {
-      if (!legal.some(t => t?.id === target?.id)) return false;
+      if (!legal.some(t => matchesCardIdentifier(t, target))) return false;
     }
+    const attackerKey = getCardInstanceId(attacker);
     const data = attacker.data || (attacker.data = {});
     if (attacker !== p.hero) {
       const hasCharge = attacker?.keywords?.includes?.('Charge');
@@ -1136,7 +1170,7 @@ export class MCTS_AI {
       if (data.summoningSick && !(hasCharge || hasRush)) return false;
       const enteredTurn = typeof data.enteredTurn === 'number' ? data.enteredTurn : null;
       const currentTurn = typeof state.turn === 'number' ? state.turn : (this.resources?.turns?.turn ?? null);
-      const flagged = enteredSet?.has?.(attacker.id);
+      const flagged = attackerKey ? enteredSet?.has?.(attackerKey) : false;
       const justEntered = flagged || (enteredTurn != null && currentTurn != null && enteredTurn === currentTurn);
       if (justEntered && !(hasCharge || hasRush)) return false;
       if (justEntered && hasRush && !hasCharge && targetHero) return false;
@@ -1147,7 +1181,7 @@ export class MCTS_AI {
     const combat = new CombatSystem();
     const actualTarget = targetHero ? o.hero : target;
     if (!combat.declareAttacker(attacker, actualTarget)) return false;
-    if (!targetHero && actualTarget) combat.assignBlocker(attacker.id, actualTarget);
+    if (!targetHero && actualTarget) combat.assignBlocker(attackerKey || attacker, actualTarget);
     combat.setDefenderHero(o.hero || null);
     const events = combat.resolve();
     this._processCombatEnrage(events, state, p, o);
@@ -1172,10 +1206,10 @@ export class MCTS_AI {
       const post = typeof ev?.postHealth === 'number'
         ? ev.postHealth
         : (target.data?.health ?? target.health ?? 0);
-      if (post <= 0) {
-        this._clearEnrageTracking(state, owner, target.id);
-        continue;
-      }
+        if (post <= 0) {
+          this._clearEnrageTracking(state, owner, target);
+          continue;
+        }
       if (post < prev && (ev?.amount || 0) > 0) {
         this._triggerEnrageIfPresent(target, owner, state);
       }
@@ -1277,7 +1311,7 @@ export class MCTS_AI {
             break;
           }
 
-          const sourceId = source?.id || null;
+            const sourceId = getCardInstanceId(source) || null;
           let candidates = [];
           switch (targetScope) {
             case 'ally':
@@ -1347,9 +1381,10 @@ export class MCTS_AI {
             summoned.data.enteredTurn = turnValue;
             player.battlefield.cards.push(summoned);
             // Track entry this turn to enforce sickness in combat filter
-            if (this._currentState) {
-              this._currentState.enteredThisTurn.add(summoned.id);
-            }
+              if (this._currentState) {
+                const summonedKey = getCardInstanceId(summoned);
+                if (summonedKey) this._currentState.enteredThisTurn.add(summonedKey);
+              }
           }
           break;
         }
@@ -1465,11 +1500,15 @@ export class MCTS_AI {
     }
 
     // Apply card
-    if (action.card) {
-      const cost = action.card.cost || 0;
-      s.pool -= cost; p.__mctsPool = s.pool;
-      p.hand.cards = p.hand.cards.filter(c => c.id !== action.card.id);
-      const played = structuredClone(action.card);
+      if (action.card) {
+        const cost = action.card.cost || 0;
+        s.pool -= cost; p.__mctsPool = s.pool;
+        const playedKey = getCardInstanceId(action.card);
+        p.hand.cards = p.hand.cards.filter((c) => {
+          if (playedKey) return getCardInstanceId(c) !== playedKey;
+          return !cardsMatch(c, action.card);
+        });
+        const played = structuredClone(action.card);
       if (played.type === 'ally' || played.type === 'equipment' || played.type === 'quest') {
         p.battlefield.cards.push(played);
         if (played.type === 'equipment') {
@@ -1479,11 +1518,12 @@ export class MCTS_AI {
           played.data = played.data || {};
           played.data.attacked = true;
         }
-        if (played.type === 'ally') {
-          played.data = played.data || {};
-          played.data.enteredTurn = s.turn;
-          s.enteredThisTurn.add(played.id);
-        }
+          if (played.type === 'ally') {
+            played.data = played.data || {};
+            played.data.enteredTurn = s.turn;
+            const playedKey = getCardInstanceId(played);
+            if (playedKey) s.enteredThisTurn.add(playedKey);
+          }
       } else {
         p.graveyard.cards.push(played);
       }
@@ -1754,6 +1794,7 @@ export class MCTS_AI {
   _cloneCardEntity(c) {
     const copy = new Card({
       id: c.id,
+      instanceId: getCardInstanceId(c),
       type: c.type,
       name: c.name,
       cost: c.cost,
@@ -1785,6 +1826,7 @@ export class MCTS_AI {
     // Equipment can be either Equipment entities or equipment-like cards; copy shallowly
     hero.equipment = Array.isArray(h.equipment) ? h.equipment.map(eq => ({
       id: eq.id,
+      instanceId: getCardInstanceId(eq),
       name: eq.name,
       attack: eq.attack || 0,
       armor: eq.armor || 0,
@@ -1897,11 +1939,12 @@ export class MCTS_AI {
       const value = this._evaluateRolloutState(descriptor, { actions });
       const score = Number.isFinite(value) ? value : 0;
       return { terminal: true, value: score };
-    }
-    if (action.card) {
-      const ok = await s.playFromHand(me, action.card.id);
-      if (!ok) return { terminal: true, value: -Infinity }; // illegal in sim => punish
-    }
+      }
+      if (action.card) {
+        const cardRef = getCardInstanceId(action.card) ?? action.card;
+        const ok = await s.playFromHand(me, cardRef);
+        if (!ok) return { terminal: true, value: -Infinity }; // illegal in sim => punish
+      }
     if (action.usePower) {
       const ok = await s.useHeroPower(me);
       if (!ok) return { terminal: true, value: -Infinity };
@@ -2268,13 +2311,14 @@ export class MCTS_AI {
           break;
         }
       }
-      if (action.card) {
-        if (this.game && typeof this.game.playFromHand === 'function') {
-          const ok = await this.game.playFromHand(player, action.card.id);
-          if (!ok) {
-            this._clearLastTree();
-            break;
-          }
+        if (action.card) {
+          if (this.game && typeof this.game.playFromHand === 'function') {
+            const cardRef = getCardInstanceId(action.card) ?? action.card;
+            const ok = await this.game.playFromHand(player, cardRef);
+            if (!ok) {
+              this._clearLastTree();
+              break;
+            }
         } else {
           // Fallback (should not happen in game integration)
           const cost = action.card.cost || 0;
@@ -2330,7 +2374,11 @@ export class MCTS_AI {
           const target = this._chooseAttackTarget(attacker, player, opponent, this.resources.turns.turn, enteredSet);
           if (!target) continue;
           if (!combat.declareAttacker(attacker, target)) continue;
-          if (target?.id && target.id !== opponent.hero?.id) combat.assignBlocker(attacker.id, target);
+          const attackerKey = getCardInstanceId(attacker);
+          const targetKey = getCardInstanceId(target);
+          if (targetKey && !matchesCardIdentifier(opponent.hero, targetKey)) {
+            combat.assignBlocker(attackerKey || attacker, target);
+          }
           if (attacker?.data) {
             attacker.data.attacked = true;
             attacker.data.attacksUsed = (attacker.data.attacksUsed || 0) + 1;

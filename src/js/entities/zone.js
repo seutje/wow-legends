@@ -1,4 +1,5 @@
 import CardEntity from './card.js';
+import { cardsMatch, matchesCardIdentifier } from '../utils/card.js';
 
 export class Zone {
   constructor(name = 'zone') {
@@ -13,12 +14,9 @@ export class Zone {
   remove(refOrId) {
     let idx = -1;
     if (refOrId && typeof refOrId === 'object') {
-      idx = this.cards.indexOf(refOrId);
-      if (idx === -1 && refOrId.id) {
-        idx = this.cards.findIndex(c => c.id === refOrId.id);
-      }
+      idx = this.cards.findIndex((c) => cardsMatch(c, refOrId));
     } else {
-      idx = this.cards.findIndex(c => c.id === refOrId);
+      idx = this.cards.findIndex((c) => matchesCardIdentifier(c, refOrId));
     }
     if (idx !== -1) return this.cards.splice(idx, 1)[0];
     return null;

@@ -1,5 +1,6 @@
 import Game from '../src/js/game.js';
 import Card from '../src/js/entities/card.js';
+import { getCardInstanceId } from '../src/js/utils/card.js';
 import { captureGameState, restoreCapturedState } from '../src/js/utils/savegame.js';
 
 describe('savegame utilities', () => {
@@ -65,5 +66,36 @@ describe('savegame utilities', () => {
     expect(secrets).toHaveLength(1);
     expect(secrets[0].type).toBe('explosiveTrap');
     expect(secrets[0].cardId).toBe(secretCard.id);
+  });
+
+  test('duplicate allies preserve instance ids across save and restore', async () => {
+    const game = new Game(null);
+    await game.init();
+
+    const makeShieldbearer = () => new Card({
+      id: 'ally-shoal-shieldbearer',
+      name: 'Shoal Shieldbearer',
+      type: 'ally',
+      data: { attack: 2, health: 4 },
+      keywords: ['Murloc'],
+    });
+
+    const first = makeShieldbearer();
+    const second = makeShieldbearer();
+    game.player.battlefield.cards.push(first, second);
+
+    const beforeIds = game.player.battlefield.cards.map(getCardInstanceId);
+    expect(new Set(beforeIds).size).toBe(2);
+
+    const snapshot = captureGameState(game);
+    const clone = new Game(null);
+    await clone.init();
+    const ok = restoreCapturedState(clone, snapshot);
+    expect(ok).toBe(true);
+
+    const restored = clone.player.battlefield.cards.map(getCardInstanceId);
+    expect(restored).toHaveLength(2);
+    expect(new Set(restored).size).toBe(2);
+    expect(restored).toEqual(beforeIds);
   });
 });

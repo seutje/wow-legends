@@ -2,6 +2,7 @@ import { jest } from '@jest/globals';
 import Game from '../src/js/game.js';
 import Card from '../src/js/entities/card.js';
 import MCTS_AI from '../src/js/systems/ai-mcts.js';
+import { getCardInstanceId } from '../src/js/utils/card.js';
 
 test('MCTS prefers lethal damage over healing', () => {
   const g = new Game();
@@ -464,7 +465,8 @@ test('simple simulation tracks enrage triggers and penalizes leaving them alive'
   const enemyMinion = simState.opponent.battlefield.cards[0];
   expect(enemyMinion.data.health).toBe(2);
   expect(enemyMinion.data.attack).toBe(5);
-  expect(simState.enragedOpponentThisTurn.get(enemyMinion.id)).toBe(1);
+  const enemyKey = getCardInstanceId(enemyMinion);
+  expect(simState.enragedOpponentThisTurn.get(enemyKey)).toBe(1);
 
   const scoreAfterWhirl = ai._resolveCombatAndScore(simState).value;
   const baseline = ai._resolveCombatAndScore(ai._cloneState(rootState)).value;

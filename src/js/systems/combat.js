@@ -1,5 +1,6 @@
 import { freezeTarget } from './keywords.js';
 import { isDebugLogging } from '../utils/logger.js';
+import { cardsMatch, getCardInstanceId, matchesCardIdentifier } from '../utils/card.js';
 
 function getStat(card, key, def = 0) {
   if (key === 'attack' && typeof card?.totalAttack === 'function') return card.totalAttack();
@@ -28,7 +29,7 @@ function safeZoneTransfer(fromZone, toZone, card) {
   }
   let removed = card;
   if (fromZone && Array.isArray(fromZone.cards)) {
-    const idx = fromZone.cards.findIndex(c => c === card || (c?.id && card?.id && c.id === card.id));
+    const idx = fromZone.cards.findIndex(c => cardsMatch(c, card));
     if (idx !== -1) {
       [removed] = fromZone.cards.splice(idx, 1);
     }
@@ -38,7 +39,7 @@ function safeZoneTransfer(fromZone, toZone, card) {
     return true;
   }
   if (Array.isArray(toZone.cards)) {
-    const exists = toZone.cards.some(c => c === removed || (c?.id && removed?.id && c.id === removed.id));
+    const exists = toZone.cards.some(c => cardsMatch(c, removed));
     if (!exists) toZone.cards.push(removed);
     return true;
   }
@@ -47,7 +48,7 @@ function safeZoneTransfer(fromZone, toZone, card) {
 
 export class CombatSystem {
   constructor(bus = null) {
-    this._attacks = new Map(); // attackerId -> { attacker, blockers: Card[] }
+    this._attacks = new Map(); // attackerKey -> { attacker, blockers: Card[] }
     this._defenderHero = null;
     this.bus = bus;
   }
@@ -69,12 +70,37 @@ export class CombatSystem {
         return false;
       }
     }
-    this._attacks.set(attacker.id, { attacker, blockers: [] });
+    const key = getCardInstanceId(attacker) || attacker;
+    this._attacks.set(key, { attacker, blockers: [] });
     return true;
   }
 
-  assignBlocker(attackerId, blocker) {
-    const rec = this._attacks.get(attackerId);
+  assignBlocker(attackerRef, blocker) {
+    let key = attackerRef;
+    if (attackerRef && typeof attackerRef === 'object') {
+      if (this._attacks.has(attackerRef)) {
+        key = attackerRef;
+      } else {
+        key = getCardInstanceId(attackerRef) || attackerRef;
+      }
+    }
+    let rec = this._attacks.get(key);
+    if (!rec && typeof attackerRef === 'string') {
+      for (const value of this._attacks.values()) {
+        if (value?.attacker && matchesCardIdentifier(value.attacker, attackerRef)) {
+          rec = value;
+          break;
+        }
+      }
+    }
+    if (!rec && attackerRef && typeof attackerRef === 'object') {
+      for (const value of this._attacks.values()) {
+        if (cardsMatch(value?.attacker, attackerRef)) {
+          rec = value;
+          break;
+        }
+      }
+    }
     if (rec) rec.blockers.push(blocker);
   }
 

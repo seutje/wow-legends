@@ -14,7 +14,12 @@ export function renderBoard(container, player) {
     const h = document.createElement('h3'); h.textContent = name; section.appendChild(h);
     const ul = document.createElement('ul'); ul.dataset.zone = name.toLowerCase(); ul.classList.add('zone-list');
     for (const c of zone.cards) {
-      const li = document.createElement('li'); li.textContent = c.name; li.dataset.cardId = c.id; ul.appendChild(li);
+      const li = document.createElement('li');
+      li.textContent = c.name;
+      const instanceId = c.instanceId || c.id;
+      if (instanceId != null) li.dataset.cardId = String(instanceId);
+      if (c.id != null) li.dataset.templateId = String(c.id);
+      ul.appendChild(li);
     }
     section.appendChild(ul);
     container.appendChild(section);

@@ -28,6 +28,7 @@ function serializeCard(card) {
   if (!card) return null;
   const base = {
     id: card.id,
+    instanceId: card.instanceId ?? null,
     type: card.type,
     name: card.name,
     cost: card.cost ?? 0,
@@ -62,6 +63,7 @@ function deserializeCard(data, game) {
   if (!data) return null;
   const card = new Card({
     id: data.id,
+    instanceId: data.instanceId,
     type: data.type,
     name: data.name,
     cost: data.cost ?? 0,
@@ -90,6 +92,7 @@ function serializeEquipment(eq) {
   if (!eq) return null;
   return {
     id: eq.id,
+    instanceId: eq.instanceId ?? null,
     name: eq.name,
     attack: eq.attack ?? 0,
     armor: eq.armor ?? 0,
@@ -102,6 +105,7 @@ function deserializeEquipment(data) {
   if (!data) return null;
   return new Equipment({
     id: data.id,
+    instanceId: data.instanceId,
     name: data.name,
     attack: data.attack ?? 0,
     armor: data.armor ?? 0,

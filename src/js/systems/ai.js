@@ -2,6 +2,7 @@ import CombatSystem from './combat.js';
 import { evaluateGameState } from './ai-heuristics.js';
 import { selectTargets } from './targeting.js';
 import Card from '../entities/card.js';
+import { cardsMatch, getCardInstanceId, matchesCardIdentifier } from '../utils/card.js';
 
 export class BasicAI {
   constructor({ resourceSystem, combatSystem } = {}) {
@@ -199,14 +200,13 @@ export class BasicAI {
     if (!legal.length) return null;
 
     const hero = opponent?.hero || null;
-    const heroId = hero?.id;
-    const heroInPool = legal.some(t => t?.id === heroId);
+    const heroInPool = legal.some(t => matchesCardIdentifier(t, hero));
     const heroAllowed = heroInPool && this._canAttackHero(attacker, player);
 
-    let bestTarget = heroAllowed ? hero : null;
-    let bestScore = heroAllowed ? this._scoreHeroAttack(attacker, hero) : -Infinity;
+    let bestTarget = heroAllowed && hero ? hero : null;
+    let bestScore = (heroAllowed && hero) ? this._scoreHeroAttack(attacker, hero) : -Infinity;
 
-    const enemies = legal.filter(t => t?.id !== heroId);
+    const enemies = legal.filter(t => !matchesCardIdentifier(t, hero));
     for (const enemy of enemies) {
       const score = this._scoreAllyTrade(attacker, enemy);
       if (!heroAllowed && !bestTarget) {
@@ -220,7 +220,7 @@ export class BasicAI {
       }
     }
 
-    if (!bestTarget && heroAllowed) return hero;
+    if (!bestTarget && heroAllowed && hero) return hero;
     if (!bestTarget && enemies.length) return enemies[0];
     return bestTarget;
   }
@@ -233,7 +233,11 @@ export class BasicAI {
 
     if (card) {
       res -= card.cost || 0;
-      p.hand.cards = p.hand.cards.filter(c => c.id !== card.id);
+      const playedId = getCardInstanceId(card);
+      p.hand.cards = p.hand.cards.filter((c) => {
+        if (playedId) return getCardInstanceId(c) !== playedId;
+        return !cardsMatch(c, card);
+      });
       const played = structuredClone(card);
       if (played.type === 'ally' || played.type === 'equipment' || played.type === 'quest') {
         p.battlefield.cards.push(played);
@@ -278,7 +282,10 @@ export class BasicAI {
       const target = this._chooseAttackTarget(a, p, o);
       if (!target) continue;
       if (combat.declareAttacker(a, target)) {
-        if (target?.id && target.id !== o.hero?.id) combat.assignBlocker(a.id, target);
+        const targetKey = getCardInstanceId(target);
+        if (targetKey && !matchesCardIdentifier(o.hero, targetKey)) {
+          combat.assignBlocker(getCardInstanceId(a), target);
+        }
         if (a.data) a.data.attacked = true;
       }
     }
@@ -289,7 +296,11 @@ export class BasicAI {
       const dead = pl.battlefield.cards.filter(c => c.data?.dead);
       for (const d of dead) {
         pl.graveyard.cards.push(d);
-        pl.battlefield.cards = pl.battlefield.cards.filter(c => c.id !== d.id);
+        const deadId = getCardInstanceId(d);
+        pl.battlefield.cards = pl.battlefield.cards.filter((c) => {
+          if (deadId) return getCardInstanceId(c) !== deadId;
+          return !cardsMatch(c, d);
+        });
       }
     }
 
@@ -364,7 +375,10 @@ export class BasicAI {
         const target = this._chooseAttackTarget(a, player, opponent);
         if (!target) continue;
         if (this.combat.declareAttacker(a, target)) {
-          if (target?.id && target.id !== opponent.hero?.id) this.combat.assignBlocker(a.id, target);
+          const targetKey = getCardInstanceId(target);
+          if (targetKey && !matchesCardIdentifier(opponent.hero, targetKey)) {
+            this.combat.assignBlocker(getCardInstanceId(a), target);
+          }
           if (a.data) a.data.attacked = true;
         }
       }
