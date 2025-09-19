@@ -203,12 +203,14 @@
       {
         "type": "buff",
         "target": "character",
+        "allowHero": false,
         "property": "attack",
         "amount": 4
       },
       {
         "type": "buff",
         "target": "character",
+        "allowHero": false,
         "property": "health",
         "amount": 4
       }
@@ -645,12 +647,14 @@
       {
         "type": "buff",
         "target": "character",
+        "allowHero": false,
         "property": "attack",
         "amount": 2
       },
       {
         "type": "buff",
         "target": "character",
+        "allowHero": false,
         "property": "health",
         "amount": 2
       }
