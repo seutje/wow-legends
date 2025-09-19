@@ -294,14 +294,16 @@ async function evalCandidate(model, { games = 20, maxRounds = 20, opponentConfig
   let total = 0;
   for (let g = 0; g < games; g++) {
     const game = new Game(null, { aiPlayers: ['player', 'opponent'] });
+    if (game?.state) game.state.difficulty = 'nightmare';
     // Use deterministic RNG seeds per evaluation so every candidate sees identical matchups
     const seed = g >>> 0;
     game.rng = new RNG(seed);
     await game.setupMatch();
+    game.turns.setActivePlayer(game.player);
     setActiveModel(model); // ensure endTurn or direct AI uses this model
 
-    // Opponent is the candidate NN (controlled directly); player baseline varies by opponent mode
-    const aiOpp = new NeuralAI({ game, resourceSystem: game.resources, combatSystem: game.combat, model });
+    // Candidate network always pilots the opponent side; baseline controls the player side
+    const opponentAI = new NeuralAI({ game, resourceSystem: game.resources, combatSystem: game.combat, model });
     const playerAI = (baselineModel)
       ? new NeuralAI({ game, resourceSystem: game.resources, combatSystem: game.combat, model: baselineModel })
       : new MCTS_AI({
@@ -316,16 +318,23 @@ async function evalCandidate(model, { games = 20, maxRounds = 20, opponentConfig
     // Ensure start is player's turn (Game.setupMatch sets player start)
     let rounds = 0;
     let opponentTurns = 0;
+    const playerNeedsResume = playerAI instanceof MCTS_AI;
+    let resumePlayerTurn = playerNeedsResume;
     while (rounds < maxRounds && game.player.hero.data.health > 0 && game.opponent.hero.data.health > 0) {
-      // Player turn
-      await playerAI.takeTurn(game.player, game.opponent);
+      // Player turn (baseline controller)
+      if (playerNeedsResume) {
+        await playerAI.takeTurn(game.player, game.opponent, { resume: resumePlayerTurn });
+        resumePlayerTurn = true;
+      } else {
+        await playerAI.takeTurn(game.player, game.opponent);
+      }
       if (game.opponent.hero.data.health <= 0 || game.player.hero.data.health <= 0) break;
 
       // Opponent turn
       game.turns.setActivePlayer(game.opponent);
       game.turns.startTurn();
       game.resources.startTurn(game.opponent);
-      await aiOpp.takeTurn(game.opponent, game.player);
+      await opponentAI.takeTurn(game.opponent, game.player);
       opponentTurns++;
 
       // End of opponent turn -> advance to player's next turn
@@ -334,6 +343,7 @@ async function evalCandidate(model, { games = 20, maxRounds = 20, opponentConfig
       game.turns.setActivePlayer(game.player);
       game.turns.startTurn();
       game.resources.startTurn(game.player);
+      resumePlayerTurn = playerNeedsResume ? true : resumePlayerTurn;
 
       rounds++;
     }
