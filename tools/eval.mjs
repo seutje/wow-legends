@@ -9,6 +9,7 @@ import Game from '../src/js/game.js';
 import MCTS_AI from '../src/js/systems/ai-mcts.js';
 import NeuralAI, { loadModelFromDiskOrFetch, setActiveModel } from '../src/js/systems/ai-nn.js';
 import MLP from '../src/js/systems/nn.js';
+import { loadAutoencoder } from '../src/js/systems/autoencoder.js';
 import { RNG } from '../src/js/utils/rng.js';
 import { getOriginalConsole } from '../src/js/utils/logger.js';
 
@@ -172,6 +173,7 @@ async function main() {
     throw new Error('[eval] Match count must be a positive integer');
   }
 
+  try { await loadAutoencoder(); } catch { /* fall back to zeroed latent vectors */ }
   const bestModel = await loadModelFromDiskOrFetch();
   setActiveModel(bestModel);
 

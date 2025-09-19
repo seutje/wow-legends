@@ -5,6 +5,7 @@ import Game from '../src/js/game.js';
 import MLP from '../src/js/systems/nn.js';
 import NeuralAI, { setActiveModel } from '../src/js/systems/ai-nn.js';
 import MCTS_AI from '../src/js/systems/ai-mcts.js';
+import { loadAutoencoder } from '../src/js/systems/autoencoder.js';
 import { setDebugLogging } from '../src/js/utils/logger.js';
 import { RNG } from '../src/js/utils/rng.js';
 
@@ -18,6 +19,7 @@ function sanitizeIterations(value, fallback = 5000) {
 }
 
 async function evalCandidate(model, { games = 5, maxRounds = 20, opponentConfig = null } = {}) {
+  try { await loadAutoencoder(); } catch { /* continue with fallback encoding */ }
   const config = opponentConfig || { mode: 'mcts', iterations: 5000, rolloutDepth: 10, fullSim: true };
   const baselineModel = (config.mode === 'best' && config.modelJSON)
     ? MLP.fromJSON(config.modelJSON)

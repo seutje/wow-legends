@@ -18,6 +18,7 @@ import Game from '../src/js/game.js';
 import MLP from '../src/js/systems/nn.js';
 import NeuralAI, { setActiveModel, DEFAULT_MODEL_SHAPE, MODEL_INPUT_SIZE } from '../src/js/systems/ai-nn.js';
 import MCTS_AI from '../src/js/systems/ai-mcts.js';
+import { loadAutoencoder } from '../src/js/systems/autoencoder.js';
 import { setDebugLogging, getOriginalConsole } from '../src/js/utils/logger.js';
 import { parseTrainArgs } from './train.args.mjs';
 import { RNG } from '../src/js/utils/rng.js';
@@ -411,6 +412,11 @@ async function evalPopulationParallel(population, { games = 1, maxRounds = 16, c
 async function main() {
   const { pop: POP, gens: GENS, reset, opponent, curriculum } = parseTrainArgs();
   await fs.mkdir(MODELS_DIR, { recursive: true });
+  try {
+    await loadAutoencoder();
+  } catch (err) {
+    progress(`[${now()}] Failed to load autoencoder model: ${err?.message || err}. Continuing with fallback encoding.`);
+  }
   let savedBest = await loadSavedBest();
   if (savedBest && (!Array.isArray(savedBest.sizes) || savedBest.sizes[0] !== MODEL_INPUT_SIZE)) {
     progress(`[${now()}] Saved model input size ${savedBest?.sizes?.[0]} does not match expected ${MODEL_INPUT_SIZE}; ignoring saved checkpoint.`);
