@@ -16,13 +16,14 @@ const spellCards = JSON.parse(
 );
 const powerWordShield = spellCards.find(c => c.id === 'spell-power-word-shield');
 const shadowWordPain = spellCards.find(c => c.id === 'spell-shadow-word-pain');
+const explosiveTrap = spellCards.find(c => c.id === 'spell-explosive-trap');
 
 const allyCards = JSON.parse(
   fs.readFileSync(new URL('../data/cards/ally.json', import.meta.url).pathname)
 );
 const waterElementalGuardian = allyCards.find(c => c.id === 'ally-water-elemental-guardian');
 
-if (!thrallData || !powerWordShield || !shadowWordPain || !waterElementalGuardian) {
+if (!thrallData || !powerWordShield || !shadowWordPain || !waterElementalGuardian || !explosiveTrap) {
   throw new Error('Required card data missing for combat log tests.');
 }
 
@@ -191,4 +192,26 @@ test('auto-target logging falls back when target capture is unavailable', async 
 
   const lastLog = g.player.log[g.player.log.length - 1];
   expect(lastLog).toBe(`Played ${spell.name} targeting ${enemy.name}`);
+});
+
+test('AI secrets are obscured in combat log entries', async () => {
+  const g = new Game();
+  g.player.hero = new Hero(thrallData);
+  g.player.hero.owner = g.player;
+  g.opponent.hero = new Hero(thrallData);
+  g.opponent.hero.owner = g.opponent;
+
+  const secret = new Card(explosiveTrap);
+  secret.owner = g.opponent;
+  g.opponent.hand.add(secret);
+
+  g.turns.setActivePlayer(g.opponent);
+  g.turns.turn = 5;
+  g.resources.startTurn(g.opponent);
+
+  const ok = await g.playFromHand(g.opponent, secret);
+  expect(ok).toBe(true);
+
+  const lastLog = g.opponent.log[g.opponent.log.length - 1];
+  expect(lastLog).toBe('Played a secret');
 });
