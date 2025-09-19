@@ -234,6 +234,15 @@ export default class Game {
     return `${base}${connector}${formatted}`;
   }
 
+  _shouldObscureSecretLog(player, card) {
+    if (!player || !card) return false;
+    if (this.state?.debug) return false;
+    if (player === this.player) return false;
+    if (!this._isAIControlled(player)) return false;
+    const keywords = Array.isArray(card.keywords) ? card.keywords : [];
+    return keywords.some((kw) => typeof kw === 'string' && kw.toLowerCase() === 'secret');
+  }
+
   async init() {
     if (this.rootEl && !this.rootEl.dataset.bound) {
       // No start button; avoid showing an initialization prompt
@@ -918,7 +927,12 @@ export default class Game {
     if ((!Array.isArray(targetsForLog) || targetsForLog.length === 0) && loggedTargets.size > 0) {
       targetsForLog = Array.from(loggedTargets);
     }
-    const logMessage = this._formatLogWithTargets(`Played ${card.name}`, targetsForLog);
+    let logMessage;
+    if (this._shouldObscureSecretLog(player, card)) {
+      logMessage = 'Played a secret';
+    } else {
+      logMessage = this._formatLogWithTargets(`Played ${card.name}`, targetsForLog);
+    }
     player.log.push(logMessage);
     player.cardsPlayedThisTurn += 1;
 
