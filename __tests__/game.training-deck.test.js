@@ -1,5 +1,52 @@
+import fs from 'fs';
 import Game from '../src/js/game.js';
 import { RNG } from '../src/js/utils/rng.js';
+
+const deckDefinitions = [1, 2, 3, 4, 5]
+  .map((idx) => {
+    try {
+      const url = new URL(`../data/decks/deck${idx}.json`, import.meta.url);
+      const raw = JSON.parse(fs.readFileSync(url, 'utf8'));
+      if (!raw || typeof raw.hero !== 'string' || !Array.isArray(raw.cards)) return null;
+      const counts = new Map();
+      for (const id of raw.cards) {
+        if (typeof id !== 'string' || !id) return null;
+        counts.set(id, (counts.get(id) || 0) + 1);
+      }
+      return { hero: raw.hero, counts };
+    } catch {
+      return null;
+    }
+  })
+  .filter(Boolean);
+
+if (deckDefinitions.length === 0) {
+  throw new Error('Expected at least one prebuilt AI deck definition');
+}
+
+function mapFromCards(cards) {
+  const counts = new Map();
+  for (const card of cards) {
+    const id = card?.id;
+    if (!id) continue;
+    counts.set(id, (counts.get(id) || 0) + 1);
+  }
+  return counts;
+}
+
+function mapsEqual(a, b) {
+  if (a.size !== b.size) return false;
+  for (const [key, value] of a.entries()) {
+    if (b.get(key) !== value) return false;
+  }
+  return true;
+}
+
+function expectDeckMatchesPrebuilt(cards, heroId) {
+  const counts = mapFromCards(cards);
+  const match = deckDefinitions.some((def) => def.hero === heroId && mapsEqual(def.counts, counts));
+  expect(match).toBe(true);
+}
 
 describe('training decks', () => {
   function expectDeckToRespectLimits(cards) {
@@ -36,5 +83,22 @@ describe('training decks', () => {
     const opponentDeckCards = [...game.opponent.library.cards, ...game.opponent.hand.cards];
     expectDeckToRespectLimits(playerDeckCards);
     expectDeckToRespectLimits(opponentDeckCards);
+    expectDeckMatchesPrebuilt(playerDeckCards, game.player.hero.id);
+    expectDeckMatchesPrebuilt(opponentDeckCards, game.opponent.hero.id);
+  });
+
+  it('selects deterministic AI decks when seeded', async () => {
+    async function snapshot(seed) {
+      const g = new Game(null, { aiPlayers: ['player', 'opponent'] });
+      g.rng = new RNG(seed);
+      await g.setupMatch();
+      const cards = [...g.player.library.cards, ...g.player.hand.cards];
+      return { hero: g.player.hero.id, counts: mapFromCards(cards) };
+    }
+
+    const first = await snapshot(42);
+    const second = await snapshot(42);
+    expect(first.hero).toBe(second.hero);
+    expect(mapsEqual(first.counts, second.counts)).toBe(true);
   });
 });

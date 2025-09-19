@@ -39,11 +39,20 @@ export default class Game {
     this.bus = new EventBus();
     this.combat = new CombatSystem(this.bus);
     this.effects = new EffectSystem(this);
+    const rawSeed = opts?.seed;
+    if (rawSeed != null) {
+      const parsedSeed = Number(rawSeed);
+      if (Number.isFinite(parsedSeed)) {
+        this.rng = new RNG(parsedSeed >>> 0);
+      }
+    }
     // Use deterministic RNG in tests/node to stabilize content selection
-    if (typeof window === 'undefined') {
-      this.rng = new RNG(0xC0FFEE);
-    } else {
-      this.rng = new RNG();
+    if (!this.rng) {
+      if (typeof window === 'undefined') {
+        this.rng = new RNG(0xC0FFEE);
+      } else {
+        this.rng = new RNG();
+      }
     }
     this.quests = new QuestSystem(this);
 
@@ -98,6 +107,7 @@ export default class Game {
 
     this.state = { frame: 0, startedAt: 0, difficulty: 'easy', debug: false };
     this._nnModelPromise = null;
+    this._aiDeckTemplates = null;
   }
 
   setUIRerender(fn) {
@@ -146,6 +156,7 @@ export default class Game {
     const heroes = this.allCards.filter(c => c.type === 'hero');
     const otherCards = this.allCards.filter(c => c.type !== 'hero');
     const nonQuestCards = otherCards.filter(c => c.type !== 'quest');
+    const cardById = new Map(this.allCards.map((card) => [card.id, card]));
 
     const rng = this.rng;
     const createRandomDeckState = (excludeHeroId = null) => {
@@ -166,6 +177,63 @@ export default class Game {
     const aiPlayers = this.aiPlayers instanceof Set ? this.aiPlayers : new Set();
     const playerIsAI = aiPlayers.has('player');
     const opponentIsAI = aiPlayers.has('opponent');
+
+    let prebuiltDeckPool = [];
+    if (playerIsAI || opponentIsAI) {
+      try {
+        const templates = await this._loadAIDeckTemplates();
+        if (Array.isArray(templates) && templates.length > 0) {
+          prebuiltDeckPool = templates.map((template) => {
+            const heroData = template.heroId ? cardById.get(template.heroId) : null;
+            if (!heroData || heroData.type !== 'hero') return null;
+            const counts = new Map();
+            const equipmentIds = new Set();
+            const cards = [];
+            for (const cardId of template.cards) {
+              const cardData = cardById.get(cardId);
+              if (!cardData || cardData.type === 'hero') continue;
+              if (cardData.type === 'quest') return null;
+              const current = counts.get(cardData.id) || 0;
+              if (current >= 3) return null;
+              counts.set(cardData.id, current + 1);
+              if (cardData.type === 'equipment') equipmentIds.add(cardData.id);
+              cards.push(cardData);
+            }
+            if (cards.length !== template.cards.length) return null;
+            if (cards.length !== 60) return null;
+            let allyCount = 0;
+            for (const c of cards) {
+              if (c.type === 'ally') allyCount += 1;
+            }
+            if (allyCount < 30) return null;
+            if (equipmentIds.size > 1) return null;
+            return { hero: heroData, cards, name: template.name || null };
+          }).filter(Boolean);
+        }
+      } catch {
+        prebuiltDeckPool = [];
+      }
+    }
+
+    const pickPrebuiltDeck = (excludeHeroId = null) => {
+      if (!prebuiltDeckPool.length) return null;
+      let pool = prebuiltDeckPool;
+      if (excludeHeroId) {
+        pool = prebuiltDeckPool.filter((deck) => deck.hero?.id !== excludeHeroId);
+        if (pool.length === 0) return null;
+      }
+      const rngSource = (this.rng && typeof this.rng.randomInt === 'function') ? this.rng : null;
+      let index = 0;
+      if (rngSource) index = rngSource.randomInt(0, pool.length);
+      else index = Math.floor(Math.random() * pool.length);
+      const selected = pool[index];
+      if (!selected) return null;
+      return {
+        hero: selected.hero,
+        cards: Array.isArray(selected.cards) ? selected.cards.slice() : [],
+        name: selected.name || null,
+      };
+    };
     const buildLibraryData = (cards, allowQuest) => {
       const sanitized = [];
       if (Array.isArray(cards)) {
@@ -202,7 +270,13 @@ export default class Game {
         this.player.library.add(new Card(cardData));
       }
     } else {
-      const playerDeckState = createRandomDeckState();
+      let playerDeckState = null;
+      if (playerIsAI) {
+        playerDeckState = pickPrebuiltDeck();
+      }
+      if (!playerDeckState) {
+        playerDeckState = createRandomDeckState();
+      }
       let playerHeroData = playerDeckState.hero;
       if (!playerHeroData && heroes.length > 0) {
         playerHeroData = rng.pick(heroes);
@@ -230,7 +304,13 @@ export default class Game {
     }
 
     // Assign opponent hero and library
-    const opponentDeckState = createRandomDeckState(this.player.hero?.id);
+    let opponentDeckState = null;
+    if (opponentIsAI) {
+      opponentDeckState = pickPrebuiltDeck(this.player.hero?.id);
+    }
+    if (!opponentDeckState) {
+      opponentDeckState = createRandomDeckState(this.player.hero?.id);
+    }
     let opponentHeroData = opponentDeckState.hero;
     if (!opponentHeroData && heroes.length > 0) {
       opponentHeroData = rng.pick(heroes);
@@ -279,6 +359,67 @@ export default class Game {
     if (this.state?.difficulty === 'hybrid' || this.state?.difficulty === 'nightmare') {
       this._ensureNNModelLoading();
     }
+  }
+
+  async _loadAIDeckTemplates() {
+    if (Array.isArray(this._aiDeckTemplates)) return this._aiDeckTemplates;
+
+    const deckNames = ['deck1', 'deck2', 'deck3', 'deck4', 'deck5'];
+    const entries = [];
+
+    if (typeof window === 'undefined') {
+      try {
+        const fs = await import('fs/promises');
+        for (const name of deckNames) {
+          try {
+            const url = new URL(`../../data/decks/${name}.json`, import.meta.url);
+            const txt = await fs.readFile(url, 'utf8');
+            entries.push({ name, data: JSON.parse(txt) });
+          } catch {}
+        }
+      } catch {}
+    } else {
+      const fetches = deckNames.map((name) => fetch(new URL(`../../data/decks/${name}.json`, import.meta.url)).catch(() => null));
+      const results = await Promise.all(fetches);
+      for (let i = 0; i < results.length; i++) {
+        const res = results[i];
+        if (res && res.ok) {
+          try {
+            const data = await res.json();
+            entries.push({ name: deckNames[i], data });
+          } catch {}
+        }
+      }
+    }
+
+    const normalized = [];
+    for (const entry of entries) {
+      const raw = entry?.data;
+      if (!raw) continue;
+      let heroId = null;
+      let cards = [];
+      if (Array.isArray(raw)) {
+        cards = raw;
+      } else if (typeof raw === 'object') {
+        if (typeof raw.hero === 'string') heroId = raw.hero;
+        if (Array.isArray(raw.cards)) cards = raw.cards;
+      }
+      if (typeof heroId !== 'string' || !heroId) continue;
+      const normalizedCards = [];
+      for (const cardId of cards) {
+        if (typeof cardId === 'string') {
+          if (cardId) normalizedCards.push(cardId);
+        } else if (cardId != null) {
+          const asString = String(cardId);
+          if (asString) normalizedCards.push(asString);
+        }
+      }
+      if (normalizedCards.length === 0) continue;
+      normalized.push({ heroId, cards: normalizedCards, name: entry.name });
+    }
+
+    this._aiDeckTemplates = normalized;
+    return this._aiDeckTemplates;
   }
 
   draw(player, n = 1) {
