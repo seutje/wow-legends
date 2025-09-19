@@ -505,6 +505,145 @@ export class MCTS_AI {
     }
   }
 
+  _applyBuffToEntity(target, {
+    property = null,
+    amount = 0,
+    duration = 'permanent',
+    player = null,
+    opponent = null,
+    state = null,
+    source = null,
+  } = {}) {
+    if (!target || !property) return false;
+    const actualAmount = amount || 0;
+    const actualDuration = duration || 'permanent';
+    const data = target.data || (target.data = {});
+    const isTemporary = actualDuration === 'thisTurn'
+      || actualDuration === 'endOfTurn'
+      || actualDuration === 'untilYourNextTurn';
+    const trackTemporary = () => {
+      if (!isTemporary) return;
+      const entry = {
+        property,
+        amount: actualAmount,
+        duration: actualDuration,
+        turn: state?.turn ?? null,
+        sourceId: source?.id ?? null,
+      };
+      if (Array.isArray(data.__mctsTempBuffs)) {
+        data.__mctsTempBuffs.push(entry);
+      } else {
+        data.__mctsTempBuffs = [entry];
+      }
+    };
+
+    const readStat = (key) => {
+      if (typeof data[key] === 'number') return data[key];
+      if (typeof target[key] === 'number') return target[key];
+      return 0;
+    };
+
+    const writeStat = (key, value) => {
+      data[key] = value;
+      if (key === 'armor' && typeof target.armor === 'number') {
+        target.armor = value;
+      } else if (key === 'attack' && typeof target.attack === 'number' && target.type === 'hero') {
+        target.attack = value;
+      } else if (key === 'maxHealth' && typeof target.maxHealth === 'number') {
+        target.maxHealth = value;
+      } else if (key === 'health' && typeof target.health === 'number' && target.type === 'hero') {
+        target.health = value;
+      }
+    };
+
+    switch (property) {
+      case 'spellDamage': {
+        if (
+          target.type === 'hero'
+          && (actualDuration === 'thisTurn' || actualDuration === 'endOfTurn')
+        ) {
+          const prevTemp = state?.tempSpellDamage || 0;
+          const baseSpellDamage = typeof state?.baseHeroSpellDamage === 'number'
+            ? state.baseHeroSpellDamage
+            : (typeof data.spellDamage === 'number'
+              ? Math.max(0, data.spellDamage - prevTemp)
+              : Math.max(0, readStat('spellDamage') - prevTemp));
+          const nextTemp = Math.max(0, prevTemp + actualAmount);
+          const clampedBase = Math.max(0, baseSpellDamage);
+          data.spellDamage = Math.max(0, clampedBase + nextTemp);
+          if (state) {
+            state.baseHeroSpellDamage = clampedBase;
+            state.tempSpellDamage = nextTemp;
+          }
+          if (player) {
+            player.__mctsBaseSpellDamage = clampedBase;
+            player.__mctsTempSpellDamage = nextTemp;
+          }
+          trackTemporary();
+          return true;
+        }
+        const current = typeof data.spellDamage === 'number'
+          ? data.spellDamage
+          : readStat('spellDamage');
+        data.spellDamage = Math.max(0, current + actualAmount);
+        trackTemporary();
+        return true;
+      }
+      case 'attack': {
+        const current = typeof data.attack === 'number'
+          ? data.attack
+          : readStat('attack');
+        const next = current + actualAmount;
+        writeStat('attack', next);
+        trackTemporary();
+        return true;
+      }
+      case 'health': {
+        const current = typeof data.health === 'number'
+          ? data.health
+          : readStat('health');
+        let next = current + actualAmount;
+        let baseMax = typeof data.maxHealth === 'number'
+          ? data.maxHealth
+          : (typeof target.maxHealth === 'number' ? target.maxHealth : current);
+        baseMax += actualAmount;
+        if (baseMax < 0) baseMax = 0;
+        if (actualAmount < 0) {
+          next = Math.max(0, Math.min(next, baseMax));
+        }
+        writeStat('maxHealth', baseMax);
+        writeStat('health', next);
+        trackTemporary();
+        return true;
+      }
+      case 'armor': {
+        const current = typeof data.armor === 'number'
+          ? data.armor
+          : readStat('armor');
+        let next = current + actualAmount;
+        if (next < 0) next = 0;
+        writeStat('armor', next);
+        if (actualAmount > 0) {
+          if (player && target === player.hero) {
+            player.armorGainedThisTurn = (player.armorGainedThisTurn || 0) + actualAmount;
+          } else if (opponent && target === opponent.hero) {
+            opponent.armorGainedThisTurn = (opponent.armorGainedThisTurn || 0) + actualAmount;
+          }
+        }
+        trackTemporary();
+        return true;
+      }
+      default: {
+        const current = typeof data[property] === 'number'
+          ? data[property]
+          : readStat(property);
+        data[property] = current + actualAmount;
+        trackTemporary();
+        return true;
+      }
+    }
+  }
+
   _collectFriendlyCharacters(player, { excludeSourceId = null } = {}) {
     const characters = [];
     if (player?.hero && !this._isEntityDead(player.hero)) {
@@ -1104,31 +1243,92 @@ export class MCTS_AI {
           break;
         }
         case 'buff': {
-          if (e.target === 'hero' && player?.hero) {
-            const property = e.property;
-            const duration = e.duration || 'permanent';
-            const data = player.hero.data || (player.hero.data = {});
-            if (property === 'spellDamage' && (duration === 'thisTurn' || duration === 'endOfTurn')) {
-              const prevTemp = state?.tempSpellDamage || 0;
-              const baseSpellDamage = typeof state?.baseHeroSpellDamage === 'number'
-                ? state.baseHeroSpellDamage
-                : (typeof player.__mctsBaseSpellDamage === 'number'
-                  ? player.__mctsBaseSpellDamage
-                  : Math.max(0, (data.spellDamage || 0) - prevTemp));
-              const nextTemp = Math.max(0, prevTemp + amt);
-              const clampedBase = Math.max(0, baseSpellDamage);
-              data.spellDamage = Math.max(0, clampedBase + nextTemp);
-              if (state) {
-                state.baseHeroSpellDamage = clampedBase;
-                state.tempSpellDamage = nextTemp;
-              }
-              player.__mctsBaseSpellDamage = clampedBase;
-              player.__mctsTempSpellDamage = nextTemp;
-            } else if (property) {
-              const current = typeof data[property] === 'number' ? data[property] : 0;
-              data[property] = current + amt;
-            }
+          const property = e.property;
+          if (!property || !player) break;
+          const duration = e.duration || 'permanent';
+          const targetScope = e.target || 'hero';
+          const applyBuff = (entity, ownerPlayer = player, ownerOpponent = opponent) => {
+            if (!entity) return;
+            this._applyBuffToEntity(entity, {
+              property,
+              amount: amt,
+              duration,
+              player: ownerPlayer,
+              opponent: ownerOpponent,
+              state,
+              source,
+            });
+          };
+
+          if ((targetScope === 'hero' || targetScope === 'selfHero') && player.hero) {
+            applyBuff(player.hero);
+            break;
           }
+
+          if (targetScope === 'allies' || targetScope === 'allFriendlies') {
+            if (player.hero && !this._isEntityDead(player.hero)) {
+              applyBuff(player.hero);
+            }
+            for (const ally of player?.battlefield?.cards || []) {
+              if (!ally || ally.type === 'quest') continue;
+              if (this._isEntityDead(ally)) continue;
+              applyBuff(ally);
+            }
+            break;
+          }
+
+          const sourceId = source?.id || null;
+          let candidates = [];
+          switch (targetScope) {
+            case 'ally':
+            case 'minion':
+            case 'friendlyMinion':
+            case 'friendlyAlly':
+              candidates = this._collectFriendlyMinions(player, { excludeSourceId: sourceId });
+              break;
+            case 'character':
+            case 'friendly':
+            case 'friendlyCharacter':
+            default:
+              candidates = this._collectFriendlyCharacters(player, { excludeSourceId: sourceId });
+              break;
+          }
+
+          if (!candidates.length) {
+            this._registerActionTarget(action, e, null, { source, index });
+            break;
+          }
+
+          let chosen = candidates[0];
+          if (candidates.length > 1 && state) {
+            let best = null;
+            for (const candidate of candidates) {
+              const preview = this._cloneState(state);
+              if (!preview) continue;
+              const branchPlayer = preview.player;
+              const branchOpponent = preview.opponent;
+              const mapped = this._resolveTargetInState(candidate, branchPlayer, branchOpponent);
+              if (!mapped) continue;
+              this._applyBuffToEntity(mapped, {
+                property,
+                amount: amt,
+                duration,
+                player: branchPlayer,
+                opponent: branchOpponent,
+                state: preview,
+                source,
+              });
+              const value = this._evaluateRolloutState(preview);
+              if (!Number.isFinite(value)) continue;
+              if (!best || value > best.value) {
+                best = { value, target: candidate };
+              }
+            }
+            if (best && best.target) chosen = best.target;
+          }
+
+          applyBuff(chosen);
+          this._registerActionTarget(action, e, chosen, { source, index });
           break;
         }
         case 'summon': {
