@@ -458,6 +458,7 @@ async function main() {
 
   let activeStage = curriculumSchedule ? pickCurriculumStage(curriculumSchedule, -Infinity) : null;
   let activeOpponentConfig = descriptorToConfig(activeStage ? activeStage.descriptor : baseDescriptor, scheduleContext);
+  let encounteredBestOpponent = activeOpponentConfig.mode === 'best';
 
   progress(`[${now()}] Starting training: pop=${POP}, gens=${GENS}, reset=${Boolean(reset)}, opponent=${activeOpponentConfig.label}`);
   if (curriculumSchedule) {
@@ -466,6 +467,9 @@ async function main() {
   }
 
   for (let gen = 0; gen < GENS; gen++) {
+    if (activeOpponentConfig.mode === 'best') {
+      encounteredBestOpponent = true;
+    }
     // Evaluate in parallel using worker threads
     const scores = await evalPopulationParallel(population, { games: 5, maxRounds: 16, opponentConfig: activeOpponentConfig });
     scores.sort((a,b)=> b.score - a.score);
@@ -511,6 +515,9 @@ async function main() {
         activeStage = nextStage;
         const previousLabel = activeOpponentConfig.label;
         activeOpponentConfig = descriptorToConfig(activeStage.descriptor, scheduleContext);
+        if (activeOpponentConfig.mode === 'best') {
+          encounteredBestOpponent = true;
+        }
         const thresholdText = Number.isFinite(activeStage.threshold)
           ? `>= ${activeStage.threshold.toFixed(2)}`
           : 'final';
@@ -546,9 +553,15 @@ async function main() {
   }
 
   // Save best model
-  const json = JSON.stringify(best.toJSON(), null, 2);
-  await fs.writeFile(MODEL_PATH, json, 'utf8');
-  progress(`[${now()}] Saved best model to ${MODEL_PATH}`);
+  const shouldSaveBest = !encounteredBestOpponent || bestScore > 2.0;
+  if (shouldSaveBest) {
+    const json = JSON.stringify(best.toJSON(), null, 2);
+    await fs.writeFile(MODEL_PATH, json, 'utf8');
+    progress(`[${now()}] Saved best model to ${MODEL_PATH}`);
+  } else {
+    const formattedScore = Number.isFinite(bestScore) ? bestScore.toFixed(3) : String(bestScore);
+    progress(`[${now()}] Best score ${formattedScore} did not exceed 2.000 against saved opponent; skipping save to ${MODEL_PATH}`);
+  }
 }
 
 main().catch(err => { console.error(err); process.exit(1); });
