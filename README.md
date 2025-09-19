@@ -69,7 +69,7 @@ Developer Notes
 - Asset optimization: `npm run optim` compresses PNGs in `src/assets/art/*.png` (lossless deflate via sharp) and writes optimized copies to `src/assets/optim/` with the same filenames. To optimize a single card image, pass its card id: `npm run optim -- --id spell-mind-vision` (positional also works: `npm run optim -- spell-mind-vision`).
 
 Nightmare AI
-- Uses a small MLP (two hidden layers of 64) to score Q(s,a).
+- Uses a small MLP with four hidden layers (64 units each) to score Q(s,a).
 - Inputs include normalized state features (health, armor, resources, board/hand metrics) and action features (type, cost, stats, keywords).
 - Output is a scalar score per candidate action; picks the highest.
 - Training runs population=500 for 10 generations vs an MCTS baseline (by default) and saves the best model to `data/models/best.json`. Use the `--curriculum` flag to introduce a weaker baseline early and escalate the opponent after the population's top score crosses configured thresholds.

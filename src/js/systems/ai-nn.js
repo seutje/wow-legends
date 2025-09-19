@@ -41,7 +41,7 @@ export const STATE_FEATURE_COUNT =
   + LATENT_VECTOR_SIZE * 2
   + HAND_VECTOR_SIZE * 2;
 export const MODEL_INPUT_SIZE = STATE_FEATURE_COUNT + ACTION_FEATURE_COUNT;
-export const DEFAULT_MODEL_SHAPE = [MODEL_INPUT_SIZE, 64, 64, 1];
+export const DEFAULT_MODEL_SHAPE = Object.freeze([MODEL_INPUT_SIZE, 64, 64, 64, 64, 1]);
 
 export function heroIdToVector(heroId) {
   const vec = new Array(HERO_VECTOR_SIZE).fill(0);
@@ -58,8 +58,18 @@ export function heroIdToVector(heroId) {
 
 let ActiveModel = null; // module-level active model
 
+function modelHasExpectedShape(model) {
+  if (!model || !Array.isArray(model.sizes)) return false;
+  const expected = DEFAULT_MODEL_SHAPE;
+  if (model.sizes.length !== expected.length) return false;
+  for (let i = 0; i < expected.length; i++) {
+    if (model.sizes[i] !== expected[i]) return false;
+  }
+  return true;
+}
+
 function isModelCompatible(model) {
-  return !!(model && Array.isArray(model.sizes) && model.sizes[0] === MODEL_INPUT_SIZE);
+  return modelHasExpectedShape(model);
 }
 
 function createDefaultModel() {

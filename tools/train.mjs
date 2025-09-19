@@ -16,7 +16,7 @@ const __dirname = path.dirname(__filename);
 
 import Game from '../src/js/game.js';
 import MLP from '../src/js/systems/nn.js';
-import NeuralAI, { setActiveModel, DEFAULT_MODEL_SHAPE, MODEL_INPUT_SIZE } from '../src/js/systems/ai-nn.js';
+import NeuralAI, { setActiveModel, DEFAULT_MODEL_SHAPE } from '../src/js/systems/ai-nn.js';
 import MCTS_AI from '../src/js/systems/ai-mcts.js';
 import { loadAutoencoder } from '../src/js/systems/autoencoder.js';
 import { setDebugLogging, getOriginalConsole } from '../src/js/utils/logger.js';
@@ -80,6 +80,15 @@ function formatIterations(iterations) {
   return Number.isFinite(iterations)
     ? iterations.toLocaleString('en-US')
     : String(iterations);
+}
+
+function shapesMatch(actual, expected) {
+  if (!Array.isArray(actual) || !Array.isArray(expected)) return false;
+  if (actual.length !== expected.length) return false;
+  for (let i = 0; i < expected.length; i++) {
+    if (actual[i] !== expected[i]) return false;
+  }
+  return true;
 }
 
 const NAMED_MCTS_LEVELS = {
@@ -418,8 +427,10 @@ async function main() {
     progress(`[${now()}] Failed to load autoencoder model: ${err?.message || err}. Continuing with fallback encoding.`);
   }
   let savedBest = await loadSavedBest();
-  if (savedBest && (!Array.isArray(savedBest.sizes) || savedBest.sizes[0] !== MODEL_INPUT_SIZE)) {
-    progress(`[${now()}] Saved model input size ${savedBest?.sizes?.[0]} does not match expected ${MODEL_INPUT_SIZE}; ignoring saved checkpoint.`);
+  if (savedBest && !shapesMatch(savedBest.sizes, DEFAULT_MODEL_SHAPE)) {
+    const actualShape = Array.isArray(savedBest?.sizes) ? savedBest.sizes.join('x') : 'unknown';
+    const expectedShape = DEFAULT_MODEL_SHAPE.join('x');
+    progress(`[${now()}] Saved model shape ${actualShape} does not match expected ${expectedShape}; ignoring saved checkpoint.`);
     savedBest = null;
   }
   const savedBestJSON = savedBest ? savedBest.toJSON() : null;

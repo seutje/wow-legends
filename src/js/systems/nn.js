@@ -1,5 +1,5 @@
 // Tiny MLP for scoring actions: Q(s,a) -> scalar
-// - Two hidden layers with ReLU by default
+// - Hidden layer count/width driven by provided shape (ReLU activations on hidden layers)
 // - Pure JS arrays for portability and serialization
 
 export class MLP {
