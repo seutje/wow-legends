@@ -5,6 +5,7 @@ import Hero from '../src/js/entities/hero.js';
 const cards = JSON.parse(fs.readFileSync(new URL('../data/cards/hero.json', import.meta.url)));
 const jaina = cards.find(c => c.id === 'hero-jaina-proudmoore-archmage');
 const thrall = cards.find(c => c.id === 'hero-thrall-warchief-of-the-horde');
+const varian = cards.find(c => c.id === 'hero-varian-wrynn-high-king');
 
 test('Frozen hero cannot use hero power until after their turn', async () => {
   const g = new Game();
@@ -28,4 +29,19 @@ test('Frozen hero cannot use hero power until after their turn', async () => {
   while (g.turns.current !== 'End') g.turns.nextPhase();
   g.turns.nextPhase();
   expect(g.opponent.hero.data.freezeTurns).toBe(0);
+});
+
+test('Hero with armor still gets frozen by Jaina hero power', async () => {
+  const g = new Game();
+  g.player.hero = new Hero(jaina);
+  g.opponent.hero = new Hero(varian);
+  g.turns.setActivePlayer(g.player);
+  g.turns.turn = 2;
+  g.resources.startTurn(g.player);
+  g.promptTarget = async () => g.opponent.hero;
+
+  await g.useHeroPower(g.player);
+
+  expect(g.opponent.hero.data.armor).toBe(1);
+  expect(g.opponent.hero.data.freezeTurns).toBe(1);
 });

@@ -339,7 +339,19 @@ export class EffectSystem {
         t.data.armor = a - use; // never negative
         remaining -= use;
       }
-      if (remaining <= 0) continue;
+      if (remaining <= 0) {
+        if (freeze && dmgAmount > 0) {
+          const healthValue = typeof t?.data?.health === 'number'
+            ? t.data.health
+            : typeof t?.health === 'number'
+              ? t.health
+              : null;
+          if (healthValue == null || healthValue > 0) {
+            freezeTarget(t, freeze);
+          }
+        }
+        continue;
+      }
       const damageApplied = remaining;
       if (t.data && t.data.health != null) {
         t.data.health -= remaining;
