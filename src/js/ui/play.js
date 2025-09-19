@@ -534,20 +534,26 @@ export function renderPlay(container, game, { onUpdate, onOpenDeckBuilder, onNew
   const thinking = !!(game.state?.aiThinking);
   let aiOverlay = container.querySelector('.ai-overlay');
   if (thinking) {
-    const pct = Math.max(0, Math.min(100, (game.state?.aiProgress ?? 0) * 100));
+    const progress = Math.max(0, Math.min(1, game.state?.aiProgress ?? 0));
+    const pct = Math.round(progress * 1000) / 10;
     if (!aiOverlay) {
       aiOverlay = el('div', { class: 'ai-overlay' },
         el('div', { class: 'panel' },
           el('p', { class: 'msg' }, 'AI is thinking...'),
-          el('div', { class: 'progress' },
-            el('div', { class: 'bar', style: `width: ${pct}%` })
-          )
+          el('div', {
+            class: 'progress',
+            style: `--progress: ${pct}%`,
+            dataset: { complete: progress >= 0.999 ? '1' : '0' },
+          })
         )
       );
       container.append(aiOverlay);
     } else {
-      const bar = aiOverlay.querySelector('.progress .bar');
-      if (bar) bar.style.width = `${pct}%`;
+      const progressEl = aiOverlay.querySelector('.progress');
+      if (progressEl) {
+        progressEl.style.setProperty('--progress', `${pct}%`);
+        progressEl.dataset.complete = progress >= 0.999 ? '1' : '0';
+      }
     }
   } else if (aiOverlay) {
     aiOverlay.remove();

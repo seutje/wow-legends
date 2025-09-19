@@ -230,17 +230,48 @@ ul.zone-list li {
 .ai-overlay .msg { margin: 0 0 8px; }
 .ai-overlay .progress {
   position: relative;
+  --progress: 0%;
   height: 10px;
   border: 1px solid #203040;
-  background: #10171f;
+  background-color: #10171f;
+  overflow: hidden;
 }
-.ai-overlay .progress .bar {
+.ai-overlay .progress::before {
+  content: '';
   position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 0%;
-  background: linear-gradient(90deg, #1e90ff, #55b0ff);
+  inset: 0;
+  background-image:
+    linear-gradient(90deg, rgba(30, 144, 255, 0.1) 0%, rgba(85, 176, 255, 0.8) 100%),
+    linear-gradient(90deg, rgba(85, 176, 255, 0.6), rgba(30, 144, 255, 0.45), rgba(10, 21, 32, 0.9)),
+    linear-gradient(90deg, rgba(12, 18, 24, 0.95), rgba(12, 18, 24, 0.95));
+  background-repeat: no-repeat;
+  background-size:
+    var(--progress) 100%,
+    calc(var(--progress, 0%) + 15%) 100%,
+    100% 100%;
+  background-position: left center;
+  transition: background-size 0.35s ease-out;
+  box-shadow: 0 0 8px rgba(40, 120, 190, 0.4);
+}
+.ai-overlay .progress::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, transparent 0%, rgba(173, 216, 230, 0.6) 50%, transparent 100%);
+  background-size: 200% 100%;
+  background-position: -150% 0;
+  animation: aiProgressSheen 1.4s linear infinite;
+  opacity: 0.35;
+  mix-blend-mode: screen;
+  transition: opacity 0.3s ease-out;
+}
+.ai-overlay .progress[data-complete='1']::after {
+  opacity: 0;
+}
+
+@keyframes aiProgressSheen {
+  0% { background-position: -150% 0; }
+  100% { background-position: 150% 0; }
 }
 
 /* Card tooltip styling */
