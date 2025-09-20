@@ -58,6 +58,7 @@ Developer Notes
   - `npm run train -- <population> <generations> <reset> <opponent>` — evolutionary RL saves the best model to `data/models/best.json`. The optional `<opponent>` defaults to `mcts`, or set `best`/`mcts@<iterations>` to start against the saved NN or a weaker MCTS baseline.
   - Add `--curriculum gentle` to ramp from a light MCTS opponent toward the requested baseline automatically. Custom schedules use comma-separated `<scoreThreshold>:<opponent>` entries, e.g. `--curriculum "0:mcts@1500,1.2:mcts@4000,2.0:best"`.
   - Example: `npm run train -- 200 15 true mcts --curriculum gentle`.
+- Regularization controls: `--lambda-decor <λ₁>` applies a DeCorr penalty on hidden activations and `--lambda-l2 <λ₂>` adds optional L2 weight decay. Defaults are λ₁ = 0.01 and λ₂ = 0.0001; pass 0 to disable either term. Training logs report both raw win rates and regularized scores so you can observe the impact of the penalties.
 - Autoencoder embeddings:
   - `node tools/encode-minions.mjs` samples quick AI vs AI matches and writes `data/datasets/minion-encodings.json` with per-minion feature vectors (attack, health, taunt, rush, stealth, divine shield, windfury, reflect, lifesteal).
   - `node tools/train-autoencoder.mjs` fits a sparse autoencoder (≈20 latent dims) over that dataset and saves weights to `data/models/autoencoder.json`.
@@ -69,7 +70,7 @@ Developer Notes
 - Asset optimization: `npm run optim` compresses PNGs in `src/assets/art/*.png` (lossless deflate via sharp) and writes optimized copies to `src/assets/optim/` with the same filenames. To optimize a single card image, pass its card id: `npm run optim -- --id spell-mind-vision` (positional also works: `npm run optim -- spell-mind-vision`).
 
 Nightmare AI
-- Uses a small MLP with four hidden layers (64 units each) to score Q(s,a).
+- Uses a small MLP with four hidden layers (128, 64, 32, 16 units) to score Q(s,a).
 - Inputs include normalized state features (health, armor, resources, board/hand metrics) and action features (type, cost, stats, keywords).
 - Output is a scalar score per candidate action; picks the highest.
 - Training runs population=500 for 10 generations vs an MCTS baseline (by default) and saves the best model to `data/models/best.json`. Use the `--curriculum` flag to introduce a weaker baseline early and escalate the opponent after the population's top score crosses configured thresholds.

@@ -41,7 +41,7 @@ export const STATE_FEATURE_COUNT =
   + LATENT_VECTOR_SIZE * 2
   + HAND_VECTOR_SIZE * 2;
 export const MODEL_INPUT_SIZE = STATE_FEATURE_COUNT + ACTION_FEATURE_COUNT;
-export const DEFAULT_MODEL_SHAPE = Object.freeze([MODEL_INPUT_SIZE, 64, 64, 64, 64, 1]);
+export const DEFAULT_MODEL_SHAPE = Object.freeze([MODEL_INPUT_SIZE, 128, 64, 32, 16, 1]);
 
 export function heroIdToVector(heroId) {
   const vec = new Array(HERO_VECTOR_SIZE).fill(0);
