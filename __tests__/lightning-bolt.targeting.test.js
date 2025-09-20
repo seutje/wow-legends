@@ -60,7 +60,7 @@ test('quests are excluded from spell target prompts', async () => {
   expect(g.opponent.battlefield.cards).toContain(quest);
 });
 
-test('lightning bolt cannot target friendly stealth allies', async () => {
+test('lightning bolt can target friendly stealth allies', async () => {
   const g = new Game();
   await g.setupMatch();
 
@@ -78,14 +78,14 @@ test('lightning bolt cannot target friendly stealth allies', async () => {
   const bolt = g.player.hand.cards.find(c => c.id === 'spell-lightning-bolt');
 
   const promptSpy = jest.fn(async (candidates) => {
-    expect(candidates).not.toContain(stealth);
-    return enemy;
+    expect(candidates).toContain(stealth);
+    return stealth;
   });
   g.promptTarget = promptSpy;
 
   await g.playFromHand(g.player, bolt.id);
 
   expect(promptSpy).toHaveBeenCalled();
-  expect(enemy.data.health).toBe(2);
+  expect(stealth.data.health).toBeLessThanOrEqual(0);
+  expect(stealth.keywords).not.toContain('Stealth');
 });
-

@@ -1,6 +1,7 @@
 import { isTargetLegal, selectTargets } from '../src/js/systems/targeting.js';
 import Card from '../src/js/entities/card.js';
 import Hero from '../src/js/entities/hero.js';
+import Player from '../src/js/entities/player.js';
 
 describe('Targeting', () => {
   test('legality checks by type and name', () => {
@@ -22,8 +23,10 @@ describe('Targeting', () => {
 
   test('stealth allies are untargetable unless allowed', () => {
     const stealth = new Card({ type: 'ally', name: 'S', keywords: ['Stealth'] });
+    const owner = new Player({ name: 'Owner' });
+    owner.battlefield.add(stealth);
     expect(selectTargets([stealth])).toEqual([]);
+    expect(selectTargets([stealth], {}, { requester: owner })).toEqual([stealth]);
     expect(selectTargets([stealth], {}, { allowStealthTargeting: true })).toEqual([stealth]);
   });
 });
-

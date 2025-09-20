@@ -26,8 +26,18 @@ export function enforceTaunt(candidates) {
   return taunts.length ? taunts : candidates;
 }
 
-export function isTargetable(entity, { allowStealthTargeting = false } = {}) {
-  if (!allowStealthTargeting && entity?.keywords?.includes?.('Stealth')) return false;
+function controlsEntity(player, entity) {
+  if (!player || !entity) return false;
+  const battlefield = player.battlefield?.cards;
+  return Array.isArray(battlefield) && battlefield.includes(entity);
+}
+
+export function isTargetable(entity, { allowStealthTargeting = false, requester = null } = {}) {
+  if (!entity) return true;
+  const hasStealth = entity?.keywords?.includes?.('Stealth');
+  if (!allowStealthTargeting && hasStealth && !controlsEntity(requester, entity)) {
+    return false;
+  }
   return true;
 }
 
@@ -103,4 +113,3 @@ export function registerDefaults({ resourceSystem } = {}) {
   registerKeyword('Spell Damage', {});
   registerKeyword('Unique', { isAllowed: ({ existingNames, name }) => !existingNames?.includes?.(name) });
 }
-

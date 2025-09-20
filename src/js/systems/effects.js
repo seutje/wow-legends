@@ -117,7 +117,7 @@ export class EffectSystem {
         let candidates = [
           ...(allowHeroTargets ? [player.hero] : []),
           ...friendlyAllies
-        ].filter(isTargetable);
+        ].filter((target) => isTargetable(target, { requester: player }));
 
         if (isDebuff) {
           const enemy = selectTargets([
@@ -274,7 +274,7 @@ export class EffectSystem {
         const friendly = [
           player.hero,
           ...player.battlefield.cards.filter(c => c.type !== 'quest')
-        ].filter(isTargetable);
+        ].filter((target) => isTargetable(target, { requester: player }));
         const candidates = [...enemy, ...friendly];
         const chosen = await game.promptTarget(candidates);
         if (chosen === game.CANCEL) throw game.CANCEL;
@@ -285,7 +285,7 @@ export class EffectSystem {
         const friendly = [
           player.hero,
           ...player.battlefield.cards.filter(c => c.type !== 'quest')
-        ].filter(isTargetable);
+        ].filter((target) => isTargetable(target, { requester: player }));
         const enemy = selectTargets([
           opponent.hero,
           ...opponent.battlefield.cards.filter(c => c.type !== 'quest'),
@@ -304,7 +304,7 @@ export class EffectSystem {
         const friendly = [
           player.hero,
           ...player.battlefield.cards.filter(c => c.type !== 'quest')
-        ].filter(isTargetable);
+        ].filter((target) => isTargetable(target, { requester: player }));
         const candidates = [...enemy, ...friendly];
         const chosen = new Set();
         for (let i = 0; i < 3; i++) {
@@ -347,7 +347,7 @@ export class EffectSystem {
         );
         const friendly = player.battlefield.cards
           .filter(c => c.type !== 'quest')
-          .filter(isTargetable);
+          .filter((target) => isTargetable(target, { requester: player }));
         const candidates = [...enemy, ...friendly];
         const chosen = await game.promptTarget(candidates);
         if (chosen === game.CANCEL) throw game.CANCEL;
@@ -684,7 +684,7 @@ export class EffectSystem {
         const friendly = [
           player.hero,
           ...player.battlefield.cards.filter(c => c.type !== 'quest')
-        ].filter(isTargetable);
+        ].filter((target) => isTargetable(target, { requester: player }));
 
         // If it's the AI's turn, default to healing its own hero
         if (game.turns.activePlayer && game.turns.activePlayer !== game.player) {
@@ -1071,7 +1071,7 @@ export class EffectSystem {
       }
       candidates = candidates
         .filter(t => (t.data && t.data.health != null) || t.health != null)
-        .filter(isTargetable);
+        .filter((entity) => isTargetable(entity, { requester: player }));
 
       if (!candidates.length) return;
       const targetChar = game.rng.pick(candidates);
@@ -1146,7 +1146,7 @@ export class EffectSystem {
           break;
       }
 
-      candidates = candidates.filter(isTargetable);
+      candidates = candidates.filter((entity) => isTargetable(entity, { requester: player }));
       if (!candidates.length) return;
 
       const targetChar = game.rng.pick(candidates);
@@ -1215,7 +1215,7 @@ export class EffectSystem {
     };
 
     candidates = candidates
-      .filter(isTargetable)
+      .filter((entity) => isTargetable(entity, { requester: player }))
       .filter((c) => {
         if (!condition) return true;
         switch (condition.type) {
@@ -1280,7 +1280,8 @@ export class EffectSystem {
     }
 
     // Respect targetability/taunt rules via selector
-    candidates = selectTargets(candidates).filter(isTargetable);
+    candidates = selectTargets(candidates, {}, { requester: player })
+      .filter((entity) => isTargetable(entity, { requester: player }));
 
     if (!candidates.length) {
       console.log('No valid ally found to return to hand.');
@@ -1314,7 +1315,7 @@ export class EffectSystem {
       ...opponent.battlefield.cards,
     ]
       .filter(c => c.keywords?.includes('Beast') && c.type !== 'quest')
-      .filter(isTargetable);
+      .filter((entity) => isTargetable(entity, { requester: player }));
 
     if (!beasts.length) return;
 
@@ -1454,7 +1455,7 @@ export class EffectSystem {
 
     let pool = player.battlefield.cards
       .filter(c => c.type !== 'quest')
-      .filter(isTargetable);
+      .filter((entity) => isTargetable(entity, { requester: player }));
     if (target === 'randomAlly') {
       pool = pool.filter(c => c.type === 'ally' || c.summonedBy);
     }
@@ -1550,7 +1551,7 @@ export class EffectSystem {
           let candidates = [
             ...(allowHeroTargets ? [player.hero] : []),
             ...friendlyAllies
-          ].filter(isTargetable);
+          ].filter((entity) => isTargetable(entity, { requester: player }));
           if (isDebuff) {
             const enemy = selectTargets([
               ...(allowHeroTargets ? [opponent.hero] : []),
@@ -1721,7 +1722,7 @@ export class EffectSystem {
         actualTargets.push(
           ...player.battlefield.cards
             .filter(c => c.type !== 'quest')
-            .filter(isTargetable)
+            .filter((entity) => isTargetable(entity, { requester: player }))
         );
         break;
       }
@@ -1736,7 +1737,7 @@ export class EffectSystem {
           const friendly = [
             ...(allowHero ? [player.hero] : []),
             ...player.battlefield.cards.filter(c => c.type !== 'quest')
-          ].filter(isTargetable);
+          ].filter((entity) => isTargetable(entity, { requester: player }));
 
           const chosen = await game.promptTarget(friendly);
           if (chosen === game.CANCEL) throw game.CANCEL;

@@ -659,7 +659,7 @@ export class MCTS_AI {
       return getCardInstanceId(entity) === excludeSourceId;
     };
     if (player?.hero && !this._isEntityDead(player.hero)) {
-      if (!shouldExclude(player.hero) && isTargetable(player.hero)) {
+      if (!shouldExclude(player.hero) && isTargetable(player.hero, { requester: player })) {
         characters.push(player.hero);
       }
     }
@@ -667,7 +667,7 @@ export class MCTS_AI {
       if (!card || card.type === 'quest') continue;
       if (this._isEntityDead(card)) continue;
       if (shouldExclude(card)) continue;
-      if (!isTargetable(card)) continue;
+      if (!isTargetable(card, { requester: player })) continue;
       characters.push(card);
     }
     return characters;

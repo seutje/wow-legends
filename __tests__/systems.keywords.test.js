@@ -29,7 +29,10 @@ describe('Keywords registry', () => {
     const t = new Card({ type: 'ally', name: 'T', keywords: ['Taunt'] });
     expect(enforceTaunt([a,t])).toEqual([t]);
     const s = new Card({ type: 'ally', name: 'S', keywords: ['Stealth'] });
+    const owner = new Player({ name: 'Owner' });
+    owner.battlefield.add(s);
     expect(isTargetable(s)).toBe(false);
+    expect(isTargetable(s, { requester: owner })).toBe(true);
     expect(isTargetable(s, { allowStealthTargeting: true })).toBe(true);
   });
 
@@ -68,4 +71,3 @@ describe('Keywords registry', () => {
     expect(out).toBe(30);
   });
 });
-
