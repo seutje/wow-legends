@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Evaluate one or more full games.
-// Default: NN (player) vs hard MCTS (opponent).
-// If a model path argument is provided, pits NN-best (player) vs NN-candidate (opponent).
+// Default: hard MCTS (player) vs NN-best (opponent).
+// If a model path argument is provided, pits NN-candidate (player) vs NN-best (opponent).
 // Provide a positive integer as the final argument to run multiple matches.
 // Caps at 20 rounds (player+opponent turns). Prints concise results.
 
@@ -73,11 +73,11 @@ async function playMatch({ matchSeed, maxRounds, bestModel, candidateModel, play
   game.rng = new RNG(matchSeed);
   await game.setupMatch();
 
-  const nn = new NeuralAI({ game, resourceSystem: game.resources, combatSystem: game.combat, model: bestModel });
-  const useMctsOpponent = !candidateModel;
-  const opponentAI = useMctsOpponent
+  const playerUsesMcts = !candidateModel;
+  const playerAI = playerUsesMcts
     ? new MCTS_AI({ resourceSystem: game.resources, combatSystem: game.combat, game, iterations: 5000, rolloutDepth: 10, fullSim: true })
     : new NeuralAI({ game, resourceSystem: game.resources, combatSystem: game.combat, model: candidateModel });
+  const opponentAI = new NeuralAI({ game, resourceSystem: game.resources, combatSystem: game.combat, model: bestModel });
 
   let finalizePlayerLog = () => {};
   let finalizeOpponentLog = () => {};
@@ -95,19 +95,18 @@ async function playMatch({ matchSeed, maxRounds, bestModel, candidateModel, play
 
   let rounds = 0;
   while (rounds < maxRounds && game.player.hero.data.health > 0 && game.opponent.hero.data.health > 0) {
-    await nn.takeTurn(game.player, game.opponent);
+    await playerAI.takeTurn(game.player, game.opponent);
     if (game.opponent.hero.data.health <= 0 || game.player.hero.data.health <= 0) break;
 
     game.turns.setActivePlayer(game.opponent);
     game.turns.startTurn();
-    if (useMctsOpponent) game.resources.startTurn(game.opponent);
     await opponentAI.takeTurn(game.opponent, game.player);
 
     while (game.turns.current !== 'End') game.turns.nextPhase();
     game.turns.nextPhase();
     game.turns.setActivePlayer(game.player);
     game.turns.startTurn();
-    if (useMctsOpponent) game.resources.startTurn(game.player);
+    if (playerUsesMcts) game.resources.startTurn(game.player);
 
     rounds++;
 
@@ -186,8 +185,8 @@ async function main() {
     candidateModel = MLP.fromJSON(obj);
   }
 
-  const playerName = modelArg ? 'NN-best' : 'NN';
-  const opponentName = modelArg ? 'NN-candidate' : 'MCTS-hard';
+  const playerName = modelArg ? 'NN-candidate' : 'MCTS-hard';
+  const opponentName = 'NN-best';
 
   const out = getOriginalConsole().log;
   const logDetails = matchCount === 1;
