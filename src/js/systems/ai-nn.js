@@ -515,13 +515,33 @@ export class NeuralAI {
     return best;
   }
 
+  _heroHealth(hero) {
+    if (!hero) return null;
+    if (typeof hero?.data?.health === 'number') return hero.data.health;
+    if (typeof hero?.health === 'number') return hero.health;
+    return null;
+  }
+
+  _shouldAbortTurn(player, opponent) {
+    const playerHealth = this._heroHealth(player?.hero);
+    if (typeof playerHealth === 'number' && playerHealth <= 0) return true;
+    const opponentHealth = this._heroHealth(opponent?.hero);
+    if (typeof opponentHealth === 'number' && opponentHealth <= 0) return true;
+    if (this.game?.isGameOver?.()) return true;
+    return false;
+  }
+
   async takeTurn(player, opponent = null) {
+    if (this._shouldAbortTurn(player, opponent)) return false;
     this.resources.startTurn(player);
+    if (this._shouldAbortTurn(player, opponent)) return false;
     const drawn = player.library.draw(1);
     if (drawn[0]) player.hand.add(drawn[0]);
+    if (this._shouldAbortTurn(player, opponent)) return false;
 
     let powerAvailable = !!(player.hero?.active?.length) && !player.hero.powerUsed;
     while (true) {
+      if (this._shouldAbortTurn(player, opponent)) break;
       const pool = this.resources.pool(player);
       const state = {
         kind: 'live',
@@ -538,15 +558,18 @@ export class NeuralAI {
         const cardRef = getCardInstanceId(action.card) ?? action.card;
         const ok = await (this.game?.playFromHand?.(player, cardRef) ?? false);
         if (!ok) break;
+        if (this._shouldAbortTurn(player, opponent)) break;
       }
       if (action.usePower) {
         const ok = await (this.game?.useHeroPower?.(player) ?? false);
         if (!ok) break;
         powerAvailable = false;
+        if (this._shouldAbortTurn(player, opponent)) break;
       }
       powerAvailable = !!(player.hero?.active?.length) && !player.hero.powerUsed;
     }
 
+    if (this._shouldAbortTurn(player, opponent)) return true;
     this.combat.clear();
     const attackValue = (entity) => {
       if (!entity) return 0;
@@ -570,6 +593,7 @@ export class NeuralAI {
       .filter(canSwing);
 
     while (queue.length) {
+      if (this._shouldAbortTurn(player, opponent)) break;
       const attacker = queue.shift();
       if (!canSwing(attacker)) continue;
 
@@ -589,6 +613,7 @@ export class NeuralAI {
       const target = block || opponent.hero;
 
       await this.game?.throttleAIAction?.(player);
+      if (this._shouldAbortTurn(player, opponent)) break;
 
       this.combat.clear();
       if (!this.combat.declareAttacker(attacker, target)) continue;
@@ -611,6 +636,7 @@ export class NeuralAI {
       }
       await this.game?.cleanupDeaths?.(player, opponent);
       await this.game?.cleanupDeaths?.(opponent, player);
+      if (this._shouldAbortTurn(player, opponent)) break;
 
       if (canSwing(attacker)) queue.push(attacker);
     }

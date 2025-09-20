@@ -914,6 +914,22 @@ export class MCTS_AI {
     return 0;
   }
 
+  _heroHealth(hero) {
+    if (!hero) return null;
+    if (typeof hero?.data?.health === 'number') return hero.data.health;
+    if (typeof hero?.health === 'number') return hero.health;
+    return null;
+  }
+
+  _shouldAbortTurn(player, opponent) {
+    const playerHealth = this._heroHealth(player?.hero);
+    if (typeof playerHealth === 'number' && playerHealth <= 0) return true;
+    const opponentHealth = this._heroHealth(opponent?.hero);
+    if (typeof opponentHealth === 'number' && opponentHealth <= 0) return true;
+    if (this.game?.isGameOver?.()) return true;
+    return false;
+  }
+
   _scoreHeroAttack(attacker, hero) {
     if (!attacker || !hero) return -Infinity;
     const attack = this._entityAttackValue(attacker);
@@ -2246,11 +2262,13 @@ export class MCTS_AI {
   async takeTurn(player, opponent = null, options = {}) {
     const { resume = false } = options;
     this._clearLastTree();
+    if (this._shouldAbortTurn(player, opponent)) return false;
     // Start turn: mirror BasicAI semantics
     if (!resume) {
       this.resources.startTurn(player);
       const drawn = player.library.draw(1);
       if (drawn[0]) player.hand.add(drawn[0]);
+      if (this._shouldAbortTurn(player, opponent)) return false;
     }
     if (this.game?.state?.aiPending?.type === 'mcts') {
       this.game.state.aiPending.stage = 'running';
@@ -2259,6 +2277,10 @@ export class MCTS_AI {
     // Iteratively choose and apply actions using MCTS until we choose to end
     let powerAvailable = !!(player.hero?.active?.length) && !player.hero.powerUsed;
     while (true) {
+      if (this._shouldAbortTurn(player, opponent)) {
+        this._clearLastTree();
+        break;
+      }
       const pool = this.resources.pool(player);
       const overloadPlayer = typeof this.resources.pendingOverload === 'function'
         ? this.resources.pendingOverload(player)
@@ -2310,15 +2332,19 @@ export class MCTS_AI {
           this._clearLastTree();
           break;
         }
+        if (this._shouldAbortTurn(player, opponent)) {
+          this._clearLastTree();
+          break;
+        }
       }
-        if (action.card) {
-          if (this.game && typeof this.game.playFromHand === 'function') {
-            const cardRef = getCardInstanceId(action.card) ?? action.card;
-            const ok = await this.game.playFromHand(player, cardRef);
-            if (!ok) {
-              this._clearLastTree();
-              break;
-            }
+      if (action.card) {
+        if (this.game && typeof this.game.playFromHand === 'function') {
+          const cardRef = getCardInstanceId(action.card) ?? action.card;
+          const ok = await this.game.playFromHand(player, cardRef);
+          if (!ok) {
+            this._clearLastTree();
+            break;
+          }
         } else {
           // Fallback (should not happen in game integration)
           const cost = action.card.cost || 0;
@@ -2339,6 +2365,10 @@ export class MCTS_AI {
           player.cardsPlayedThisTurn += 1;
         }
       }
+      if (this._shouldAbortTurn(player, opponent)) {
+        this._clearLastTree();
+        break;
+      }
       if (action.usePower) {
         if (this.game && typeof this.game.useHeroPower === 'function') {
           const ok = await this.game.useHeroPower(player);
@@ -2354,6 +2384,10 @@ export class MCTS_AI {
           player.hero.powerUsed = true;
         }
       }
+      if (this._shouldAbortTurn(player, opponent)) {
+        this._clearLastTree();
+        break;
+      }
       // Keep hero power availability synced
       const descriptor = this._stateFromLive(player, opponent);
       this._advanceLastTreeToChild(searchKind, candidate, descriptor);
@@ -2361,6 +2395,7 @@ export class MCTS_AI {
     }
 
     if (opponent) {
+      if (this._shouldAbortTurn(player, opponent)) return true;
       let combat = this.combat || null;
       const temporaryCombat = !combat;
       if (temporaryCombat) combat = new CombatSystem();
@@ -2371,6 +2406,7 @@ export class MCTS_AI {
           .filter((c) => (c?.type !== 'equipment') && !c?.data?.attacked && (this._entityAttackValue(c) > 0));
         let declared = false;
         for (const attacker of attackers) {
+          if (this._shouldAbortTurn(player, opponent)) break;
           const target = this._chooseAttackTarget(attacker, player, opponent, this.resources.turns.turn, enteredSet);
           if (!target) continue;
           if (!combat.declareAttacker(attacker, target)) continue;
@@ -2394,6 +2430,7 @@ export class MCTS_AI {
               p.battlefield.moveTo(p.graveyard, d);
             }
           }
+          if (this._shouldAbortTurn(player, opponent)) return true;
         }
       }
     }
