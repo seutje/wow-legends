@@ -6,6 +6,7 @@ import CombatSystem from './combat.js';
 import { selectTargets } from './targeting.js';
 import MLP from './nn.js';
 import { actionSignature } from './ai-signatures.js';
+import { encodeMinion, getLatentSize, loadAutoencoder } from './autoencoder.js';
 import { getCardInstanceId, matchesCardIdentifier } from '../utils/card.js';
 
 export const HERO_ID_VOCAB = Object.freeze([
@@ -29,9 +30,18 @@ const HERO_VECTOR_SIZE = HERO_ID_VOCAB.length + 1; // +1 for unknown heroes
 const HERO_UNKNOWN_INDEX = HERO_VECTOR_SIZE - 1;
 const STATE_BASE_FEATURE_COUNT = 20;
 const ACTION_FEATURE_COUNT = 15;
-export const STATE_FEATURE_COUNT = STATE_BASE_FEATURE_COUNT + HERO_VECTOR_SIZE * 2;
+const MAX_BOARD_UNITS = 7;
+const HAND_HASH_BUCKETS = 128;
+const HAND_COUNT_NORMALIZER = 10;
+const LATENT_VECTOR_SIZE = getLatentSize();
+const HAND_VECTOR_SIZE = HAND_HASH_BUCKETS;
+export const STATE_FEATURE_COUNT =
+  STATE_BASE_FEATURE_COUNT
+  + HERO_VECTOR_SIZE * 2
+  + LATENT_VECTOR_SIZE * 2
+  + HAND_VECTOR_SIZE * 2;
 export const MODEL_INPUT_SIZE = STATE_FEATURE_COUNT + ACTION_FEATURE_COUNT;
-export const DEFAULT_MODEL_SHAPE = [MODEL_INPUT_SIZE, 64, 64, 1];
+export const DEFAULT_MODEL_SHAPE = Object.freeze([MODEL_INPUT_SIZE, 128, 64, 32, 16, 1]);
 
 export function heroIdToVector(heroId) {
   const vec = new Array(HERO_VECTOR_SIZE).fill(0);
@@ -48,8 +58,18 @@ export function heroIdToVector(heroId) {
 
 let ActiveModel = null; // module-level active model
 
+function modelHasExpectedShape(model) {
+  if (!model || !Array.isArray(model.sizes)) return false;
+  const expected = DEFAULT_MODEL_SHAPE;
+  if (model.sizes.length !== expected.length) return false;
+  for (let i = 0; i < expected.length; i++) {
+    if (model.sizes[i] !== expected[i]) return false;
+  }
+  return true;
+}
+
 function isModelCompatible(model) {
-  return !!(model && Array.isArray(model.sizes) && model.sizes[0] === MODEL_INPUT_SIZE);
+  return modelHasExpectedShape(model);
 }
 
 function createDefaultModel() {
@@ -83,6 +103,7 @@ export function getActiveModel() {
 
 export async function loadModelFromDiskOrFetch() {
   try {
+    try { await loadAutoencoder(); } catch { /* fallback to zeroed latent vectors */ }
     if (typeof window === 'undefined') {
       const fs = await import('fs/promises');
       const path = new URL('../../../data/models/best.json', import.meta.url);
@@ -108,6 +129,57 @@ export async function loadModelFromDiskOrFetch() {
 }
 
 function clamp01(x) { return x < 0 ? 0 : x > 1 ? 1 : x; }
+
+function hashCardId(id) {
+  if (typeof id !== 'string') return 0;
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < id.length; i++) {
+    hash ^= id.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return hash >>> 0;
+}
+
+function handDictionaryVector(handIds, size = HAND_HASH_BUCKETS) {
+  const vec = new Array(size).fill(0);
+  if (!Array.isArray(handIds)) return vec;
+  for (const id of handIds) {
+    if (typeof id !== 'string' || !id) continue;
+    const idx = hashCardId(id) % size;
+    vec[idx] += 1;
+  }
+  return vec.map((count) => clamp01(count / HAND_COUNT_NORMALIZER));
+}
+
+function sumLatentVectors(minions) {
+  const size = getLatentSize();
+  const sum = new Array(size).fill(0);
+  if (!Array.isArray(minions)) return sum;
+  for (const card of minions) {
+    const vec = encodeMinion(card);
+    if (!Array.isArray(vec)) continue;
+    const n = Math.min(size, vec.length);
+    for (let i = 0; i < n; i++) {
+      const val = Number(vec[i]);
+      if (!Number.isNaN(val)) sum[i] += val;
+    }
+  }
+  return sum;
+}
+
+function normalizeLatentVector(sumVec, count = 0) {
+  const size = getLatentSize();
+  const out = new Array(size).fill(0);
+  if (!Array.isArray(sumVec)) return out;
+  const divisor = Math.max(1, Math.min(MAX_BOARD_UNITS, Number.isFinite(count) ? count : MAX_BOARD_UNITS));
+  const max = divisor > 0 ? divisor : 1;
+  const n = Math.min(size, sumVec.length);
+  for (let i = 0; i < n; i++) {
+    const val = Number(sumVec[i]);
+    out[i] = clamp01(Number.isNaN(val) ? 0 : val / max);
+  }
+  return out;
+}
 
 function listCards(zone) {
   if (!zone) return [];
@@ -143,6 +215,10 @@ function summarizeSide(side) {
     || null;
   const battlefield = listCards(side?.battlefield);
   const allies = battlefield.filter(c => c && c.type !== 'equipment' && c.type !== 'quest');
+  const handCards = listCards(side?.hand);
+  const handIds = handCards
+    .map((card) => (typeof card?.id === 'string' ? card.id : (typeof card?.data?.id === 'string' ? card.data.id : null)))
+    .filter((id) => typeof id === 'string' && id.length > 0);
   let attackSum = 0;
   let hpSum = 0;
   let maxAttack = 0;
@@ -155,16 +231,19 @@ function summarizeSide(side) {
     if (atk > maxAttack) maxAttack = atk;
     if (hasKeyword(card, 'Taunt')) tauntCount += 1;
   }
+  const latentSum = sumLatentVectors(allies);
   return {
     heroId,
     heroHealth: heroData.health ?? hero.health ?? 0,
     heroArmor: heroData.armor ?? hero.armor ?? 0,
-    handCount: listCards(side?.hand).length,
+    handCount: handCards.length,
+    handIds,
     alliesCount: allies.length,
     attackSum,
     hpSum,
     maxAttack,
     tauntCount,
+    latentSum,
   };
 }
 
@@ -269,10 +348,21 @@ function stateFeaturesFromDescriptor(desc = {}) {
   ];
   const playerHeroVec = heroIdToVector(player.heroId);
   const opponentHeroVec = heroIdToVector(opponent.heroId);
-  return base.concat(playerHeroVec, opponentHeroVec);
+  const playerLatent = normalizeLatentVector(player.latentSum, player.alliesCount);
+  const opponentLatent = normalizeLatentVector(opponent.latentSum, opponent.alliesCount);
+  const playerHandVec = handDictionaryVector(player.handIds);
+  const opponentHandVec = handDictionaryVector(opponent.handIds);
+  return base.concat(
+    playerHeroVec,
+    opponentHeroVec,
+    playerLatent,
+    opponentLatent,
+    playerHandVec,
+    opponentHandVec,
+  );
 }
 
-function stateFeatures(state) {
+export function stateFeatures(state) {
   if (!state) return stateFeaturesFromDescriptor();
   if (state.kind === 'live' || state.type === 'live' || state.game || state.resources || state.resourceSystem) {
     return stateFeaturesFromDescriptor(stateDescriptorFromLive({

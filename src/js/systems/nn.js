@@ -1,5 +1,5 @@
 // Tiny MLP for scoring actions: Q(s,a) -> scalar
-// - Two hidden layers with ReLU by default
+// - Hidden layer count/width driven by provided shape (ReLU activations on hidden layers)
 // - Pure JS arrays for portability and serialization
 
 export class MLP {
@@ -52,8 +52,13 @@ export class MLP {
     return { sizes: this.sizes.slice(), W: this.W.map(l => l.map(r => r.slice())), b: this.b.map(a => a.slice()) };
   }
 
-  forward(x) {
+  forward(x, options = undefined) {
     // x: array of length sizes[0]
+    let opts = options;
+    if (typeof opts === 'boolean') opts = { collectHidden: opts };
+    if (opts == null) opts = {};
+    const collectHidden = Boolean(opts.collectHidden || opts.returnHidden);
+    const hidden = collectHidden ? [] : null;
     let a = x;
     for (let l = 0; l < this.W.length; l++) {
       const z = new Array(this.W[l].length);
@@ -65,8 +70,14 @@ export class MLP {
         for (let j = 0; j < n; j++) sum += row[j] * a[j];
         z[i] = sum;
       }
-      if (l < this.W.length - 1) a = relu(z); else a = z; // last layer linear
+      if (l < this.W.length - 1) {
+        a = relu(z);
+        if (collectHidden) hidden.push(a.slice());
+      } else {
+        a = z; // last layer linear
+      }
     }
+    if (collectHidden) return { output: a, hidden };
     return a;
   }
 }
