@@ -431,7 +431,10 @@ export function renderPlay(container, game, { onUpdate, onOpenDeckBuilder, onNew
       el('button', { class: 'btn-end-turn', onclick: async (ev) => {
         const btn = ev?.currentTarget;
         if (btn) btn.disabled = true;
-        if (game?.state) game.state.aiThinking = true;
+        if (game?.state) {
+          game.state.aiThinking = true;
+          game.state.aiProgress = 0;
+        }
         onUpdate?.();
         try {
           await game.endTurn();
