@@ -601,16 +601,30 @@ export class NeuralAI {
       const legal = selectTargets(defenders);
       if (!legal.length) continue;
 
+      const attackerData = attacker?.data || {};
+      const hasRush = !!attacker?.keywords?.includes?.('Rush');
+      const hasCharge = !!attacker?.keywords?.includes?.('Charge');
+      const currentTurn = typeof this.game?.turns?.turn === 'number' ? this.game.turns.turn : null;
+      const enteredTurn = typeof attackerData.enteredTurn === 'number' ? attackerData.enteredTurn : null;
+      const justEntered = enteredTurn != null && currentTurn != null && enteredTurn === currentTurn;
+      const rushRestricted = hasRush && justEntered && !hasCharge;
+
+      const hero = opponent?.hero || null;
+      const nonHero = legal.filter(t => !matchesCardIdentifier(t, hero));
+      const heroAllowed = !rushRestricted && legal.some(t => matchesCardIdentifier(t, hero));
+
+      if (!nonHero.length && !heroAllowed) continue;
+
       let block = null;
-      if (legal.length > 1) {
-        const nonHero = legal.filter(t => !matchesCardIdentifier(t, opponent.hero));
+      if (nonHero.length) {
         const taunts = nonHero.filter(t => t.keywords?.includes('Taunt'));
         const poolChoices = (taunts.length ? taunts : nonHero);
         block = poolChoices.sort((x, y) => (x.data?.health || 0) - (y.data?.health || 0))[0] || null;
-      } else if (legal.length === 1 && !matchesCardIdentifier(legal[0], opponent.hero)) {
-        block = legal[0];
       }
-      const target = block || opponent.hero;
+
+      if (!block && !heroAllowed) continue;
+      const target = block || (heroAllowed ? hero : null);
+      if (!target) continue;
 
       await this.game?.throttleAIAction?.(player);
       if (this._shouldAbortTurn(player, opponent)) break;
