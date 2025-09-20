@@ -100,6 +100,7 @@
       {
         "type": "summon",
         "unit": {
+          "id": "token-imp",
           "name": "Imp",
           "attack": 1,
           "health": 1,
@@ -282,6 +283,7 @@
       {
         "type": "summon",
         "unit": {
+          "id": "token-defias-footpad",
           "name": "Defias Footpad",
           "attack": 1,
           "health": 1,
@@ -483,6 +485,7 @@
       {
         "type": "summon",
         "unit": {
+          "id": "token-murloc-scout",
           "name": "Murloc Scout",
           "attack": 1,
           "health": 1,
@@ -692,6 +695,7 @@
       {
         "type": "summon",
         "unit": {
+          "id": "token-imp",
           "name": "Imp",
           "attack": 1,
           "health": 1,
@@ -848,6 +852,7 @@
       {
         "type": "summon",
         "unit": {
+          "id": "token-owl-companion",
           "name": "Owl Companion",
           "attack": 1,
           "health": 1,
@@ -903,6 +908,7 @@
       {
         "type": "summon",
         "unit": {
+          "id": "token-squire",
           "name": "Squire",
           "attack": 2,
           "health": 2,
@@ -1045,6 +1051,7 @@
       {
         "type": "summon",
         "unit": {
+          "id": "token-water-sprite",
           "name": "Water Sprite",
           "attack": 1,
           "health": 1,
@@ -1960,6 +1967,7 @@
       {
         "type": "summon",
         "unit": {
+          "id": "token-loa-spirit",
           "name": "Loa Spirit",
           "attack": 1,
           "health": 1,
@@ -2103,6 +2111,7 @@
       {
         "type": "summon",
         "unit": {
+          "id": "token-hound",
           "name": "Hound",
           "attack": 1,
           "health": 1,

@@ -27,6 +27,7 @@
       {
         "type": "summon",
         "unit": {
+          "id": "token-water-elemental",
           "name": "Water Elemental",
           "attack": 3,
           "health": 6,
@@ -254,6 +255,7 @@
       {
         "type": "summon",
         "unit": {
+          "id": "token-spirit-wolf",
           "name": "Spirit Wolf",
           "attack": 2,
           "health": 3,
@@ -390,6 +392,7 @@
       {
         "type": "summon",
         "unit": {
+          "id": "token-infernal",
           "name": "Infernal",
           "attack": 6,
           "health": 6,
@@ -460,6 +463,7 @@
       {
         "type": "summon",
         "unit": {
+          "id": "token-windfury-totem",
           "name": "Windfury Totem",
           "attack": 0,
           "health": 3,
@@ -901,6 +905,7 @@
       {
         "type": "summon",
         "unit": {
+          "id": "token-great-wolf",
           "name": "Great Wolf",
           "attack": 4,
           "health": 4,

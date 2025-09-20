@@ -110,14 +110,45 @@ function minionFeatureVector(card) {
   return [attack, health, taunt, rush, stealth, divineShield, windfury, reflect, lifesteal];
 }
 
-function collectSideSamples(side, owner, output, traitPresence, latentColumns = FEATURE_COLUMNS) {
+function slugifyTokenName(name) {
+  if (!name) return '';
+  return String(name)
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+function deriveSummonedCardId(card) {
+  const parentId = typeof card?.summonedBy?.id === 'string' ? card.summonedBy.id.trim() : '';
+  const slug = slugifyTokenName(card?.name);
+  if (parentId) {
+    if (slug) return `${parentId}__${slug}`;
+    return `${parentId}__token`;
+  }
+  if (slug) return `token-${slug}`;
+  return null;
+}
+
+function resolveSampleCardId(card, game) {
+  if (!card) return null;
+  const raw = typeof card.id === 'string' ? card.id.trim() : '';
+  const index = game?._cardIndex;
+  const known = index instanceof Map && raw ? index.has(raw) : false;
+  const placeholder = !raw || (!known && /^card-[a-z0-9]+$/i.test(raw));
+  if (!placeholder) return raw || null;
+  const fallback = deriveSummonedCardId(card);
+  return fallback || (raw || null);
+}
+
+function collectSideSamples(game, side, owner, output, traitPresence) {
   const battlefield = listCards(side?.battlefield);
   for (const card of battlefield) {
     if (!card || card.type !== 'ally') continue;
     if (card?.data?.dead) continue;
     const vector = minionFeatureVector(card);
     output.push({
-      cardId: typeof card.id === 'string' ? card.id : null,
+      cardId: resolveSampleCardId(card, game),
       owner,
       heroId: typeof side?.hero?.id === 'string' ? side.hero.id : null,
       vector
@@ -160,20 +191,20 @@ async function simulateAndCollect({ games, rounds }) {
       && game.player?.hero?.data?.health > 0
       && game.opponent?.hero?.data?.health > 0
     ) {
-      collectSideSamples(game.player, 'player', samples, traitPresence);
-      collectSideSamples(game.opponent, 'opponent', samples, traitPresence);
+      collectSideSamples(game, game.player, 'player', samples, traitPresence);
+      collectSideSamples(game, game.opponent, 'opponent', samples, traitPresence);
 
       ai.takeTurn(game.player, game.opponent);
-      collectSideSamples(game.player, 'player', samples, traitPresence);
-      collectSideSamples(game.opponent, 'opponent', samples, traitPresence);
+      collectSideSamples(game, game.player, 'player', samples, traitPresence);
+      collectSideSamples(game, game.opponent, 'opponent', samples, traitPresence);
       if (game.opponent.hero.data.health <= 0 || game.player.hero.data.health <= 0) break;
 
       game.turns.setActivePlayer(game.opponent);
       game.turns.startTurn();
       game.resources.startTurn(game.opponent);
       ai.takeTurn(game.opponent, game.player);
-      collectSideSamples(game.player, 'player', samples, traitPresence);
-      collectSideSamples(game.opponent, 'opponent', samples, traitPresence);
+      collectSideSamples(game, game.player, 'player', samples, traitPresence);
+      collectSideSamples(game, game.opponent, 'opponent', samples, traitPresence);
       if (game.opponent.hero.data.health <= 0 || game.player.hero.data.health <= 0) break;
 
       while (game.turns.current !== 'End') game.turns.nextPhase();
