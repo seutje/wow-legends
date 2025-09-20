@@ -144,7 +144,7 @@ export default class Game {
     this.player = new Player({ name: 'You' });
     this.opponent = new Player({ name: 'AI' });
 
-    this.state = { frame: 0, startedAt: 0, difficulty: 'easy', debug: false };
+    this.state = { frame: 0, startedAt: 0, difficulty: 'easy', debug: false, matchOver: false, winner: null };
     this._nnModelPromise = null;
     this._aiDeckTemplates = null;
     this._playerDeckTemplates = null;
@@ -169,6 +169,50 @@ export default class Game {
     const pool = this.aiPlayers;
     if (!pool || typeof pool.has !== 'function') return false;
     return pool.has(role);
+  }
+
+  _isParticipant(player) {
+    return player === this.player || player === this.opponent;
+  }
+
+  _currentHealth(hero) {
+    if (!hero) return null;
+    if (hero?.data && typeof hero.data.health === 'number') return hero.data.health;
+    if (typeof hero?.health === 'number') return hero.health;
+    return null;
+  }
+
+  _isHeroDefeated(hero) {
+    const health = this._currentHealth(hero);
+    return typeof health === 'number' && health <= 0;
+  }
+
+  checkForGameOver() {
+    const playerDead = this._isHeroDefeated(this.player?.hero);
+    const opponentDead = this._isHeroDefeated(this.opponent?.hero);
+    const ended = playerDead || opponentDead;
+    if (!ended) return false;
+    if (this.state && !this.state.matchOver) {
+      this.state.matchOver = true;
+      if (playerDead && opponentDead) this.state.winner = 'draw';
+      else if (playerDead) this.state.winner = 'opponent';
+      else this.state.winner = 'player';
+      try {
+        this.bus.emit('game:over', {
+          player: this.player,
+          opponent: this.opponent,
+          playerDead,
+          opponentDead,
+          winner: this.state.winner,
+        });
+      } catch {}
+    }
+    return true;
+  }
+
+  isGameOver() {
+    if (this.state?.matchOver) return true;
+    return this.checkForGameOver();
   }
 
   async throttleAIAction(player) {
@@ -627,12 +671,16 @@ export default class Game {
   }
 
   draw(player, n = 1) {
+    if (!this._isParticipant(player)) return 0;
+    if (this.isGameOver()) return 0;
     const drawn = player.library.draw(n);
     for (const c of drawn) player.hand.add(c);
     return drawn.length;
   }
 
   async useHeroPower(player) {
+    if (!this._isParticipant(player)) return false;
+    if (this.isGameOver()) return false;
     const hero = player?.hero;
     if (!hero || hero.powerUsed) return false;
     if (hero.data?.freezeTurns > 0) return false;
@@ -701,6 +749,8 @@ export default class Game {
   
 
   async playFromHand(player, cardRef) {
+    if (!this._isParticipant(player)) return false;
+    if (this.isGameOver()) return false;
     let card = null;
     if (cardRef && typeof cardRef === 'object') {
       card = player.hand.cards.find((c) => matchesCardIdentifier(c, cardRef)) || null;
@@ -1081,6 +1131,8 @@ export default class Game {
   }
 
   async attack(player, cardRef, targetRef = null) {
+    if (!this._isParticipant(player)) return false;
+    if (this.isGameOver()) return false;
     const defender = player === this.player ? this.opponent : this.player;
     const candidatesForAttack = [player.hero, ...player.battlefield.cards];
     let card = null;
@@ -1152,6 +1204,7 @@ export default class Game {
     }
     await this.cleanupDeaths(player, defender);
     await this.cleanupDeaths(defender, player);
+    this.checkForGameOver();
     player.log.push(`Attacked ${actualTarget.name} with ${card.name}`);
     // Mark attack usage
     card.data.attacked = true;
@@ -1186,6 +1239,8 @@ export default class Game {
       }
     }
 
+    if (this.isGameOver()) return;
+
     // AI's turn
     this.turns.setActivePlayer(this.opponent);
     this.turns.startTurn();
@@ -1209,6 +1264,7 @@ export default class Game {
         if (this.state) this.state.aiThinking = false;
         this.bus.emit('ai:thinking', { thinking: false });
       }
+      if (this.isGameOver()) return;
     } else if (diff === 'medium' || diff === 'hard' || diff === 'hybrid') {
       // Use MCTS for medium/hard; hard uses deeper search
       if (this.state) this.state.aiPending = { type: 'mcts', stage: 'queued' };
@@ -1225,12 +1281,16 @@ export default class Game {
         }
         this.bus.emit('ai:thinking', { thinking: false });
       }
+      if (this.isGameOver()) return;
     } else {
       // Easy difficulty: previous simple heuristic flow
       const affordable = this.opponent.hand.cards
         .filter(c => this.canPlay(this.opponent, c))
         .sort((a,b)=> (a.cost||0)-(b.cost||0));
-      if (affordable[0]) await this.playFromHand(this.opponent, affordable[0]);
+      if (affordable[0]) {
+        await this.playFromHand(this.opponent, affordable[0]);
+        if (this.isGameOver()) return;
+      }
       const attackers = this.opponent.battlefield.cards.filter(c => {
         if (!(c.type === 'ally' || c.type === 'equipment')) return false;
         const atk = typeof c.totalAttack === 'function' ? c.totalAttack() : (c.data?.attack || 0);
@@ -1239,6 +1299,7 @@ export default class Game {
         return atk > 0 && !c?.data?.summoningSick && used < maxAttacks;
       });
       for (const c of attackers) {
+        if (this.isGameOver()) break;
         // Enforce Rush restriction on entry: must have a non-hero target available
         const hasRush = !!c?.keywords?.includes?.('Rush');
         const justEntered = !!(c?.data?.enteredTurn && c.data.enteredTurn === this.turns.turn);
@@ -1263,6 +1324,7 @@ export default class Game {
         }
         const target = block || this.player.hero;
         await this.throttleAIAction(this.opponent);
+        if (this.isGameOver()) break;
         const declared = this.combat.declareAttacker(c, target);
         if (!declared) continue;
         if (c.data) {
@@ -1287,7 +1349,11 @@ export default class Game {
       }
       await this.cleanupDeaths(this.player, this.opponent);
       await this.cleanupDeaths(this.opponent, this.player);
+      this.checkForGameOver();
+      if (this.isGameOver()) return;
     }
+
+    if (this.isGameOver()) return;
 
     // End AI's turn and start player's turn
     await this._finalizeOpponentTurn();
@@ -1324,6 +1390,7 @@ export default class Game {
       }
       this.bus.emit('ai:thinking', { thinking: false });
     }
+    if (this.isGameOver()) return true;
     await this._finalizeOpponentTurn();
     return true;
   }
@@ -1381,6 +1448,7 @@ export default class Game {
   }
 
   async _finalizeOpponentTurn() {
+    if (this.isGameOver()) return;
     while(this.turns.current !== 'End') {
       this.turns.nextPhase();
     }
@@ -1394,6 +1462,8 @@ export default class Game {
   async reset(playerDeck = null) {
     this.state.frame = 0;
     this.state.startedAt = 0;
+    this.state.matchOver = false;
+    this.state.winner = null;
     this.turns.turn = 1;
     this.turns.current = 'Start';
     this.turns.activePlayer = null;

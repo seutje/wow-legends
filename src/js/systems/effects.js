@@ -445,6 +445,7 @@ export class EffectSystem {
     }
     await game.cleanupDeaths(player, player);
     await game.cleanupDeaths(opponent, player);
+    game.checkForGameOver?.();
   }
 
   async summonUnit(effect, context) {

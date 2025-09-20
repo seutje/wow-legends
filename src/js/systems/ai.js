@@ -116,6 +116,21 @@ export class BasicAI {
     return 0;
   }
 
+  _heroHealth(hero) {
+    if (!hero) return null;
+    if (typeof hero?.data?.health === 'number') return hero.data.health;
+    if (typeof hero?.health === 'number') return hero.health;
+    return null;
+  }
+
+  _shouldAbortTurn(player, opponent) {
+    const playerHealth = this._heroHealth(player?.hero);
+    if (typeof playerHealth === 'number' && playerHealth <= 0) return true;
+    const opponentHealth = this._heroHealth(opponent?.hero);
+    if (typeof opponentHealth === 'number' && opponentHealth <= 0) return true;
+    return false;
+  }
+
   _isLivingDefender(card) {
     if (!card) return false;
     if (card.type === 'equipment' || card.type === 'quest') return false;
@@ -315,10 +330,13 @@ export class BasicAI {
   }
 
   takeTurn(player, opponent = null) {
+    if (this._shouldAbortTurn(player, opponent)) return false;
     this.resources.startTurn(player);
+    if (this._shouldAbortTurn(player, opponent)) return false;
 
     const drawn = player.library.draw(1);
     if (drawn[0]) player.hand.add(drawn[0]);
+    if (this._shouldAbortTurn(player, opponent)) return false;
 
     const pool = this.resources.pool(player);
 
@@ -360,6 +378,8 @@ export class BasicAI {
       player.cardsPlayedThisTurn += 1;
     }
 
+    if (this._shouldAbortTurn(player, opponent)) return true;
+
     if (best.usePower) {
       this.resources.pay(player, 2);
       player.hero.powerUsed = true;
@@ -367,11 +387,15 @@ export class BasicAI {
       if (player?.log) player.log.push('Used hero power');
     }
 
+    if (this._shouldAbortTurn(player, opponent)) return true;
+
     if (this.combat && opponent) {
+      if (this._shouldAbortTurn(player, opponent)) return true;
       this.combat.clear();
       const attackers = [player.hero, ...player.battlefield.cards]
         .filter(c => (c.type !== 'equipment') && !c.data?.attacked && (this._entityAttackValue(c) > 0));
       for (const a of attackers) {
+        if (this._shouldAbortTurn(player, opponent)) break;
         const target = this._chooseAttackTarget(a, player, opponent);
         if (!target) continue;
         if (this.combat.declareAttacker(a, target)) {
@@ -392,6 +416,8 @@ export class BasicAI {
         }
       }
     }
+
+    if (this._shouldAbortTurn(player, opponent)) return true;
 
     return true;
   }
