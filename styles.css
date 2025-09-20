@@ -230,40 +230,46 @@ ul.zone-list li {
 .ai-overlay .msg { margin: 0 0 8px; }
 .ai-overlay .progress {
   position: relative;
-  --progress: 0%;
+  --progress-pos: 0;
   height: 10px;
   border: 1px solid #203040;
-  background-color: #10171f;
+  background: linear-gradient(90deg, rgba(16, 30, 46, 0.94), rgba(32, 64, 92, 0.94));
+  box-shadow:
+    inset 0 0 4px rgba(8, 12, 18, 0.85),
+    inset 0 0 14px rgba(56, 128, 188, 0.25);
   overflow: hidden;
 }
 .ai-overlay .progress::before {
   content: '';
   position: absolute;
-  inset: 0;
-  background-image:
-    linear-gradient(90deg, rgba(30, 144, 255, 0.1) 0%, rgba(85, 176, 255, 0.8) 100%),
-    linear-gradient(90deg, rgba(85, 176, 255, 0.6), rgba(30, 144, 255, 0.45), rgba(10, 21, 32, 0.9)),
-    linear-gradient(90deg, rgba(12, 18, 24, 0.95), rgba(12, 18, 24, 0.95));
-  background-repeat: no-repeat;
-  background-size:
-    var(--progress) 100%,
-    calc(var(--progress, 0%) + 15%) 100%,
-    100% 100%;
-  background-position: left center;
-  transition: background-size 0.35s ease-out;
-  box-shadow: 0 0 8px rgba(40, 120, 190, 0.4);
+  top: 0;
+  bottom: 0;
+  left: calc(var(--progress-pos, 0) * 100%);
+  width: 70%;
+  background: linear-gradient(90deg, rgba(55, 140, 220, 0) 0%, rgba(90, 180, 255, 0.55) 35%, rgba(150, 230, 255, 0.95) 50%, rgba(90, 180, 255, 0.55) 65%, rgba(55, 140, 220, 0) 100%);
+  transform: translateX(-50%);
+  transition: left 0.4s ease-out, opacity 0.3s ease-out, width 0.4s ease-out, background 0.3s ease-out;
+  filter: drop-shadow(0 0 8px rgba(40, 120, 190, 0.35));
+  opacity: calc(0.4 + var(--progress-pos, 0) * 0.45);
+  pointer-events: none;
 }
 .ai-overlay .progress::after {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(120deg, transparent 0%, rgba(173, 216, 230, 0.6) 50%, transparent 100%);
+  background: linear-gradient(120deg, transparent 0%, rgba(173, 216, 230, 0.55) 50%, transparent 100%);
   background-size: 200% 100%;
   background-position: -150% 0;
   animation: aiProgressSheen 1.4s linear infinite;
-  opacity: 0.35;
+  opacity: 0.32;
   mix-blend-mode: screen;
   transition: opacity 0.3s ease-out;
+}
+.ai-overlay .progress[data-complete='1']::before {
+  left: 50%;
+  width: 115%;
+  background: linear-gradient(90deg, rgba(120, 210, 255, 0.85) 0%, rgba(150, 230, 255, 0.95) 100%);
+  opacity: 1;
 }
 .ai-overlay .progress[data-complete='1']::after {
   opacity: 0;
