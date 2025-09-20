@@ -6,6 +6,37 @@ import { freezeTarget, getSpellDamageBonus, computeSpellDamage, isTargetable } f
 import { selectTargets } from './targeting.js';
 import { getCardInstanceId, matchesCardIdentifier } from '../utils/card.js';
 
+function slugifyTokenName(name) {
+  if (!name) return '';
+  return String(name)
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+function deriveSummonedCardId(unit, sourceCard) {
+  const raw = unit?.id;
+  if (typeof raw === 'string') {
+    const trimmed = raw.trim();
+    if (trimmed) return trimmed;
+  }
+
+  const parentId = typeof sourceCard?.summonedBy?.id === 'string'
+    ? sourceCard.summonedBy.id.trim()
+    : '';
+  const slug = slugifyTokenName(unit?.name);
+
+  if (parentId) {
+    if (slug) return `${parentId}__${slug}`;
+    return `${parentId}__token`;
+  }
+
+  if (slug) return `token-${slug}`;
+
+  return null;
+}
+
 export class EffectSystem {
   constructor(game) {
     this.game = game;
@@ -421,13 +452,17 @@ export class EffectSystem {
     const { player, card, game } = context;
 
     for (let i = 0; i < count; i++) {
-      const newUnit = new Card({
+      const cardProps = {
         name: unit.name,
         type: 'ally', // Summoned units are typically allies
         data: { attack: unit.attack, health: unit.health },
-        keywords: unit.keywords,
+        keywords: Array.isArray(unit.keywords) ? unit.keywords.slice() : unit.keywords,
         summonedBy: card
-      });
+      };
+      const canonicalId = deriveSummonedCardId(unit, card);
+      if (canonicalId) cardProps.id = canonicalId;
+
+      const newUnit = new Card(cardProps);
       if (newUnit.keywords?.includes('Divine Shield')) {
         newUnit.data.divineShield = true;
       }

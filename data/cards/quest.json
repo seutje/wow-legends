@@ -92,6 +92,7 @@
       {
         "type": "summon",
         "unit": {
+          "id": "token-kodo-companion",
           "name": "Kodo Companion",
           "attack": 3,
           "health": 3,
