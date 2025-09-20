@@ -11,6 +11,8 @@
 //     * custom specs: comma-separated `<threshold>:<opponent>` entries (see
 //       README for details)
 
+import { DEFAULT_LAMBDA_DECOR, DEFAULT_LAMBDA_L2 } from './regularization.mjs';
+
 export function parseTrainArgs(argv = process.argv) {
   const tokens = Array.from(argv).slice(2);
   const positional = [];
@@ -141,8 +143,8 @@ export function parseTrainArgs(argv = process.argv) {
     curriculum = null;
   }
 
-  const lambdaDecor = toFloat(getFlag('lambda-decor', 'lambdaDecor', 'lambda1', 'decor-lambda')) ?? 0;
-  const lambdaL2 = toFloat(getFlag('lambda-l2', 'lambdaL2', 'lambda2', 'l2-lambda')) ?? 0;
+  const lambdaDecor = toFloat(getFlag('lambda-decor', 'lambdaDecor', 'lambda1', 'decor-lambda')) ?? DEFAULT_LAMBDA_DECOR;
+  const lambdaL2 = toFloat(getFlag('lambda-l2', 'lambdaL2', 'lambda2', 'l2-lambda')) ?? DEFAULT_LAMBDA_L2;
 
   return { pop, gens, reset, opponent, curriculum, lambdaDecor, lambdaL2 };
 }

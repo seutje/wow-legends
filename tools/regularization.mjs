@@ -1,5 +1,8 @@
 const EPS = 1e-8;
 
+export const DEFAULT_LAMBDA_DECOR = 0.01;
+export const DEFAULT_LAMBDA_L2 = 0.0001;
+
 export function computeCorrelationMatrix(samples) {
   if (!Array.isArray(samples) || samples.length === 0) return null;
   const width = Array.isArray(samples[0]) ? samples[0].length : 0;

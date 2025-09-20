@@ -8,7 +8,7 @@ import MCTS_AI from '../src/js/systems/ai-mcts.js';
 import { loadAutoencoder } from '../src/js/systems/autoencoder.js';
 import { setDebugLogging } from '../src/js/utils/logger.js';
 import { RNG } from '../src/js/utils/rng.js';
-import { decorrelationPenalty, weightL2Norm } from './regularization.mjs';
+import { decorrelationPenalty, weightL2Norm, DEFAULT_LAMBDA_DECOR, DEFAULT_LAMBDA_L2 } from './regularization.mjs';
 
 // Disable debug logging inside the worker as well
 setDebugLogging(false);
@@ -54,7 +54,7 @@ function attachActivationCollector(model) {
   };
 }
 
-async function evalCandidate(model, { games = 5, maxRounds = 20, opponentConfig = null, lambdaDecor = 0, lambdaL2 = 0 } = {}) {
+async function evalCandidate(model, { games = 5, maxRounds = 20, opponentConfig = null, lambdaDecor = DEFAULT_LAMBDA_DECOR, lambdaL2 = DEFAULT_LAMBDA_L2 } = {}) {
   try { await loadAutoencoder(); } catch { /* continue with fallback encoding */ }
   const config = opponentConfig || { mode: 'mcts', iterations: 5000, rolloutDepth: 10, fullSim: true };
   const baselineModel = (config.mode === 'best' && config.modelJSON)
