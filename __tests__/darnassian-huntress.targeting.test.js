@@ -4,6 +4,7 @@ import Card from '../src/js/entities/card.js';
 
 test('Darnassian Huntress prompts for beast target and buffs it', async () => {
   const g = new Game();
+  g.state.difficulty = 'easy';
   await g.setupMatch();
 
   g.player.hand.cards = [];

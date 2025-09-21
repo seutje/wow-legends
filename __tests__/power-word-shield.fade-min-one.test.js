@@ -5,6 +5,7 @@ import Card from '../src/js/entities/card.js';
 describe('Power Word: Shield fade safety', () => {
   test("doesn't drop target below 1 HP when expiring after damage", async () => {
     const g = new Game();
+    g.state.difficulty = 'easy';
     await g.setupMatch();
 
     // Deterministic zones/resources
@@ -53,4 +54,3 @@ describe('Power Word: Shield fade safety', () => {
     expect(ally.data.dead).not.toBe(true);
   });
 });
-

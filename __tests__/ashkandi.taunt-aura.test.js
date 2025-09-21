@@ -14,6 +14,7 @@ function createTauntAlly({ id, attack, health }) {
 
 test('Ashkandi grants Taunt allies +1 attack while equipped', async () => {
   const g = new Game();
+  g.state.difficulty = 'easy';
   await g.setupMatch();
 
   g.player.hand.cards = [];

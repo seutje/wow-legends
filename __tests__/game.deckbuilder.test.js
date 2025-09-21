@@ -2,6 +2,7 @@ import Game from '../src/js/game.js';
 
 test('setupMatch uses provided deck', async () => {
   const game = new Game();
+  game.state.difficulty = 'easy';
   const hero = { id: 'h1', name: 'Hero', type: 'hero', text: '', data: { health: 30, armor: 0 } };
   const card = { id: 'a1', name: 'Ally', type: 'ally', text: '', data: { attack: 1, health: 1 } };
   const cards = Array(60).fill(card);
@@ -12,6 +13,7 @@ test('setupMatch uses provided deck', async () => {
 
 test('starting new match clears previous hand and battlefield', async () => {
   const game = new Game();
+  game.state.difficulty = 'easy';
   await game.setupMatch();
   game.player.battlefield.cards.push({});
   game.opponent.battlefield.cards.push({});

@@ -44,6 +44,8 @@ describe('UI Play', () => {
     const buttons = Array.from(controls.querySelectorAll('button'));
     expect(buttons[0].textContent).toContain('New Game');
     expect(buttons[1].textContent).toContain('Deck Builder');
+    const difficultySelect = controls.querySelector('select.select-difficulty');
+    expect(difficultySelect.value).toBe('nightmare');
 
     buttons[0].dispatchEvent(new Event('click'));
     await Promise.resolve();

@@ -385,6 +385,7 @@ import { saveDifficulty } from '../utils/settings.js';
 export function renderPlay(container, game, { onUpdate, onOpenDeckBuilder, onNewGame } = {}) {
   const p = game.player; const e = game.opponent;
   const debugEnabled = !!(game.state?.debug);
+  const defaultDifficulty = game?._defaultDifficulty || 'nightmare';
 
   let controls = container.querySelector('.controls');
   let board = container.querySelector('.board');
@@ -393,6 +394,7 @@ export function renderPlay(container, game, { onUpdate, onOpenDeckBuilder, onNew
   if (initialMount) {
     container.innerHTML = '';
     const diffOptions = ['easy', 'medium', 'hard', 'nightmare', 'hybrid'];
+    const currentDifficulty = game.state?.difficulty || defaultDifficulty;
     const diffSelect = el('select', {
       class: 'select-difficulty',
       onchange: (e) => {
@@ -404,7 +406,8 @@ export function renderPlay(container, game, { onUpdate, onOpenDeckBuilder, onNew
         try { saveDifficulty(v); } catch {}
         onUpdate?.();
       }
-    }, ...diffOptions.map(opt => el('option', { value: opt, selected: (game.state?.difficulty || 'easy') === opt }, opt.charAt(0).toUpperCase() + opt.slice(1))));
+    }, ...diffOptions.map(opt => el('option', { value: opt, selected: currentDifficulty === opt }, opt.charAt(0).toUpperCase() + opt.slice(1))));
+    diffSelect.value = currentDifficulty;
 
     // Debug checkbox (default off)
     const debugChk = el('input', { type: 'checkbox', class: 'chk-debug', onchange: (e) => {
@@ -473,7 +476,7 @@ export function renderPlay(container, game, { onUpdate, onOpenDeckBuilder, onNew
   } else {
     // Keep difficulty UI in sync when not remounting
     const sel = controls.querySelector('select.select-difficulty');
-    if (sel && game.state) sel.value = game.state.difficulty || 'easy';
+    if (sel && game.state) sel.value = game.state.difficulty || defaultDifficulty;
   }
 
   // Update controls disabled states

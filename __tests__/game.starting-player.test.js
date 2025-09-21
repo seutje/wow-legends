@@ -3,6 +3,7 @@ import { RNG } from '../src/js/utils/rng.js';
 
 async function setupWithSeed(seed) {
   const game = new Game(null, { aiPlayers: ['player', 'opponent'] });
+  game.state.difficulty = 'easy';
   game.rng = new RNG(seed);
   await game.setupMatch();
   return game;
@@ -35,6 +36,7 @@ describe('starting player selection', () => {
 
   test('player gains only two resources on second turn when opponent starts', async () => {
     const game = new Game(null, { aiPlayers: ['player', 'opponent'] });
+    game.state.difficulty = 'easy';
     game.rng = new RNG(1);
     await game.setupMatch();
     expect(game.state.startingPlayer).toBe('opponent');
@@ -49,6 +51,7 @@ describe('starting player selection', () => {
 
   test('opponent reaches three resources on third turn when starting first', async () => {
     const game = new Game(null, { aiPlayers: ['opponent'] });
+    game.state.difficulty = 'easy';
     game.rng = new RNG(4);
     const originalStartTurn = game.resources.startTurn;
     const observed = [];

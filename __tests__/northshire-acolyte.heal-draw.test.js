@@ -3,6 +3,7 @@ import Game from '../src/js/game.js';
 describe('Northshire Acolyte', () => {
   test('draws when a friendly character is healed', async () => {
     const g = new Game();
+    g.state.difficulty = 'easy';
     await g.setupMatch();
     g.resources._pool.set(g.player, 10);
     const initialHand = g.player.hand.cards.length;

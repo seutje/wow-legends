@@ -120,7 +120,7 @@ export default class Game {
             this.effects.execute(player.hero.passive, { game: this, player, card: player.hero });
           }
         }
-        const difficulty = this.state?.difficulty || 'easy';
+        const difficulty = this.state?.difficulty || this._defaultDifficulty;
         const opponentIsAI = typeof this.aiPlayers?.has === 'function' && this.aiPlayers.has('opponent');
         const aiHandlesDraw = opponentIsAI
           && player === this.opponent
@@ -145,7 +145,8 @@ export default class Game {
     this.player = new Player({ name: 'You' });
     this.opponent = new Player({ name: 'AI' });
 
-    this.state = { frame: 0, startedAt: 0, difficulty: 'easy', debug: false, matchOver: false, winner: null };
+    this._defaultDifficulty = this._isBrowserEnv ? 'nightmare' : 'easy';
+    this.state = { frame: 0, startedAt: 0, difficulty: this._defaultDifficulty, debug: false, matchOver: false, winner: null };
     this._nnModelPromise = null;
     this._aiDeckTemplates = null;
     this._playerDeckTemplates = null;
@@ -1238,7 +1239,7 @@ export default class Game {
       this.resources.startTurn(this.opponent);
     }
 
-    const diff = this.state?.difficulty || 'easy';
+    const diff = this.state?.difficulty || this._defaultDifficulty;
     if (diff === 'nightmare' || diff === 'hybrid') {
       this._ensureNNModelLoading();
     }
@@ -1376,7 +1377,7 @@ export default class Game {
   async resumePendingAITurn() {
     const pending = this.state?.aiPending;
     if (!pending || pending.type !== 'mcts') return false;
-    const diff = this.state?.difficulty || 'easy';
+    const diff = this.state?.difficulty || this._defaultDifficulty;
     if (!(diff === 'medium' || diff === 'hard' || diff === 'hybrid')) {
       if (this.state) {
         this.state.aiPending = null;

@@ -3,6 +3,7 @@ import Card from '../src/js/entities/card.js';
 
 test('Spell Damage +1 from Scarlet Sorcerer boosts Whirlwind', async () => {
   const g = new Game();
+  g.state.difficulty = 'easy';
   await g.setupMatch();
 
   // Clear zones for controlled scenario

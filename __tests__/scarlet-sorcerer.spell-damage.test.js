@@ -3,6 +3,7 @@ import Card from '../src/js/entities/card.js';
 
 test('Scarlet Sorcerer increases spell damage by 1', async () => {
   const g = new Game();
+  g.state.difficulty = 'easy';
   await g.setupMatch();
 
   g.player.hand.cards = [];
@@ -25,4 +26,3 @@ test('Scarlet Sorcerer increases spell damage by 1', async () => {
 
   expect(enemy.data.health).toBe(1);
 });
-

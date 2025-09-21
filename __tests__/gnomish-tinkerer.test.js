@@ -4,6 +4,7 @@ import Card from '../src/js/entities/card.js';
 describe('Gnomish Tinkerer', () => {
   test('plays a random consumable from the library', async () => {
     const g = new Game();
+    g.state.difficulty = 'easy';
     await g.setupMatch();
     g.turns.turn = 10;
     g.resources._pool.set(g.player, 10);
@@ -31,4 +32,3 @@ describe('Gnomish Tinkerer', () => {
     expect(g.player.library.cards.find(c => c.id === 'consumable-healing-potion')).toBeUndefined();
   });
 });
-

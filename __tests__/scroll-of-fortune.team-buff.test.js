@@ -5,6 +5,7 @@ import Card from '../src/js/entities/card.js';
 describe('Scroll of Fortune team buff', () => {
   test('gives all friendlies +0/+2 until next turn and draws a card', async () => {
     const g = new Game();
+    g.state.difficulty = 'easy';
     await g.setupMatch();
 
     // Deterministic setup

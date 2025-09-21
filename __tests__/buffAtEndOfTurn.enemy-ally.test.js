@@ -4,6 +4,7 @@ import Card from '../src/js/entities/card.js';
 describe('buffAtEndOfTurn target: randomEnemyAlly', () => {
   test('buffs a random enemy ally at end of controller turn', async () => {
     const g = new Game();
+    g.state.difficulty = 'easy';
     await g.setupMatch();
     g.resources._pool.set(g.player, 10);
     g.resources._pool.set(g.opponent, 10);
@@ -35,4 +36,3 @@ describe('buffAtEndOfTurn target: randomEnemyAlly', () => {
     expect(enemyAlly.data.attack).toBe(before + 1);
   });
 });
-

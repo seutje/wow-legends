@@ -4,6 +4,7 @@ import Card from '../src/js/entities/card.js';
 
 test('using Healing Potion prompts for target and respects enemy Taunt', async () => {
   const g = new Game();
+  g.state.difficulty = 'easy';
   await g.setupMatch();
   g.turns.setActivePlayer(g.player);
   g.turns.startTurn();

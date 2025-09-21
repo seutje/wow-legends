@@ -4,6 +4,7 @@ import Card from '../src/js/entities/card.js';
 
 test('frozen attackers do not trigger the target selection prompt', async () => {
   const g = new Game();
+  g.state.difficulty = 'easy';
   await g.setupMatch();
 
   const attacker = new Card({

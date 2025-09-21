@@ -356,8 +356,9 @@ function restorePersistentEffects(game) {
 
 export function captureGameState(game) {
   if (!game?.player || !game?.opponent || !game?.turns || !game?.resources) return null;
+  const defaultDifficulty = game?._defaultDifficulty || 'nightmare';
   const state = {
-    difficulty: game.state?.difficulty ?? 'easy',
+    difficulty: game.state?.difficulty ?? defaultDifficulty,
     debug: !!game.state?.debug,
     aiThinking: !!game.state?.aiThinking,
     aiProgress: game.state?.aiProgress ?? 0,
@@ -463,4 +464,3 @@ export function enrichSecretToken(token) {
   token.cardInstanceId = token.cardInstanceId || null;
   return token;
 }
-

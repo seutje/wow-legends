@@ -3,6 +3,7 @@ import Card from '../src/js/entities/card.js';
 
 test('Demonheart Grimoire buffs demon allies summoned after it is played', async () => {
   const g = new Game();
+  g.state.difficulty = 'easy';
   await g.setupMatch();
 
   g.player.hand.cards = [];
@@ -63,4 +64,3 @@ test('Demonheart Grimoire buffs demon allies summoned after it is played', async
   expect(earlyDemon.data.attack).toBe(1);
   expect(earlyDemon.data.health).toBe(1);
 });
-

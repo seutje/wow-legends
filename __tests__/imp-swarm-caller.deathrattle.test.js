@@ -3,6 +3,7 @@ import Game from '../src/js/game.js';
 describe('Imp Swarm Caller deathrattle', () => {
   test('triggers only when Imp Swarm Caller dies', async () => {
     const g = new Game();
+    g.state.difficulty = 'easy';
     await g.setupMatch();
     g.turns.turn = 10;
     g.resources._pool.set(g.player, 10);

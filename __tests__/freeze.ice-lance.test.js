@@ -3,6 +3,7 @@ import Card from '../src/js/entities/card.js';
 
 test('Ice Lance freeze fades after one full turn', async () => {
   const g = new Game();
+  g.state.difficulty = 'easy';
   await g.setupMatch();
 
   // Ensure opponent is the active player to cast Ice Lance at the player hero
@@ -36,4 +37,3 @@ test('Ice Lance freeze fades after one full turn', async () => {
   g.turns.nextPhase(); // End -> Start
   expect(g.player.hero.data.freezeTurns).toBe(0);
 });
-

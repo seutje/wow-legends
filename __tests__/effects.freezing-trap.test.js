@@ -3,6 +3,7 @@ import Card from '../src/js/entities/card.js';
 
 test('Freezing Trap returns attacking enemy ally to hand and increases cost by 2', async () => {
   const g = new Game();
+  g.state.difficulty = 'easy';
   await g.setupMatch();
 
   // Controlled state
@@ -32,4 +33,3 @@ test('Freezing Trap returns attacking enemy ally to hand and increases cost by 2
   expect(returned).toBeTruthy();
   expect(returned.cost).toBe(5);
 });
-

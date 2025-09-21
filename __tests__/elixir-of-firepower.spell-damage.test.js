@@ -3,6 +3,7 @@ import Card from '../src/js/entities/card.js';
 
 test('Elixir of Firepower grants +1 spell damage for this turn', async () => {
   const g = new Game();
+  g.state.difficulty = 'easy';
   await g.setupMatch();
 
   // Controlled setup
@@ -33,4 +34,3 @@ test('Elixir of Firepower grants +1 spell damage for this turn', async () => {
   const sd = g.player.hero?.data?.spellDamage || 0;
   expect(sd).toBe(0);
 });
-
