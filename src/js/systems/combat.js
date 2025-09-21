@@ -112,9 +112,12 @@ export class CombatSystem {
     // Track individual damage events for logging
     const events = [];
 
-    const addDmg = (target, amount, source) => {
+    const addDmg = (target, amount, source, extra = null) => {
       if (!target || amount <= 0) return;
-      events.push({ target, amount, source });
+      const payload = extra && typeof extra === 'object'
+        ? { ...extra, target, amount, source }
+        : { target, amount, source };
+      events.push(payload);
     };
 
     // For each attack group
@@ -123,11 +126,13 @@ export class CombatSystem {
       let dealt = 0;
       if (blockers.length === 0) {
         // Unblocked: route full to hero if present
-        if (this._defenderHero) addDmg(this._defenderHero, atk, attacker);
+        if (this._defenderHero) {
+          addDmg(this._defenderHero, atk, attacker, { incomingAttack: true });
+        }
       } else {
         const per = Math.floor(atk / blockers.length) || atk; // naive equal split
         for (const b of blockers) {
-          addDmg(b, per, attacker);
+          addDmg(b, per, attacker, { incomingAttack: true });
           dealt += per;
           // Lethal: mark to zero health irrespective of current, unless protected by Divine Shield
           if (attacker?.keywords?.includes?.('Lethal')) {
@@ -140,10 +145,12 @@ export class CombatSystem {
         }
         // Overflow to hero if flagged
         if (attacker?.keywords?.includes?.('Overflow') && this._defenderHero && dealt < atk) {
-          addDmg(this._defenderHero, atk - dealt, attacker);
+          addDmg(this._defenderHero, atk - dealt, attacker, { incomingAttack: true });
         }
         // Blockers strike back at attacker
-        for (const b of blockers) addDmg(attacker, getStat(b, 'attack', 0), b);
+        for (const b of blockers) {
+          addDmg(attacker, getStat(b, 'attack', 0), b, { incomingAttack: false });
+        }
       }
 
       // Equipment durability loss on attack: if attacker has equipment list
@@ -237,7 +244,7 @@ export class CombatSystem {
       if (ev.source?.keywords?.includes?.('Freeze') && newHp > 0) freezeTarget(ev.target, 1);
       if (newHp <= 0) setStat(ev.target, 'dead', true);
 
-      if (!ev.isReflect && ev.amount > 0) {
+      if (!ev.isReflect && ev.amount > 0 && ev.incomingAttack) {
         const tgt = ev.target;
         const src = ev.source;
         const hasKeywordReflect = tgt?.keywords?.includes?.('Reflect');
