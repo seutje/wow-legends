@@ -13,6 +13,16 @@ import { loadAutoencoder } from '../src/js/systems/autoencoder.js';
 import { RNG } from '../src/js/utils/rng.js';
 import { getOriginalConsole } from '../src/js/utils/logger.js';
 
+function describeHand(hand) {
+  const cards = hand?.cards || [];
+  if (!cards.length) return '<empty>';
+  return cards.map((card, index) => {
+    const label = card.name || card.id || `Card#${index + 1}`;
+    const cost = Number.isFinite(card.cost) ? card.cost : null;
+    return cost === null ? label : `${label} (${cost})`;
+  }).join(', ');
+}
+
 function fmtResult({ rounds, pHP, pArmor, oHP, oArmor, startingPlayer }, pName, oName) {
   const pAlive = pHP > 0;
   const oAlive = oHP > 0;
@@ -181,6 +191,8 @@ async function playMatch({ matchSeed, maxRounds, bestModel, candidateModel, play
     out(`[eval] Result: ${summary.winner}`);
     out(`[eval] Player (${playerName}) HP=${pHP} Armor=${pArmor} | Plays=${pPlays}`);
     out(`[eval] Opponent (${opponentName}) HP=${oHP} Armor=${oArmor} | Plays=${oPlays}`);
+    out(`[eval] Player (${playerName}) final hand (${game.player.hand.cards.length}): ${describeHand(game.player.hand)}`);
+    out(`[eval] Opponent (${opponentName}) final hand (${game.opponent.hand.cards.length}): ${describeHand(game.opponent.hand)}`);
   }
 
   finalizePlayerLog();
