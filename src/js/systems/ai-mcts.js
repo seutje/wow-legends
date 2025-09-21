@@ -1,7 +1,7 @@
 import CombatSystem from './combat.js';
 import { selectTargets } from './targeting.js';
 import { isTargetable } from './keywords.js';
-import { evaluateGameState } from './ai-heuristics.js';
+import { evaluateGameState, WIN_CONDITION_BONUS } from './ai-heuristics.js';
 import { actionSignature } from './ai-signatures.js';
 import Card from '../entities/card.js';
 import Game from '../game.js';
@@ -24,6 +24,8 @@ class MCTSNode {
     this.visits = 0;
     this.total = 0;
     this.terminal = false;
+    this.best = -Infinity;
+    this.hasLethal = false;
   }
 
   ucb1(c = 1.4) {
@@ -43,6 +45,8 @@ export class MCTS_AI {
     this.rolloutDepth = rolloutDepth;
     this.fullSim = !!fullSim;
     this.policyValueModel = policyValueModel || null;
+    const bonus = Number.isFinite(WIN_CONDITION_BONUS) ? WIN_CONDITION_BONUS : 1000;
+    this._lethalThreshold = Math.max(100, bonus * 0.8);
     // Prefer offloading search to a Web Worker when available (browser only)
     this._canUseWorker = (typeof window !== 'undefined') && (typeof Worker !== 'undefined');
     this._lastTree = null;
@@ -131,6 +135,25 @@ export class MCTS_AI {
       keywords,
       equipment,
     };
+  }
+
+  _readHeroHealth(hero) {
+    if (!hero) return 0;
+    if (typeof hero?.data?.health === 'number') return hero.data.health;
+    if (typeof hero?.health === 'number') return hero.health;
+    return 0;
+  }
+
+  _stateHasPlayerVictory(state) {
+    if (!state) return false;
+    const player = state.player || {};
+    const opponent = state.opponent || {};
+    const playerHero = player.hero || player;
+    const opponentHero = opponent.hero || opponent;
+    const opponentHealth = this._readHeroHealth(opponentHero);
+    if (opponentHealth > 0) return false;
+    const playerHealth = this._readHeroHealth(playerHero);
+    return playerHealth > opponentHealth;
   }
 
   _actionSignature(action) {
@@ -1529,7 +1552,8 @@ export class MCTS_AI {
         return this._resolveCombatAndScore(s);
       }
       const value = this._evaluateRolloutState(s, { actions });
-      return { terminal: true, value: Number.isFinite(value) ? value : 0 };
+      const lethal = this._stateHasPlayerVictory(s);
+      return { terminal: true, value: Number.isFinite(value) ? value : 0, lethal };
     }
 
     // Apply card
@@ -1801,7 +1825,8 @@ export class MCTS_AI {
       enragedOpponentThisTurn: state.enragedOpponentThisTurn,
     });
     const value = Number.isFinite(score) ? score : 0;
-    return { terminal: true, value };
+    const lethal = this._stateHasPlayerVictory(state);
+    return { terminal: true, value, lethal };
   }
 
   _randomPlayout(state) {
@@ -1834,10 +1859,14 @@ export class MCTS_AI {
       }
       const result = choice?.outcome;
       if (!result) break;
-      if (result.terminal) return result.value;
+      if (result.terminal) {
+        const lethal = !!result.lethal || (result.state ? this._stateHasPlayerVictory(result.state) : false);
+        return { value: result.value, lethal };
+      }
       s = result.state;
     }
-    return this._resolveCombatAndScore(s).value;
+    const outcome = this._resolveCombatAndScore(s);
+    return { value: outcome.value, lethal: !!outcome.lethal };
   }
 
   _bestChild(node) {
@@ -1847,6 +1876,27 @@ export class MCTS_AI {
       if (val > bestVal) { bestVal = val; best = ch; }
     }
     return best;
+  }
+
+  _backpropagate(node, value, { lethal = false } = {}) {
+    let current = node;
+    while (current) {
+      current.visits++;
+      current.total += value;
+      if (Number.isFinite(value) && value > current.best) current.best = value;
+      if (lethal) current.hasLethal = true;
+      current = current.parent;
+    }
+  }
+
+  _shouldStopSearch(root) {
+    if (!root || !Array.isArray(root.children)) return false;
+    for (const child of root.children) {
+      if (!child) continue;
+      if (child.hasLethal) return true;
+      if (Number.isFinite(child.best) && child.best >= this._lethalThreshold) return true;
+    }
+    return false;
   }
 
   // ---------- Full-fidelity simulation using cloned Game ----------
@@ -2002,7 +2052,8 @@ export class MCTS_AI {
       const descriptor = this._stateFromSim(s);
       const value = this._evaluateRolloutState(descriptor, { actions });
       const score = Number.isFinite(value) ? value : 0;
-      return { terminal: true, value: score };
+      const lethal = this._stateHasPlayerVictory(s);
+      return { terminal: true, value: score, lethal };
       }
       if (action.card) {
         const cardRef = getCardInstanceId(action.card) ?? action.card;
@@ -2036,7 +2087,9 @@ export class MCTS_AI {
       overloadNextOpponent: overloadOpponent,
       enragedOpponentThisTurn: sim.enragedOpponentThisTurn,
     });
-    return { terminal: true, value: Number.isFinite(value) ? value : 0 };
+    const score = Number.isFinite(value) ? value : 0;
+    const lethal = this._stateHasPlayerVictory({ player: me, opponent: opp });
+    return { terminal: true, value: score, lethal };
   }
 
   async _randomPlayoutSim(sim) {
@@ -2082,11 +2135,14 @@ export class MCTS_AI {
       }
       const result = choice?.outcome;
       if (!result) break;
-      if (result.terminal) return result.value;
+      if (result.terminal) {
+        const lethal = !!result.lethal || (result.state ? this._stateHasPlayerVictory(result.state) : false);
+        return { value: result.value, lethal };
+      }
       s = result.state;
     }
     const res = await this._resolveCombatAndScoreSim(s);
-    return res.value;
+    return { value: res.value, lethal: !!res.lethal };
   }
 
   async _searchFullSimAsync(rootGame) {
@@ -2101,9 +2157,11 @@ export class MCTS_AI {
       }
       // Expansion
       if (node.terminal) {
-        const value = node.visits > 0 ? (node.total / node.visits) : 0;
-        let n = node;
-        while (n) { n.visits++; n.total += value; n = n.parent; }
+        const denom = Math.max(1, node.visits);
+        const value = node.visits > 0 ? (node.total / denom) : 0;
+        const lethal = node.hasLethal || (Number.isFinite(value) && value >= this._lethalThreshold);
+        this._backpropagate(node, value, { lethal });
+        if (this._shouldStopSearch(root)) break;
         continue;
       }
       if (node.untried === null) node.untried = this._legalActionsSim(node.state, node.state.player);
@@ -2120,8 +2178,11 @@ export class MCTS_AI {
           child.state = null;
           child.untried = [];
           child.children = [];
+          child.best = Number.isFinite(value) ? value : child.best;
+          child.hasLethal = !!res.lethal;
           node.children.push(child);
-          let n = node; while (n) { n.visits++; n.total += value; n = n.parent; }
+          this._backpropagate(node, value, { lethal: res.lethal });
+          if (this._shouldStopSearch(root)) break;
           continue;
         } else {
           const child = new MCTSNode(res.state, node, action);
@@ -2130,9 +2191,10 @@ export class MCTS_AI {
         }
       }
       // Rollout
-      const value = await this._randomPlayoutSim(node.state);
+      const { value, lethal } = await this._randomPlayoutSim(node.state);
       // Backpropagation
-      while (node) { node.visits++; node.total += value; node = node.parent; }
+      this._backpropagate(node, value, { lethal });
+      if (this._shouldStopSearch(root)) break;
     }
     const best = this._bestChild(root);
     this._setLastTreeChoice(best);
@@ -2154,9 +2216,11 @@ export class MCTS_AI {
       }
       // Expansion
       if (node.terminal) {
-        const value = node.visits > 0 ? (node.total / node.visits) : 0;
-        let n = node;
-        while (n) { n.visits++; n.total += value; n = n.parent; }
+        const denom = Math.max(1, node.visits);
+        const value = node.visits > 0 ? (node.total / denom) : 0;
+        const lethal = node.hasLethal || (Number.isFinite(value) && value >= this._lethalThreshold);
+        this._backpropagate(node, value, { lethal });
+        if (this._shouldStopSearch(root)) break;
         continue;
       }
       if (node.untried === null) node.untried = this._legalActions(node.state);
@@ -2173,10 +2237,12 @@ export class MCTS_AI {
           child.state = null;
           child.untried = [];
           child.children = [];
+          child.best = Number.isFinite(value) ? value : child.best;
+          child.hasLethal = !!res.lethal;
           node.children.push(child);
           // Backprop
-          let n = node;
-          while (n) { n.visits++; n.total += value; n = n.parent; }
+          this._backpropagate(node, value, { lethal: res.lethal });
+          if (this._shouldStopSearch(root)) break;
           continue;
         } else {
           const child = new MCTSNode(res.state, node, action);
@@ -2185,9 +2251,10 @@ export class MCTS_AI {
         }
       }
       // Rollout
-      const value = this._randomPlayout(node.state);
+      const { value, lethal } = this._randomPlayout(node.state);
       // Backpropagation
-      while (node) { node.visits++; node.total += value; node = node.parent; }
+      this._backpropagate(node, value, { lethal });
+      if (this._shouldStopSearch(root)) break;
     }
     // Choose child with best average value
     const best = this._bestChild(root);
@@ -2212,10 +2279,11 @@ export class MCTS_AI {
         }
         // Expansion
         if (node.terminal) {
-          const value = node.visits > 0 ? (node.total / node.visits) : 0;
-          let n = node;
-          while (n) { n.visits++; n.total += value; n = n.parent; }
-          return;
+          const denom = Math.max(1, node.visits);
+          const value = node.visits > 0 ? (node.total / denom) : 0;
+          const lethal = node.hasLethal || (Number.isFinite(value) && value >= this._lethalThreshold);
+          this._backpropagate(node, value, { lethal });
+          return this._shouldStopSearch(root);
         }
         if (node.untried === null) node.untried = this._legalActions(node.state);
         if (node.untried.length) {
@@ -2230,10 +2298,11 @@ export class MCTS_AI {
             child.state = null;
             child.untried = [];
             child.children = [];
+            child.best = Number.isFinite(value) ? value : child.best;
+            child.hasLethal = !!res.lethal;
             node.children.push(child);
-            let n = node;
-            while (n) { n.visits++; n.total += value; n = n.parent; }
-            return;
+            this._backpropagate(node, value, { lethal: res.lethal });
+            return this._shouldStopSearch(root);
           } else {
             const child = new MCTSNode(res.state, node, action);
             node.children.push(child);
@@ -2241,11 +2310,13 @@ export class MCTS_AI {
           }
         }
         // Rollout
-        const value = this._randomPlayout(node.state);
-        while (node) { node.visits++; node.total += value; node = node.parent; }
+        const { value, lethal } = this._randomPlayout(node.state);
+        this._backpropagate(node, value, { lethal });
+        return this._shouldStopSearch(root);
       };
       for (let i = 0; i < iterations; i++) {
-        doOne();
+        const stop = doOne();
+        if (stop) break;
         if (i === 0 || (i % 50) === 0) {
           const progress = Math.min(1, i / Math.max(1, iterations));
           try { this.game?.bus?.emit?.('ai:progress', { progress }); } catch {}

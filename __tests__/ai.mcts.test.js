@@ -31,6 +31,43 @@ test('MCTS prefers lethal damage over healing', () => {
   });
 });
 
+test('MCTS stops tree search once lethal discovered', () => {
+  const g = new Game();
+  const ai = new MCTS_AI({ resourceSystem: g.resources, combatSystem: g.combat, game: g, iterations: 200, rolloutDepth: 2 });
+
+  g.turns.turn = 6;
+  g.turns.setActivePlayer(g.opponent);
+  g.opponent.hand.cards = [];
+  g.opponent.hero.active = [];
+  g.opponent.hero.powerUsed = true;
+  g.resources._pool.set(g.opponent, 0);
+
+  const attacker = new Card({
+    id: 'lethal-attacker',
+    type: 'ally',
+    name: 'Aggressive Raider',
+    data: { attack: 4, health: 3, maxHealth: 3, enteredTurn: 0 }
+  });
+  g.opponent.battlefield.cards = [attacker];
+  g.player.hero.data.health = 4;
+
+  const state = ai._stateFromLive(g.opponent, g.player);
+  const origRandom = Math.random;
+  Math.random = () => 0;
+  try {
+    const action = ai._search(state);
+    expect(action.attack).toBeTruthy();
+
+    const root = ai._lastTree?.node;
+    expect(root).toBeTruthy();
+    expect(root.visits).toBeLessThan(ai.iterations);
+    const lethalChild = root.children.find(ch => ch.action?.attack);
+    expect(lethalChild?.hasLethal).toBe(true);
+  } finally {
+    Math.random = origRandom;
+  }
+});
+
 test('MCTS spends resources to deploy large vanilla allies', async () => {
   const g = new Game();
   const ai = new MCTS_AI({ resourceSystem: g.resources, combatSystem: g.combat, game: g, iterations: 200, rolloutDepth: 3 });
