@@ -1041,6 +1041,33 @@ export class MCTS_AI {
     return true;
   }
 
+  _hasPotentialHeroLethal(attacker, player, opponent, turn, enteredSet) {
+    if (!player || !opponent?.hero) return false;
+    const heroHealth = this._totalHeroHealth(opponent);
+    if (heroHealth <= 0) return true;
+
+    let potential = 0;
+    const pool = [player.hero, ...(player?.battlefield?.cards || [])];
+    for (const entity of pool) {
+      if (!entity) continue;
+      if (entity.type === 'equipment' || entity.type === 'quest') continue;
+      if (this._isEntityDead(entity)) continue;
+      if ((entity?.data?.freezeTurns || 0) > 0) continue;
+      const attack = this._entityAttackValue(entity);
+      if (attack <= 0) continue;
+      const used = this._attacksUsed(entity);
+      const maxAttacks = this._maxAttacksAllowed(entity);
+      let remaining = Math.max(0, maxAttacks - used);
+      if (entity === attacker && remaining <= 0) remaining = 1;
+      if (remaining <= 0) continue;
+      if (!this._canAttackHero(entity, player, turn, enteredSet)) continue;
+      potential += attack * remaining;
+      if (potential >= heroHealth) return true;
+    }
+
+    return potential >= heroHealth;
+  }
+
   _chooseAttackTarget(attacker, player, opponent, turn, enteredSet, { legalTargets = null, heroAllowed = null } = {}) {
     const provided = Array.isArray(legalTargets) ? legalTargets : null;
     const defenders = provided || selectTargets(this._livingDefenders(opponent));
@@ -1056,6 +1083,10 @@ export class MCTS_AI {
 
     let bestTarget = null;
     let bestScore = -Infinity;
+
+    if (heroEligible && hero && this._hasPotentialHeroLethal(attacker, player, opponent, turn, enteredSet)) {
+      return hero;
+    }
 
     if (heroEligible && hero) {
       bestTarget = hero;

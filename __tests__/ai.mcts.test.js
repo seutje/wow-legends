@@ -209,6 +209,44 @@ test('MCTS executes lethal sequences using multiple attacks', async () => {
   expect(g.opponent.battlefield.cards.every(c => c.data?.attacked)).toBe(true);
 });
 
+test('MCTS goes face for lethal even with dangerous enemy minions', async () => {
+  const g = new Game();
+  const ai = new MCTS_AI({ resourceSystem: g.resources, combatSystem: g.combat, game: g, iterations: 400, rolloutDepth: 3 });
+  g.turns.turn = 7;
+  g.turns.setActivePlayer(g.opponent);
+
+  g.player.hero.data.maxHealth = 30;
+  g.player.hero.data.health = 6;
+  g.player.hero.data.armor = 0;
+
+  const scary = new Card({ id: 'scary-threat', type: 'ally', name: 'Scary Threat', data: { attack: 8, health: 8, maxHealth: 8, enteredTurn: 0 } });
+
+  const finisherA = new Card({ id: 'finisher-a', type: 'ally', name: 'Finisher A', data: { attack: 3, health: 3, maxHealth: 3, enteredTurn: 1 } });
+  const finisherB = new Card({ id: 'finisher-b', type: 'ally', name: 'Finisher B', data: { attack: 3, health: 3, maxHealth: 3, enteredTurn: 1 } });
+
+  for (const card of [finisherA, finisherB]) {
+    card.data.attacked = false;
+    card.data.attacksUsed = 0;
+  }
+
+  g.player.battlefield.cards = [scary];
+  g.opponent.battlefield.cards = [finisherA, finisherB];
+  g.opponent.hand.cards = [];
+  g.resources._pool.set(g.opponent, 0);
+
+  const origRandom = Math.random;
+  Math.random = () => 0;
+  try {
+    await ai.takeTurn(g.opponent, g.player, { resume: true });
+  } finally {
+    Math.random = origRandom;
+  }
+
+  expect(g.player.hero.data.health).toBeLessThanOrEqual(0);
+  expect(scary.data.health).toBe(8);
+  expect(g.opponent.battlefield.cards.every(c => c.data?.attacked)).toBe(true);
+});
+
 test('MCTS clears taunts before delivering lethal with attacks', async () => {
   const g = new Game();
   const ai = new MCTS_AI({ resourceSystem: g.resources, combatSystem: g.combat, game: g, iterations: 500, rolloutDepth: 3 });
