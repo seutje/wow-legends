@@ -7,6 +7,7 @@ const DEFAULT_COLUMNS = Object.freeze([
   'health',
   'taunt',
   'rush',
+  'charge',
   'stealth',
   'divineShield',
   'windfury',
@@ -19,6 +20,7 @@ const DEFAULT_MAX_HINTS = Object.freeze({
   health: 20,
   taunt: 1,
   rush: 1,
+  charge: 1,
   stealth: 1,
   divineShield: 1,
   windfury: 1,
@@ -69,6 +71,8 @@ function extractFeature(card, column) {
       return keywordActive(card, 'Taunt') ? 1 : 0;
     case 'rush':
       return keywordActive(card, 'Rush') ? 1 : 0;
+    case 'charge':
+      return keywordActive(card, 'Charge') ? 1 : 0;
     case 'stealth':
       return keywordActive(card, 'Stealth') ? 1 : 0;
     case 'divineShield':
@@ -182,9 +186,37 @@ function sanitizeModel(raw) {
   const featureStats = {
     max: Array.isArray(raw?.featureStats?.max) ? raw.featureStats.max.slice() : null,
   };
+  const columnSet = new Set(columns);
+  let columnsChanged = false;
+  for (const key of DEFAULT_COLUMNS) {
+    if (!columnSet.has(key)) {
+      columns.push(key);
+      columnSet.add(key);
+      columnsChanged = true;
+    }
+  }
+  if (!Array.isArray(featureStats.max)) {
+    featureStats.max = columns.map((column) => fallbackMaxForColumn(column));
+  } else {
+    while (featureStats.max.length < columns.length) {
+      const column = columns[featureStats.max.length] || DEFAULT_COLUMNS[featureStats.max.length] || 'attack';
+      featureStats.max.push(fallbackMaxForColumn(column));
+    }
+  }
+  if (columnsChanged && encoder.length) {
+    const expectedInputs = columns.length;
+    const first = encoder[0];
+    const weights = Array.isArray(first?.weights) ? first.weights : null;
+    if (Array.isArray(weights)) {
+      for (const row of weights) {
+        if (!Array.isArray(row)) continue;
+        while (row.length < expectedInputs) row.push(0);
+      }
+    }
+  }
   const latentSize = Number(raw.latentSize) > 0 ? Math.floor(raw.latentSize) : DEFAULT_LATENT_SIZE;
   return {
-    inputSize: Number(raw.inputSize) > 0 ? Math.floor(raw.inputSize) : columns.length,
+    inputSize: columns.length,
     latentSize,
     encoder,
     columns,

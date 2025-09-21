@@ -21,6 +21,7 @@ const FEATURE_COLUMNS = Object.freeze([
   'health',
   'taunt',
   'rush',
+  'charge',
   'stealth',
   'divineShield',
   'windfury',
@@ -102,12 +103,13 @@ function minionFeatureVector(card) {
   const health = numberOrZero(data.health ?? card?.health);
   const taunt = keywordActive(card, 'Taunt') ? 1 : 0;
   const rush = keywordActive(card, 'Rush') ? 1 : 0;
+  const charge = keywordActive(card, 'Charge') ? 1 : 0;
   const stealth = keywordActive(card, 'Stealth') ? 1 : 0;
   const divineShield = divineShieldActive(card) ? 1 : 0;
   const windfury = keywordActive(card, 'Windfury') ? 1 : 0;
   const reflect = keywordActive(card, 'Reflect') ? 1 : 0;
   const lifesteal = keywordActive(card, 'Lifesteal') ? 1 : 0;
-  return [attack, health, taunt, rush, stealth, divineShield, windfury, reflect, lifesteal];
+  return [attack, health, taunt, rush, charge, stealth, divineShield, windfury, reflect, lifesteal];
 }
 
 function slugifyTokenName(name) {
@@ -160,15 +162,16 @@ function collectSideSamples(game, side, owner, output, traitPresence) {
 }
 
 function syntheticVectorFor(keyword) {
-  const base = [3, 4, 0, 0, 0, 0, 0, 0, 0];
+  const base = [3, 4, 0, 0, 0, 0, 0, 0, 0, 0];
   switch (keyword) {
     case 'taunt': base[2] = 1; break;
     case 'rush': base[3] = 1; break;
-    case 'stealth': base[4] = 1; break;
-    case 'divineShield': base[5] = 1; break;
-    case 'windfury': base[6] = 1; break;
-    case 'reflect': base[7] = 1; break;
-    case 'lifesteal': base[8] = 1; break;
+    case 'charge': base[4] = 1; break;
+    case 'stealth': base[5] = 1; break;
+    case 'divineShield': base[6] = 1; break;
+    case 'windfury': base[7] = 1; break;
+    case 'reflect': base[8] = 1; break;
+    case 'lifesteal': base[9] = 1; break;
     default: break;
   }
   return base;

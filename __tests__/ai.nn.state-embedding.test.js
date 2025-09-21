@@ -2,7 +2,12 @@ import { beforeAll, describe, expect, test } from '@jest/globals';
 import Game from '../src/js/game.js';
 import Card from '../src/js/entities/card.js';
 import { stateFeatures, HERO_ID_VOCAB } from '../src/js/systems/ai-nn.js';
-import { getLatentSize, loadAutoencoder, resetAutoencoderCache } from '../src/js/systems/autoencoder.js';
+import {
+  getLatentSize,
+  loadAutoencoder,
+  resetAutoencoderCache,
+  rawMinionFeatures,
+} from '../src/js/systems/autoencoder.js';
 
 const BASE_FEATURE_COUNT = 20;
 
@@ -27,6 +32,29 @@ function featuresFor(game) {
 }
 
 describe('state feature encoding with autoencoder', () => {
+  test('raw minion features include charge keyword signal', () => {
+    const base = new Card({ id: 'minion-base', name: 'Runner', type: 'ally', data: { attack: 3, health: 3 } });
+    const charger = new Card({
+      id: 'minion-charge',
+      name: 'Sprinter',
+      type: 'ally',
+      data: { attack: 3, health: 3 },
+      keywords: ['Charge'],
+    });
+    const baseVec = rawMinionFeatures(base);
+    const chargeVec = rawMinionFeatures(charger);
+    expect(chargeVec.length).toBe(baseVec.length);
+    const differing = [];
+    for (let i = 0; i < chargeVec.length; i++) {
+      if (chargeVec[i] !== baseVec[i]) {
+        differing.push(i);
+        expect(chargeVec[i]).toBe(1);
+        expect(baseVec[i]).toBe(0);
+      }
+    }
+    expect(differing.length).toBeGreaterThanOrEqual(1);
+  });
+
   test('encoded latent sums respond to different minion compositions', async () => {
     const game = new Game();
     await game.setupMatch();

@@ -555,7 +555,7 @@ async function main() {
       encounteredBestOpponent = true;
     }
     // Evaluate in parallel using worker threads
-    const scores = await evalPopulationParallel(population, { games: 5, maxRounds: 16, opponentConfig: activeOpponentConfig, lambdaDecor, lambdaL2 });
+    const scores = await evalPopulationParallel(population, { games: 20, maxRounds: 20, opponentConfig: activeOpponentConfig, lambdaDecor, lambdaL2 });
     scores.sort((a,b)=> b.score - a.score);
     const top = scores.slice(0, KEEP);
     const parents = top.map(({ idx }) => population[idx].clone());
