@@ -59,6 +59,22 @@ export class MCTS_AI {
     return [];
   }
 
+  _isHeroFrozen(hero) {
+    if (!hero) return false;
+    const turns = hero?.data?.freezeTurns;
+    return typeof turns === 'number' ? turns > 0 : false;
+  }
+
+  _heroPowerAvailable(owner, { statePowerAvailable = true } = {}) {
+    if (!statePowerAvailable) return false;
+    const hero = owner?.hero ? owner.hero : owner;
+    if (!hero) return false;
+    if (!hero.active?.length) return false;
+    if (hero.powerUsed) return false;
+    if (this._isHeroFrozen(hero)) return false;
+    return true;
+  }
+
   _cardSnapshot(card) {
     if (!card) return '';
     const data = card.data || {};
@@ -167,7 +183,7 @@ export class MCTS_AI {
     const overloadOpponent = typeof this.resources?.pendingOverload === 'function'
       ? this.resources.pendingOverload(opponent)
       : (this.resources?._overloadNext?.get?.(opponent) || 0);
-    const powerAvailable = !!(player?.hero?.active?.length) && !player?.hero?.powerUsed;
+    const powerAvailable = this._heroPowerAvailable(player);
     const enteredThisTurn = this._collectEnteredThisTurn(player, turn);
     return {
       player,
@@ -194,7 +210,7 @@ export class MCTS_AI {
     const overloadOpponent = typeof res?.pendingOverload === 'function'
       ? res.pendingOverload(opp)
       : (res?._overloadNext?.get?.(opp) || 0);
-    const powerAvailable = !!(me?.hero?.active?.length) && !me?.hero?.powerUsed;
+    const powerAvailable = this._heroPowerAvailable(me);
     const enteredThisTurn = this._collectEnteredThisTurn(me, turn, sim?.enteredThisTurn);
     sim.enteredThisTurn = enteredThisTurn;
     return {
@@ -1472,13 +1488,14 @@ export class MCTS_AI {
     const pool = state.pool;
     const enteredSet = this._collectEnteredThisTurn(p, state.turn, state.enteredThisTurn);
     state.enteredThisTurn = enteredSet;
-    const canPower = p.hero?.active?.length && state.powerAvailable && pool >= 2
-      && !this._effectsAreUseless(p.hero.active, p, { pool, turn: state.turn, powerAvailable: state.powerAvailable });
+    const heroPowerAvailable = this._heroPowerAvailable(p, { statePowerAvailable: state.powerAvailable });
+    const canPower = heroPowerAvailable && pool >= 2
+      && !this._effectsAreUseless(p.hero.active, p, { pool, turn: state.turn, powerAvailable: heroPowerAvailable });
     if (canPower) actions.push({ card: null, usePower: true, end: false });
     for (const c of p.hand.cards) {
       const cost = c.cost || 0;
       if (pool < cost) continue;
-      if (this._effectsAreUseless(c.effects, p, { pool, turn: state.turn, card: c, powerAvailable: state.powerAvailable })) continue;
+      if (this._effectsAreUseless(c.effects, p, { pool, turn: state.turn, card: c, powerAvailable: heroPowerAvailable })) continue;
       actions.push({ card: c, usePower: false, end: false });
       if (canPower && pool - cost >= 2) actions.push({ card: c, usePower: true, end: false });
     }
@@ -1555,6 +1572,9 @@ export class MCTS_AI {
     if (action.usePower) {
       s.pool -= 2; p.__mctsPool = s.pool;
       s.powerAvailable = false;
+      if (p.hero) {
+        p.hero.powerUsed = true;
+      }
       if (p.hero.active?.length) {
         this._currentState = s;
         for (const e of p.hero.active) { if (e.type === 'overload') s.overloadNextPlayer += (e.amount || 1); }
@@ -1933,7 +1953,7 @@ export class MCTS_AI {
     }
     const pool = sim.resources.pool(me);
     const turn = typeof sim.turns?.turn === 'number' ? sim.turns.turn : 0;
-    const heroPowerAvailable = !!(me.hero?.active?.length) && !me.hero.powerUsed;
+    const heroPowerAvailable = this._heroPowerAvailable(me);
     me.__mctsPool = pool;
     const canPower = heroPowerAvailable && pool >= 2
       && !this._effectsAreUseless(me.hero?.active, me, { pool, turn, powerAvailable: heroPowerAvailable });
@@ -2303,7 +2323,7 @@ export class MCTS_AI {
     }
 
     // Iteratively choose and apply actions using MCTS until we choose to end
-    let powerAvailable = !!(player.hero?.active?.length) && !player.hero.powerUsed;
+    let powerAvailable = this._heroPowerAvailable(player);
     while (true) {
       if (this._shouldAbortTurn(player, opponent)) {
         this._clearLastTree();
