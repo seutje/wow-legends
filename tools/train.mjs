@@ -381,7 +381,7 @@ async function evalCandidate(model, { games = 20, maxRounds = 20, opponentConfig
 }
 
 // Parallel evaluation with worker pool
-async function evalPopulationParallel(population, { games = 1, maxRounds = 16, concurrency = Math.max(1, (os.cpus()?.length || 2) - 1), opponentConfig = null, lambdaDecor = DEFAULT_LAMBDA_DECOR, lambdaL2 = DEFAULT_LAMBDA_L2 } = {}) {
+async function evalPopulationParallel(population, { games = 20, maxRounds = 20, concurrency = Math.max(1, (os.cpus()?.length || 2) - 1), opponentConfig = null, lambdaDecor = DEFAULT_LAMBDA_DECOR, lambdaL2 = DEFAULT_LAMBDA_L2 } = {}) {
   const workerURL = new URL('./train.worker.mjs', import.meta.url);
   const poolSize = Math.max(1, Number(process.env.TRAIN_WORKERS) || concurrency);
   const workers = Array.from({ length: poolSize }, () => new Worker(workerURL, { type: 'module' }));
