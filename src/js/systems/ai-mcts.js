@@ -1711,6 +1711,34 @@ export class MCTS_AI {
     return entries[entries.length - 1];
   }
 
+  _fallbackNonEndAction(state) {
+    if (!state) return null;
+    const actions = this._legalActions(state);
+    if (!Array.isArray(actions) || actions.length === 0) return null;
+    const candidates = actions.filter((action) => action && !action.end);
+    if (candidates.length === 0) return null;
+    let bestAction = null;
+    let bestScore = -Infinity;
+    for (const action of candidates) {
+      const outcome = this._applyAction(state, action);
+      if (outcome.terminal) {
+        const value = Number.isFinite(outcome.value) ? outcome.value : -Infinity;
+        if (value > bestScore) {
+          bestScore = value;
+          bestAction = action;
+        }
+        continue;
+      }
+      const heuristic = this._heuristicRolloutValue(outcome.state);
+      const score = Number.isFinite(heuristic) ? heuristic : -Infinity;
+      if (score > bestScore) {
+        bestScore = score;
+        bestAction = action;
+      }
+    }
+    return bestAction || candidates[0] || null;
+  }
+
   _pickUntriedAction(node) {
     if (!node || !Array.isArray(node.untried) || node.untried.length === 0) return null;
     if (!this.policyValueModel) {
@@ -2307,8 +2335,17 @@ export class MCTS_AI {
       } else {
         action = await this._searchAsync(rootState);
       }
-      const candidate = this._lastTree?.actionChild || null;
-      const searchKind = useSim ? 'sim' : 'state';
+      let candidate = this._lastTree?.actionChild || null;
+      let searchKind = useSim ? 'sim' : 'state';
+      if (this.policyValueModel && (!action || action.end)) {
+        const fallback = this._fallbackNonEndAction(rootState);
+        if (fallback) {
+          action = fallback;
+          candidate = null;
+          searchKind = null;
+          this._clearLastTree();
+        }
+      }
       if (!action || action.end) {
         this._clearLastTree();
         break;
