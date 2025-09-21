@@ -73,3 +73,19 @@ test('AI provided decks strip quests for the player', async () => {
   expect(playerZones.every(c => c.type !== 'quest')).toBe(true);
   expect(playerZones.length).toBe(60);
 });
+
+test('browser players without a saved deck receive a prefab deck', async () => {
+  const g = new Game();
+  g._isBrowserEnv = true;
+  g.aiPlayers = new Set(['opponent']);
+  await g.setupMatch();
+  const playerHeroId = g.player.hero?.id;
+  expect(playerHeroId).toBeTruthy();
+  const decks = await g.getPrebuiltDecks();
+  expect(Array.isArray(decks)).toBe(true);
+  expect(decks.length).toBeGreaterThan(0);
+  const heroIds = new Set(decks.map(deck => deck.hero?.id).filter(Boolean));
+  expect(heroIds.has(playerHeroId)).toBe(true);
+  const playerDeckSize = g.player.library.cards.length + g.player.hand.cards.length;
+  expect(playerDeckSize).toBe(60);
+});

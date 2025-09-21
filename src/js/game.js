@@ -432,7 +432,7 @@ export default class Game {
       }
     } else {
       let playerDeckState = null;
-      if (playerIsAI) {
+      if (playerIsAI || (this._isBrowserEnv && prebuiltDeckPool.length > 0)) {
         playerDeckState = pickPrebuiltDeck();
       }
       if (!playerDeckState) {
