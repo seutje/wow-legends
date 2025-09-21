@@ -11,6 +11,7 @@ test("Malfurion's hero power offers a choice", async () => {
   await g.setupMatch();
   g.player.hero = new Hero(malfData);
   g.turns.turn = 2;
+  g.turns.setActivePlayer(g.player);
   g.resources.startTurn(g.player);
   const spy = jest.fn(async () => 0);
   g.promptOption = spy;
@@ -23,6 +24,7 @@ test("Malfurion's hero power can grant attack", async () => {
   await g.setupMatch();
   g.player.hero = new Hero(malfData);
   g.turns.turn = 2;
+  g.turns.setActivePlayer(g.player);
   g.resources.startTurn(g.player);
   g.promptOption = async () => 0; // choose attack option
   await g.useHeroPower(g.player);
@@ -36,6 +38,7 @@ test("Malfurion's hero power can grant armor", async () => {
   await g.setupMatch();
   g.player.hero = new Hero(malfData);
   g.turns.turn = 2;
+  g.turns.setActivePlayer(g.player);
   g.resources.startTurn(g.player);
   g.promptOption = async () => 1; // choose armor option
   await g.useHeroPower(g.player);

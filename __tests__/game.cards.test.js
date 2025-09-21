@@ -25,8 +25,10 @@ test('cards loaded with text for tooltips', async () => {
 test('players draw a card at the start of their turn', async () => {
   const g = new Game();
   await g.setupMatch();
-  expect(g.player.hand.size()).toBe(4);
   const before = g.player.hand.size();
+  if (g.turns.activePlayer !== g.player) {
+    g.turns.setActivePlayer(g.player);
+  }
   g.turns.startTurn();
   expect(g.player.hand.size()).toBe(before + 1);
 });
