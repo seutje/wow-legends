@@ -3,18 +3,21 @@ import { getCardInstanceId } from '../utils/card.js';
 export const TURN_WEIGHT = 0.1;
 export const AI_HEALTH_WEIGHT = 5;
 export const PLAYER_HEALTH_WEIGHT = -5;
-export const AI_HAND_WEIGHT = 1;
-export const PLAYER_HAND_WEIGHT = -1;
+export const AI_HAND_WEIGHT = 0.6;
+export const PLAYER_HAND_WEIGHT = -AI_HAND_WEIGHT;
 export const AI_BOARD_ALLY_WEIGHT = 3;
-export const PLAYER_BOARD_ALLY_WEIGHT = -3;
+export const PLAYER_BOARD_ALLY_WEIGHT = -AI_BOARD_ALLY_WEIGHT;
+export const AI_BOARD_ATTACK_WEIGHT = 1;
+export const PLAYER_BOARD_ATTACK_WEIGHT = -AI_BOARD_ATTACK_WEIGHT;
+export const AI_BOARD_HEALTH_WEIGHT = 0.5;
+export const PLAYER_BOARD_HEALTH_WEIGHT = -AI_BOARD_HEALTH_WEIGHT;
 export const AI_EQUIPMENT_WEIGHT = 2;
 export const PLAYER_EQUIPMENT_WEIGHT = -2;
 export const AI_GRAVEYARD_WEIGHT = 0.5;
 export const PLAYER_GRAVEYARD_WEIGHT = -0.5;
-// Spending resources alone shouldn't improve the score.
-// Positive weight encourages saving resources so actions that
-// don't meaningfully change the game state aren't preferred.
-export const RESOURCE_WEIGHT = 0.3;
+// Spending resources alone shouldn't improve the score but the penalty
+// should not outweigh meaningful board advances.
+export const RESOURCE_WEIGHT = 0.2;
 export const TAUNT_WEIGHT = 2;
 export const FREEZE_WEIGHT = -2;
 // Overload is generally bad for the AI (less resources next turn).
@@ -31,6 +34,19 @@ function countKeyword(cards, keyword) {
 function countFrozen(player) {
   const chars = [player.hero, ...(player.battlefield?.cards || [])];
   return chars.filter(c => (c?.data?.freezeTurns || 0) > 0).length;
+}
+
+function sumAllyStats(cards) {
+  const totals = { attack: 0, health: 0 };
+  if (!Array.isArray(cards)) return totals;
+  for (const card of cards) {
+    if (!card || card.type !== 'ally') continue;
+    const attack = Number(card?.data?.attack ?? 0);
+    if (Number.isFinite(attack) && attack > 0) totals.attack += attack;
+    const health = Number(card?.data?.health ?? 0);
+    if (Number.isFinite(health) && health > 0) totals.health += health;
+  }
+  return totals;
 }
 
 export function evaluateGameState({
@@ -56,6 +72,13 @@ export function evaluateGameState({
   const oppAllies = opponent.battlefield?.cards?.filter?.(c => c.type === 'ally').length || 0;
   score += aiAllies * AI_BOARD_ALLY_WEIGHT;
   score += oppAllies * PLAYER_BOARD_ALLY_WEIGHT;
+
+  const aiStats = sumAllyStats(player.battlefield?.cards);
+  const oppStats = sumAllyStats(opponent.battlefield?.cards);
+  score += aiStats.attack * AI_BOARD_ATTACK_WEIGHT;
+  score += oppStats.attack * PLAYER_BOARD_ATTACK_WEIGHT;
+  score += aiStats.health * AI_BOARD_HEALTH_WEIGHT;
+  score += oppStats.health * PLAYER_BOARD_HEALTH_WEIGHT;
 
   const aiEq = player.hero?.equipment?.length || 0;
   const oppEq = opponent.hero?.equipment?.length || 0;
