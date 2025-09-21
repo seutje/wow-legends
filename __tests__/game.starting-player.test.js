@@ -32,4 +32,18 @@ describe('starting player selection', () => {
     const expected = key === 'player' ? game.player : game.opponent;
     expect(game.turns.activePlayer).toBe(expected);
   });
+
+  test('player gains only two resources on second turn when opponent starts', async () => {
+    const game = new Game(null, { aiPlayers: ['player', 'opponent'] });
+    game.rng = new RNG(1);
+    await game.setupMatch();
+    expect(game.state.startingPlayer).toBe('opponent');
+    expect(game.turns.turn).toBe(1);
+    expect(game.resources.pool(game.player)).toBe(1);
+
+    await game.endTurn();
+
+    expect(game.turns.turn).toBe(2);
+    expect(game.resources.pool(game.player)).toBe(2);
+  });
 });

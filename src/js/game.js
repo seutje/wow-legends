@@ -152,6 +152,7 @@ export default class Game {
     this._cardIndex = null;
     this._actionTargetStack = [];
     this._pendingTurnIncrement = false;
+    this._skipNextTurnAdvance = false;
   }
 
   setUIRerender(fn) {
@@ -1369,6 +1370,7 @@ export default class Game {
     if (this._pendingTurnIncrement) {
       this.turns.turn += 1;
       this._pendingTurnIncrement = false;
+      this._skipNextTurnAdvance = true;
     }
 
     await this._executeOpponentTurn();
@@ -1467,7 +1469,9 @@ export default class Game {
     while(this.turns.current !== 'End') {
       this.turns.nextPhase();
     }
-    if (preserveTurn) {
+    const skipAdvance = preserveTurn || this._skipNextTurnAdvance;
+    if (this._skipNextTurnAdvance) this._skipNextTurnAdvance = false;
+    if (skipAdvance) {
       const prev = this.turns.current;
       this.turns.bus.emit('phase:end', { phase: prev, turn: this.turns.turn });
       this.turns.setActivePlayer(this.player);
@@ -1503,6 +1507,7 @@ export default class Game {
     this.player = new Player({ name: 'You' });
     this.opponent = new Player({ name: 'AI' });
     this._pendingTurnIncrement = false;
+    this._skipNextTurnAdvance = false;
     await this.setupMatch(playerDeck);
   }
 
