@@ -12,6 +12,8 @@ class WNode {
     this.visits = 0;
     this.total = 0;
     this.terminal = false;
+    this.best = -Infinity;
+    this.hasLethal = false;
   }
   ucb1(c = 1.4) {
     if (this.visits === 0) return Infinity;
@@ -20,6 +22,17 @@ class WNode {
     return mean + exploration;
   }
 }
+
+const backpropagate = (node, value, lethal = false) => {
+  let current = node;
+  while (current) {
+    current.visits++;
+    current.total += value;
+    if (Number.isFinite(value) && value > current.best) current.best = value;
+    if (lethal) current.hasLethal = true;
+    current = current.parent;
+  }
+};
 
 self.onmessage = (ev) => {
   const { cmd, rootState, iterations, rolloutDepth, turn } = ev.data || {};
@@ -40,9 +53,11 @@ self.onmessage = (ev) => {
       }
       // Expansion
       if (node.terminal) {
-        const value = node.visits > 0 ? (node.total / node.visits) : 0;
-        let n = node;
-        while (n) { n.visits++; n.total += value; n = n.parent; }
+        const denom = Math.max(1, node.visits);
+        const value = node.visits > 0 ? (node.total / denom) : 0;
+        const lethal = node.hasLethal || (Number.isFinite(value) && value >= ai._lethalThreshold);
+        backpropagate(node, value, lethal);
+        if (ai._shouldStopSearch(root)) break;
         continue;
       }
       if (node.untried === null) node.untried = ai._legalActions(node.state);
@@ -59,21 +74,25 @@ self.onmessage = (ev) => {
           child.state = null;
           child.untried = [];
           child.children = [];
+          child.best = Number.isFinite(value) ? value : child.best;
+          child.hasLethal = !!res.lethal;
           node.children.push(child);
-          let n = node;
-          while (n) { n.visits++; n.total += value; n = n.parent; }
+          backpropagate(node, value, !!res.lethal);
+          if (ai._shouldStopSearch(root)) break;
         } else {
           const child = new WNode(res.state, node, action);
           node.children.push(child);
           node = child;
           // Rollout
-          const value = ai._randomPlayout(node.state);
-          while (node) { node.visits++; node.total += value; node = node.parent; }
+          const { value, lethal } = ai._randomPlayout(node.state);
+          backpropagate(node, value, lethal);
+          if (ai._shouldStopSearch(root)) break;
         }
       } else {
         // Rollout only
-        const value = ai._randomPlayout(node.state);
-        while (node) { node.visits++; node.total += value; node = node.parent; }
+        const { value, lethal } = ai._randomPlayout(node.state);
+        backpropagate(node, value, lethal);
+        if (ai._shouldStopSearch(root)) break;
       }
       if (i === 0 || (i % 100) === 0) {
         const progress = Math.min(1, i / iters);
