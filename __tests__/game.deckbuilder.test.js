@@ -19,8 +19,9 @@ test('starting new match clears previous hand and battlefield', async () => {
   const card = { id: 'a1', name: 'Ally', type: 'ally', text: '', data: { attack: 1, health: 1 } };
   const cards = Array(60).fill(card);
   await game.setupMatch({ hero, cards });
-  expect(game.player.hand.cards.length).toBe(4);
+  const playerStarts = game.turns.activePlayer === game.player;
+  expect(game.player.hand.cards.length).toBe(playerStarts ? 4 : 3);
   expect(game.player.battlefield.cards.length).toBe(0);
-  expect(game.opponent.hand.cards.length).toBe(3);
+  expect(game.opponent.hand.cards.length).toBe(playerStarts ? 3 : 4);
   expect(game.opponent.battlefield.cards.length).toBe(0);
 });

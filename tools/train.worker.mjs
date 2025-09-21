@@ -73,7 +73,7 @@ async function evalCandidate(model, { games = 20, maxRounds = 20, opponentConfig
       const seed = g >>> 0;
       game.rng = new RNG(seed);
       await game.setupMatch();
-      game.turns.setActivePlayer(game.player);
+      const startingPlayerKey = game.state?.startingPlayer === 'opponent' ? 'opponent' : 'player';
       setActiveModel(model);
 
       const opponentAI = new NeuralAI({ game, resourceSystem: game.resources, combatSystem: game.combat, model });
@@ -88,31 +88,78 @@ async function evalCandidate(model, { games = 20, maxRounds = 20, opponentConfig
           fullSim
         });
 
+      const opponentStarts = startingPlayerKey === 'opponent';
       let rounds = 0;
       let opponentTurns = 0;
       const playerNeedsResume = playerAI instanceof MCTS_AI;
       let resumePlayerTurn = playerNeedsResume;
+      let playerTurns = 0;
+      let pendingTurnIncrement = opponentStarts;
       while (rounds < maxRounds && game.player.hero.data.health > 0 && game.opponent.hero.data.health > 0) {
-        if (playerNeedsResume) {
-          await playerAI.takeTurn(game.player, game.opponent, { resume: resumePlayerTurn });
-          resumePlayerTurn = true;
+        if (game.turns.activePlayer === game.player) {
+          if (playerNeedsResume) {
+            await playerAI.takeTurn(game.player, game.opponent, { resume: resumePlayerTurn });
+            resumePlayerTurn = true;
+          } else {
+            await playerAI.takeTurn(game.player, game.opponent);
+          }
+          playerTurns += 1;
+          if (game.opponent.hero.data.health <= 0 || game.player.hero.data.health <= 0) break;
+
+          if (pendingTurnIncrement) {
+            game.turns.turn += 1;
+            pendingTurnIncrement = false;
+          }
+
+          game.turns.setActivePlayer(game.opponent);
+          game.turns.startTurn();
+          game.resources.startTurn(game.opponent);
+          await opponentAI.takeTurn(game.opponent, game.player);
+          opponentTurns++;
+          if (game.opponent.hero.data.health <= 0 || game.player.hero.data.health <= 0) break;
+
+          while (game.turns.current !== 'End') game.turns.nextPhase();
+          game.turns.nextPhase();
+          game.turns.setActivePlayer(game.player);
+          game.turns.startTurn();
+          game.resources.startTurn(game.player);
+          resumePlayerTurn = playerNeedsResume ? true : resumePlayerTurn;
         } else {
-          await playerAI.takeTurn(game.player, game.opponent);
+          await opponentAI.takeTurn(game.opponent, game.player);
+          opponentTurns++;
+          if (game.opponent.hero.data.health <= 0 || game.player.hero.data.health <= 0) break;
+
+          if (playerTurns === 0) {
+            await game._finalizeOpponentTurn({ preserveTurn: true });
+            pendingTurnIncrement = true;
+          } else {
+            while (game.turns.current !== 'End') game.turns.nextPhase();
+            game.turns.nextPhase();
+            game.turns.setActivePlayer(game.player);
+            game.turns.startTurn();
+            game.resources.startTurn(game.player);
+          }
+
+          if (playerNeedsResume) {
+            await playerAI.takeTurn(game.player, game.opponent, { resume: resumePlayerTurn });
+            resumePlayerTurn = true;
+          } else {
+            await playerAI.takeTurn(game.player, game.opponent);
+          }
+          playerTurns += 1;
+          if (game.opponent.hero.data.health <= 0 || game.player.hero.data.health <= 0) break;
+
+          resumePlayerTurn = playerNeedsResume ? true : resumePlayerTurn;
+
+          if (pendingTurnIncrement) {
+            game.turns.turn += 1;
+            pendingTurnIncrement = false;
+          }
+
+          game.turns.setActivePlayer(game.opponent);
+          game.turns.startTurn();
+          game.resources.startTurn(game.opponent);
         }
-        if (game.opponent.hero.data.health <= 0 || game.player.hero.data.health <= 0) break;
-
-        game.turns.setActivePlayer(game.opponent);
-        game.turns.startTurn();
-        game.resources.startTurn(game.opponent);
-        await opponentAI.takeTurn(game.opponent, game.player);
-        opponentTurns++;
-
-        while (game.turns.current !== 'End') game.turns.nextPhase();
-        game.turns.nextPhase();
-        game.turns.setActivePlayer(game.player);
-        game.turns.startTurn();
-        game.resources.startTurn(game.player);
-        resumePlayerTurn = playerNeedsResume ? true : resumePlayerTurn;
 
         rounds++;
       }

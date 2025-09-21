@@ -4,6 +4,8 @@ import Card from '../src/js/entities/card.js';
 test('canceling targeted spell prompt does not consume the card or mana', async () => {
   const g = new Game();
   await g.setupMatch();
+  g.turns.setActivePlayer(g.player);
+  g.turns.startTurn();
 
   // Setup: clear zones and give resources
   g.player.hand.cards = [];
@@ -30,6 +32,8 @@ test('canceling targeted spell prompt does not consume the card or mana', async 
 test('canceling choose-one prompt does not consume the card or mana', async () => {
   const g = new Game();
   await g.setupMatch();
+  g.turns.setActivePlayer(g.player);
+  g.turns.startTurn();
 
   // Use an ally with Choose One battlecry (Keeper of the Grove from cards-2)
   g.player.hand.cards = [];

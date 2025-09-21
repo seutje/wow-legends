@@ -186,6 +186,8 @@ async function simulateAndCollect({ games, rounds }) {
     if (!cardIndex && game?._cardIndex instanceof Map) cardIndex = game._cardIndex;
     const ai = new BasicAI({ resourceSystem: game.resources, combatSystem: game.combat });
     let completedRounds = 0;
+    let playerTurns = 0;
+    let pendingTurnIncrement = false;
     while (
       completedRounds < rounds
       && game.player?.hero?.data?.health > 0
@@ -194,24 +196,66 @@ async function simulateAndCollect({ games, rounds }) {
       collectSideSamples(game, game.player, 'player', samples, traitPresence);
       collectSideSamples(game, game.opponent, 'opponent', samples, traitPresence);
 
-      ai.takeTurn(game.player, game.opponent);
-      collectSideSamples(game, game.player, 'player', samples, traitPresence);
-      collectSideSamples(game, game.opponent, 'opponent', samples, traitPresence);
-      if (game.opponent.hero.data.health <= 0 || game.player.hero.data.health <= 0) break;
+      if (game.turns.activePlayer === game.player) {
+        ai.takeTurn(game.player, game.opponent);
+        playerTurns += 1;
+        collectSideSamples(game, game.player, 'player', samples, traitPresence);
+        collectSideSamples(game, game.opponent, 'opponent', samples, traitPresence);
+        if (game.opponent.hero.data.health <= 0 || game.player.hero.data.health <= 0) break;
 
-      game.turns.setActivePlayer(game.opponent);
-      game.turns.startTurn();
-      game.resources.startTurn(game.opponent);
-      ai.takeTurn(game.opponent, game.player);
-      collectSideSamples(game, game.player, 'player', samples, traitPresence);
-      collectSideSamples(game, game.opponent, 'opponent', samples, traitPresence);
-      if (game.opponent.hero.data.health <= 0 || game.player.hero.data.health <= 0) break;
+        if (pendingTurnIncrement) {
+          game.turns.turn += 1;
+          pendingTurnIncrement = false;
+        }
 
-      while (game.turns.current !== 'End') game.turns.nextPhase();
-      game.turns.nextPhase();
-      game.turns.setActivePlayer(game.player);
-      game.turns.startTurn();
-      game.resources.startTurn(game.player);
+        game.turns.setActivePlayer(game.opponent);
+        game.turns.startTurn();
+        game.resources.startTurn(game.opponent);
+        ai.takeTurn(game.opponent, game.player);
+        collectSideSamples(game, game.player, 'player', samples, traitPresence);
+        collectSideSamples(game, game.opponent, 'opponent', samples, traitPresence);
+        if (game.opponent.hero.data.health <= 0 || game.player.hero.data.health <= 0) break;
+
+        while (game.turns.current !== 'End') game.turns.nextPhase();
+        game.turns.nextPhase();
+        game.turns.setActivePlayer(game.player);
+        game.turns.startTurn();
+        game.resources.startTurn(game.player);
+      } else {
+        ai.takeTurn(game.opponent, game.player);
+        collectSideSamples(game, game.player, 'player', samples, traitPresence);
+        collectSideSamples(game, game.opponent, 'opponent', samples, traitPresence);
+        if (game.opponent.hero.data.health <= 0 || game.player.hero.data.health <= 0) break;
+
+        if (playerTurns === 0) {
+          await game._finalizeOpponentTurn({ preserveTurn: true });
+          pendingTurnIncrement = true;
+        } else {
+          while (game.turns.current !== 'End') game.turns.nextPhase();
+          game.turns.nextPhase();
+          game.turns.setActivePlayer(game.player);
+          game.turns.startTurn();
+          game.resources.startTurn(game.player);
+        }
+        collectSideSamples(game, game.player, 'player', samples, traitPresence);
+        collectSideSamples(game, game.opponent, 'opponent', samples, traitPresence);
+
+        ai.takeTurn(game.player, game.opponent);
+        playerTurns += 1;
+        collectSideSamples(game, game.player, 'player', samples, traitPresence);
+        collectSideSamples(game, game.opponent, 'opponent', samples, traitPresence);
+        if (game.opponent.hero.data.health <= 0 || game.player.hero.data.health <= 0) break;
+
+        if (pendingTurnIncrement) {
+          game.turns.turn += 1;
+          pendingTurnIncrement = false;
+        }
+
+        game.turns.setActivePlayer(game.opponent);
+        game.turns.startTurn();
+        game.resources.startTurn(game.opponent);
+      }
+
       completedRounds += 1;
     }
   }

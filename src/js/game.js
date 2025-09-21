@@ -15,6 +15,7 @@ import { selectTargets } from './systems/targeting.js';
 import { logSecretTriggered } from './utils/combatLog.js';
 import { fillDeckRandomly } from './utils/deckbuilder.js';
 import { getCardInstanceId, matchesCardIdentifier } from './utils/card.js';
+import { chooseStartingPlayerKey } from './utils/turnOrder.js';
 
 const DEFAULT_AI_ACTION_DELAY_MS = 1000;
 
@@ -150,6 +151,8 @@ export default class Game {
     this._playerDeckTemplates = null;
     this._cardIndex = null;
     this._actionTargetStack = [];
+    this._pendingTurnIncrement = false;
+    this._skipNextTurnAdvance = false;
   }
 
   setUIRerender(fn) {
@@ -332,6 +335,7 @@ export default class Game {
     const cardById = new Map(this.allCards.map((card) => [card.id, card]));
     this._cardIndex = cardById;
     this._playerDeckTemplates = null;
+    this._pendingTurnIncrement = false;
 
     const rng = this.rng;
     const createRandomDeckState = (excludeHeroId = null) => {
@@ -504,14 +508,25 @@ export default class Game {
     this.player.library.shuffle(rng);
     this.opponent.library.shuffle(rng);
 
+    const startingKey = chooseStartingPlayerKey(this.rng);
+    const startingPlayer = startingKey === 'player' ? this.player : this.opponent;
+    const waitingPlayer = startingKey === 'player' ? this.opponent : this.player;
+    if (this.state) {
+      this.state.startingPlayer = startingKey;
+    }
 
-
-    this.turns.setActivePlayer(this.player);
+    this.turns.setActivePlayer(startingPlayer);
     // Draw opening hand
-    this.draw(this.player, 3);
-    this.draw(this.opponent, 3);
+    this.draw(startingPlayer, 3);
+    this.draw(waitingPlayer, 3);
     this.turns.startTurn();
-    this.resources.startTurn(this.player);
+    this.resources.startTurn(startingPlayer);
+
+    if (startingPlayer === this.opponent
+      && this._isAIControlled(this.opponent)
+      && !this._isAIControlled(this.player)) {
+      await this._executeOpponentTurn({ skipSetup: true, preserveTurn: true });
+    }
 
     if (this.state?.difficulty === 'hybrid' || this.state?.difficulty === 'nightmare') {
       this._ensureNNModelLoading();
@@ -1216,6 +1231,117 @@ export default class Game {
     return true;
   }
 
+  async _executeOpponentTurn({ skipSetup = false, preserveTurn = false } = {}) {
+    if (!skipSetup) {
+      this.turns.setActivePlayer(this.opponent);
+      this.turns.startTurn();
+      this.resources.startTurn(this.opponent);
+    }
+
+    const diff = this.state?.difficulty || 'easy';
+    if (diff === 'nightmare' || diff === 'hybrid') {
+      this._ensureNNModelLoading();
+    }
+    if (diff === 'nightmare') {
+      const { default: NeuralAI, loadModelFromDiskOrFetch } = await import('./systems/ai-nn.js');
+      await loadModelFromDiskOrFetch();
+      const ai = new NeuralAI({ game: this, resourceSystem: this.resources, combatSystem: this.combat });
+      if (this.state) this.state.aiThinking = true;
+      this.bus.emit('ai:thinking', { thinking: true });
+      try {
+        await ai.takeTurn(this.opponent, this.player);
+      } finally {
+        if (this.state) this.state.aiThinking = false;
+        this.bus.emit('ai:thinking', { thinking: false });
+      }
+      if (this.isGameOver()) return;
+    } else if (diff === 'medium' || diff === 'hard' || diff === 'hybrid') {
+      if (this.state) this.state.aiPending = { type: 'mcts', stage: 'queued' };
+      const ai = await this._createMctsAI(diff);
+      if (this.state) this.state.aiThinking = true;
+      this.bus.emit('ai:thinking', { thinking: true });
+      try {
+        await ai.takeTurn(this.opponent, this.player);
+      } finally {
+        if (this.state) {
+          this.state.aiThinking = false;
+          this.state.aiPending = null;
+        }
+        this.bus.emit('ai:thinking', { thinking: false });
+      }
+      if (this.isGameOver()) return;
+    } else {
+      const affordable = this.opponent.hand.cards
+        .filter(c => this.canPlay(this.opponent, c))
+        .sort((a, b) => (a.cost || 0) - (b.cost || 0));
+      if (affordable[0]) {
+        await this.playFromHand(this.opponent, affordable[0]);
+        if (this.isGameOver()) return;
+      }
+      const attackers = this.opponent.battlefield.cards.filter((c) => {
+        if (!(c.type === 'ally' || c.type === 'equipment')) return false;
+        const atk = typeof c.totalAttack === 'function' ? c.totalAttack() : (c.data?.attack || 0);
+        const maxAttacks = c?.keywords?.includes?.('Windfury') ? 2 : 1;
+        const used = c?.data?.attacksUsed || 0;
+        return atk > 0 && !c?.data?.summoningSick && used < maxAttacks;
+      });
+      for (const c of attackers) {
+        if (this.isGameOver()) break;
+        const hasRush = !!c?.keywords?.includes?.('Rush');
+        const justEntered = !!(c?.data?.enteredTurn && c.data.enteredTurn === this.turns.turn);
+        const defenders = [
+          this.player.hero,
+          ...this.player.battlefield.cards.filter((d) => d.type !== 'equipment' && d.type !== 'quest')
+        ];
+        const legal = selectTargets(defenders);
+        if (hasRush && justEntered) {
+          const nonHero = legal.filter((t) => !matchesCardIdentifier(t, this.player.hero));
+          if (nonHero.length === 0) continue;
+        }
+        let block = null;
+        if (legal.length === 1) {
+          const only = legal[0];
+          if (!matchesCardIdentifier(only, this.player.hero)) block = only;
+        } else if (legal.length > 1) {
+          const choices = legal.filter((t) => !matchesCardIdentifier(t, this.player.hero));
+          block = this.rng.pick(choices);
+        }
+        const target = block || this.player.hero;
+        await this.throttleAIAction(this.opponent);
+        if (this.isGameOver()) break;
+        const declared = this.combat.declareAttacker(c, target);
+        if (!declared) continue;
+        if (c.data) {
+          c.data.attacked = true;
+          c.data.attacksUsed = (c.data.attacksUsed || 0) + 1;
+        }
+        if (c?.keywords?.includes?.('Stealth')) {
+          c.keywords = c.keywords.filter((k) => k !== 'Stealth');
+        }
+        if (block) this.combat.assignBlocker(getCardInstanceId(c), block);
+        this.opponent.log.push(`Attacked ${target.name} with ${c.name}`);
+      }
+      this.combat.setDefenderHero(this.player.hero);
+      const events = this.combat.resolve();
+      for (const ev of events) {
+        const srcOwner = [this.opponent.hero, ...this.opponent.battlefield.cards].includes(ev.source) ? this.opponent : this.player;
+        this.bus.emit('damageDealt', { player: srcOwner, source: ev.source, amount: ev.amount, target: ev.target });
+      }
+      if (this._uiRerender) {
+        try { this._uiRerender(); } catch {}
+      }
+      await this.cleanupDeaths(this.player, this.opponent);
+      await this.cleanupDeaths(this.opponent, this.player);
+      this.checkForGameOver();
+      if (this.isGameOver()) return;
+    }
+
+    if (this.isGameOver()) return;
+
+    await this._finalizeOpponentTurn({ preserveTurn });
+    if (preserveTurn) this._pendingTurnIncrement = true;
+  }
+
   async cleanupDeaths(player, killer) {
     const dead = player.battlefield.cards.filter(c => c.data?.dead);
     for (const c of dead) {
@@ -1241,122 +1367,10 @@ export default class Game {
 
     if (this.isGameOver()) return;
 
-    // AI's turn
-    this.turns.setActivePlayer(this.opponent);
-    this.turns.startTurn();
-    this.resources.startTurn(this.opponent);
+    const prepared = await this._finalizePlayerTurn();
+    if (!prepared) return;
 
-    const diff = this.state?.difficulty || 'easy';
-    if (diff === 'nightmare' || diff === 'hybrid') {
-      this._ensureNNModelLoading();
-    }
-    if (diff === 'nightmare') {
-      // Neural network AI (nightmare)
-      const { default: NeuralAI, loadModelFromDiskOrFetch } = await import('./systems/ai-nn.js');
-      // Lazy-load model if not already set
-      await loadModelFromDiskOrFetch();
-      const ai = new NeuralAI({ game: this, resourceSystem: this.resources, combatSystem: this.combat });
-      if (this.state) this.state.aiThinking = true;
-      this.bus.emit('ai:thinking', { thinking: true });
-      try {
-        await ai.takeTurn(this.opponent, this.player);
-      } finally {
-        if (this.state) this.state.aiThinking = false;
-        this.bus.emit('ai:thinking', { thinking: false });
-      }
-      if (this.isGameOver()) return;
-    } else if (diff === 'medium' || diff === 'hard' || diff === 'hybrid') {
-      // Use MCTS for medium/hard; hard uses deeper search
-      if (this.state) this.state.aiPending = { type: 'mcts', stage: 'queued' };
-      const ai = await this._createMctsAI(diff);
-      // Mark AI as thinking to allow UI to disable controls
-      if (this.state) this.state.aiThinking = true;
-      this.bus.emit('ai:thinking', { thinking: true });
-      try {
-        await ai.takeTurn(this.opponent, this.player);
-      } finally {
-        if (this.state) {
-          this.state.aiThinking = false;
-          this.state.aiPending = null;
-        }
-        this.bus.emit('ai:thinking', { thinking: false });
-      }
-      if (this.isGameOver()) return;
-    } else {
-      // Easy difficulty: previous simple heuristic flow
-      const affordable = this.opponent.hand.cards
-        .filter(c => this.canPlay(this.opponent, c))
-        .sort((a,b)=> (a.cost||0)-(b.cost||0));
-      if (affordable[0]) {
-        await this.playFromHand(this.opponent, affordable[0]);
-        if (this.isGameOver()) return;
-      }
-      const attackers = this.opponent.battlefield.cards.filter(c => {
-        if (!(c.type === 'ally' || c.type === 'equipment')) return false;
-        const atk = typeof c.totalAttack === 'function' ? c.totalAttack() : (c.data?.attack || 0);
-        const maxAttacks = c?.keywords?.includes?.('Windfury') ? 2 : 1;
-        const used = c?.data?.attacksUsed || 0;
-        return atk > 0 && !c?.data?.summoningSick && used < maxAttacks;
-      });
-      for (const c of attackers) {
-        if (this.isGameOver()) break;
-        // Enforce Rush restriction on entry: must have a non-hero target available
-        const hasRush = !!c?.keywords?.includes?.('Rush');
-        const justEntered = !!(c?.data?.enteredTurn && c.data.enteredTurn === this.turns.turn);
-        // Stealth is lost when a unit attacks (AI - easy difficulty path)
-        const defenders = [
-          this.player.hero,
-          ...this.player.battlefield.cards.filter(d => d.type !== 'equipment' && d.type !== 'quest')
-        ];
-        const legal = selectTargets(defenders);
-        // If Rush on entry and no non-hero targets, skip attacking with this unit
-        if (hasRush && justEntered) {
-          const nonHero = legal.filter(t => !matchesCardIdentifier(t, this.player.hero));
-          if (nonHero.length === 0) continue;
-        }
-        let block = null;
-        if (legal.length === 1) {
-          const only = legal[0];
-          if (!matchesCardIdentifier(only, this.player.hero)) block = only;
-        } else if (legal.length > 1) {
-          const choices = legal.filter(t => !matchesCardIdentifier(t, this.player.hero));
-          block = this.rng.pick(choices);
-        }
-        const target = block || this.player.hero;
-        await this.throttleAIAction(this.opponent);
-        if (this.isGameOver()) break;
-        const declared = this.combat.declareAttacker(c, target);
-        if (!declared) continue;
-        if (c.data) {
-          c.data.attacked = true;
-          c.data.attacksUsed = (c.data.attacksUsed || 0) + 1;
-        }
-        if (c?.keywords?.includes?.('Stealth')) {
-          c.keywords = c.keywords.filter(k => k !== 'Stealth');
-        }
-        if (block) this.combat.assignBlocker(getCardInstanceId(c), block);
-        this.opponent.log.push(`Attacked ${target.name} with ${c.name}`);
-      }
-      this.combat.setDefenderHero(this.player.hero);
-      const events = this.combat.resolve();
-      for (const ev of events) {
-        const srcOwner = [this.opponent.hero, ...this.opponent.battlefield.cards].includes(ev.source) ? this.opponent : this.player;
-        this.bus.emit('damageDealt', { player: srcOwner, source: ev.source, amount: ev.amount, target: ev.target });
-      }
-      // Allow UI to reflect HP changes before removals
-      if (this._uiRerender) {
-        try { this._uiRerender(); } catch {}
-      }
-      await this.cleanupDeaths(this.player, this.opponent);
-      await this.cleanupDeaths(this.opponent, this.player);
-      this.checkForGameOver();
-      if (this.isGameOver()) return;
-    }
-
-    if (this.isGameOver()) return;
-
-    // End AI's turn and start player's turn
-    await this._finalizeOpponentTurn();
+    await this._executeOpponentTurn({ skipSetup: true });
   }
 
   async resumePendingAITurn() {
@@ -1447,16 +1461,46 @@ export default class Game {
     return new MCTS_AI(config);
   }
 
-  async _finalizeOpponentTurn() {
+  async _finalizeOpponentTurn({ preserveTurn = false } = {}) {
     if (this.isGameOver()) return;
     while(this.turns.current !== 'End') {
       this.turns.nextPhase();
     }
-    this.turns.nextPhase(); // End -> Start, turn increments for player
+    const skipAdvance = preserveTurn || this._skipNextTurnAdvance;
+    if (this._skipNextTurnAdvance) this._skipNextTurnAdvance = false;
+    if (skipAdvance) {
+      const prev = this.turns.current;
+      this.turns.bus.emit('phase:end', { phase: prev, turn: this.turns.turn });
+      this.turns.setActivePlayer(this.player);
+      this.turns.startTurn();
+      this.resources.startTurn(this.player);
+    } else {
+      this.turns.nextPhase(); // End -> Start, turn increments for player
+      this.turns.setActivePlayer(this.player);
+      this.turns.startTurn();
+      this.resources.startTurn(this.player);
+    }
+  }
 
-    this.turns.setActivePlayer(this.player);
+  async _finalizePlayerTurn() {
+    if (this.isGameOver()) return false;
+    while (this.turns.current !== 'End') {
+      this.turns.nextPhase();
+    }
+    if (this._pendingTurnIncrement) {
+      const prevPhase = this.turns.current;
+      const prevTurn = this.turns.turn;
+      this.turns.bus.emit('phase:end', { phase: prevPhase, turn: prevTurn });
+      this.turns.turn += 1;
+      this._pendingTurnIncrement = false;
+    } else {
+      this.turns.nextPhase();
+    }
+    this._skipNextTurnAdvance = true;
+    this.turns.setActivePlayer(this.opponent);
     this.turns.startTurn();
-    this.resources.startTurn(this.player);
+    this.resources.startTurn(this.opponent);
+    return true;
   }
 
   async reset(playerDeck = null) {
@@ -1480,6 +1524,8 @@ export default class Game {
     this.resources = new ResourceSystem(this.turns);
     this.player = new Player({ name: 'You' });
     this.opponent = new Player({ name: 'AI' });
+    this._pendingTurnIncrement = false;
+    this._skipNextTurnAdvance = false;
     await this.setupMatch(playerDeck);
   }
 

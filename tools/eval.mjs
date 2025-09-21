@@ -13,7 +13,7 @@ import { loadAutoencoder } from '../src/js/systems/autoencoder.js';
 import { RNG } from '../src/js/utils/rng.js';
 import { getOriginalConsole } from '../src/js/utils/logger.js';
 
-function fmtResult({ rounds, pHP, pArmor, oHP, oArmor }, pName, oName) {
+function fmtResult({ rounds, pHP, pArmor, oHP, oArmor, startingPlayer }, pName, oName) {
   const pAlive = pHP > 0;
   const oAlive = oHP > 0;
   let winner = 'draw';
@@ -34,7 +34,14 @@ function fmtResult({ rounds, pHP, pArmor, oHP, oArmor }, pName, oName) {
       winnerKey = 'opponent';
     }
   }
-  return { winner, winnerKey, rounds, player: { hp: pHP, armor: pArmor }, opponent: { hp: oHP, armor: oArmor } };
+  return {
+    winner,
+    winnerKey,
+    rounds,
+    startingPlayer,
+    player: { hp: pHP, armor: pArmor },
+    opponent: { hp: oHP, armor: oArmor }
+  };
 }
 
 function attachCombatLogPrinter(outFn, label, entries) {
@@ -72,6 +79,7 @@ async function playMatch({ matchSeed, maxRounds, bestModel, candidateModel, play
   const game = new Game(null, { aiPlayers: ['player', 'opponent'] });
   game.rng = new RNG(matchSeed);
   await game.setupMatch();
+  const startingPlayerKey = game.state?.startingPlayer === 'opponent' ? 'opponent' : 'player';
 
   const playerUsesMcts = !candidateModel;
   const playerAI = playerUsesMcts
@@ -88,25 +96,65 @@ async function playMatch({ matchSeed, maxRounds, bestModel, candidateModel, play
 
     out(`[eval] Player AI ${playerName} controls hero ${playerHeroName}`);
     out(`[eval] Opponent AI ${opponentName} controls hero ${opponentHeroName}`);
+    const firstMoverName = startingPlayerKey === 'player' ? playerName : opponentName;
+    out(`[eval] Starting player: ${firstMoverName} (${startingPlayerKey})`);
 
     finalizePlayerLog = attachCombatLogPrinter(out, `Player (${playerName})`, game.player.log);
     finalizeOpponentLog = attachCombatLogPrinter(out, `Opponent (${opponentName})`, game.opponent.log);
   }
 
   let rounds = 0;
+  let playerTurns = 0;
+  let pendingTurnIncrement = startingPlayerKey === 'opponent';
   while (rounds < maxRounds && game.player.hero.data.health > 0 && game.opponent.hero.data.health > 0) {
-    await playerAI.takeTurn(game.player, game.opponent);
-    if (game.opponent.hero.data.health <= 0 || game.player.hero.data.health <= 0) break;
+    if (game.turns.activePlayer === game.player) {
+      await playerAI.takeTurn(game.player, game.opponent);
+      playerTurns += 1;
+      if (game.opponent.hero.data.health <= 0 || game.player.hero.data.health <= 0) break;
 
-    game.turns.setActivePlayer(game.opponent);
-    game.turns.startTurn();
-    await opponentAI.takeTurn(game.opponent, game.player);
+      if (pendingTurnIncrement) {
+        game.turns.turn += 1;
+        pendingTurnIncrement = false;
+      }
 
-    while (game.turns.current !== 'End') game.turns.nextPhase();
-    game.turns.nextPhase();
-    game.turns.setActivePlayer(game.player);
-    game.turns.startTurn();
-    if (playerUsesMcts) game.resources.startTurn(game.player);
+      game.turns.setActivePlayer(game.opponent);
+      game.turns.startTurn();
+      await opponentAI.takeTurn(game.opponent, game.player);
+      if (game.opponent.hero.data.health <= 0 || game.player.hero.data.health <= 0) break;
+
+      while (game.turns.current !== 'End') game.turns.nextPhase();
+      game.turns.nextPhase();
+      game.turns.setActivePlayer(game.player);
+      game.turns.startTurn();
+      if (playerUsesMcts) game.resources.startTurn(game.player);
+    } else {
+      await opponentAI.takeTurn(game.opponent, game.player);
+      if (game.opponent.hero.data.health <= 0 || game.player.hero.data.health <= 0) break;
+
+      if (playerTurns === 0) {
+        await game._finalizeOpponentTurn({ preserveTurn: true });
+        pendingTurnIncrement = true;
+        if (playerUsesMcts) game.resources.startTurn(game.player);
+      } else {
+        while (game.turns.current !== 'End') game.turns.nextPhase();
+        game.turns.nextPhase();
+        game.turns.setActivePlayer(game.player);
+        game.turns.startTurn();
+        if (playerUsesMcts) game.resources.startTurn(game.player);
+      }
+
+      await playerAI.takeTurn(game.player, game.opponent);
+      playerTurns += 1;
+      if (game.opponent.hero.data.health <= 0 || game.player.hero.data.health <= 0) break;
+
+      if (pendingTurnIncrement) {
+        game.turns.turn += 1;
+        pendingTurnIncrement = false;
+      }
+
+      game.turns.setActivePlayer(game.opponent);
+      game.turns.startTurn();
+    }
 
     rounds++;
 
@@ -123,7 +171,7 @@ async function playMatch({ matchSeed, maxRounds, bestModel, candidateModel, play
   const pArmor = game.player.hero.data.armor || 0;
   const oHP = game.opponent.hero.data.health;
   const oArmor = game.opponent.hero.data.armor || 0;
-  const summary = fmtResult({ rounds, pHP, pArmor, oHP, oArmor }, playerName, opponentName);
+  const summary = fmtResult({ rounds, pHP, pArmor, oHP, oArmor, startingPlayer: startingPlayerKey }, playerName, opponentName);
 
   if (logDetails) {
     const pPlays = game.player.log.filter(l => l.startsWith('Played ')).length;
@@ -211,7 +259,8 @@ async function main() {
     else totals.draw += 1;
 
     if (!logDetails) {
-      out(`[eval] Match ${i + 1}/${matchCount}: ${summary.winner}`);
+      const firstMoverName = summary.startingPlayer === 'player' ? playerName : opponentName;
+      out(`[eval] Match ${i + 1}/${matchCount}: ${summary.winner} (first: ${firstMoverName})`);
     }
   }
 
