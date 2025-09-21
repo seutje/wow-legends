@@ -31,6 +31,40 @@ test('MCTS prefers lethal damage over healing', () => {
   });
 });
 
+test('MCTS spends resources to deploy large vanilla allies', async () => {
+  const g = new Game();
+  const ai = new MCTS_AI({ resourceSystem: g.resources, combatSystem: g.combat, game: g, iterations: 200, rolloutDepth: 3 });
+
+  g.turns.turn = 10;
+  g.opponent.hand.cards = [];
+  g.opponent.battlefield.cards = [];
+  g.player.battlefield.cards = [];
+  g.opponent.hero.active = [];
+  g.opponent.hero.powerUsed = false;
+  g.resources._pool.set(g.opponent, 10);
+  g.turns.setActivePlayer(g.opponent);
+
+  const colossus = new Card({
+    id: 'test-colossus',
+    type: 'ally',
+    name: 'Arcane Colossus',
+    cost: 8,
+    data: { attack: 8, health: 8, maxHealth: 8 },
+  });
+  g.opponent.hand.add(colossus);
+
+  const origRandom = Math.random;
+  Math.random = () => 0;
+  try {
+    await ai.takeTurn(g.opponent, g.player);
+  } finally {
+    Math.random = origRandom;
+  }
+
+  expect(g.opponent.battlefield.cards.some(c => c.name === 'Arcane Colossus')).toBe(true);
+  expect(g.opponent.hand.cards.some(c => c.name === 'Arcane Colossus')).toBe(false);
+});
+
 test('MCTS simulation targets the biggest threat with single-target removal', () => {
   const g = new Game();
   const ai = new MCTS_AI({ resourceSystem: g.resources, combatSystem: g.combat, game: g, iterations: 100, rolloutDepth: 3 });
