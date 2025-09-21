@@ -46,4 +46,30 @@ describe('starting player selection', () => {
     expect(game.turns.turn).toBe(2);
     expect(game.resources.pool(game.player)).toBe(2);
   });
+
+  test('opponent reaches three resources on third turn when starting first', async () => {
+    const game = new Game(null, { aiPlayers: ['opponent'] });
+    game.rng = new RNG(4);
+    const originalStartTurn = game.resources.startTurn;
+    const observed = [];
+    game.resources.startTurn = function patchedStartTurn(player) {
+      const result = originalStartTurn.call(this, player);
+      if (player === game.opponent) observed.push(this.pool(player));
+      return result;
+    };
+
+    try {
+      await game.setupMatch();
+      expect(game.state.startingPlayer).toBe('opponent');
+      expect(observed[0]).toBe(1);
+
+      await game.endTurn();
+      expect(observed[1]).toBe(2);
+
+      await game.endTurn();
+      expect(observed[2]).toBe(3);
+    } finally {
+      game.resources.startTurn = originalStartTurn;
+    }
+  });
 });

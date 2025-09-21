@@ -1367,13 +1367,10 @@ export default class Game {
 
     if (this.isGameOver()) return;
 
-    if (this._pendingTurnIncrement) {
-      this.turns.turn += 1;
-      this._pendingTurnIncrement = false;
-      this._skipNextTurnAdvance = true;
-    }
+    const prepared = await this._finalizePlayerTurn();
+    if (!prepared) return;
 
-    await this._executeOpponentTurn();
+    await this._executeOpponentTurn({ skipSetup: true });
   }
 
   async resumePendingAITurn() {
@@ -1483,6 +1480,27 @@ export default class Game {
       this.turns.startTurn();
       this.resources.startTurn(this.player);
     }
+  }
+
+  async _finalizePlayerTurn() {
+    if (this.isGameOver()) return false;
+    while (this.turns.current !== 'End') {
+      this.turns.nextPhase();
+    }
+    if (this._pendingTurnIncrement) {
+      const prevPhase = this.turns.current;
+      const prevTurn = this.turns.turn;
+      this.turns.bus.emit('phase:end', { phase: prevPhase, turn: prevTurn });
+      this.turns.turn += 1;
+      this._pendingTurnIncrement = false;
+    } else {
+      this.turns.nextPhase();
+    }
+    this._skipNextTurnAdvance = true;
+    this.turns.setActivePlayer(this.opponent);
+    this.turns.startTurn();
+    this.resources.startTurn(this.opponent);
+    return true;
   }
 
   async reset(playerDeck = null) {
