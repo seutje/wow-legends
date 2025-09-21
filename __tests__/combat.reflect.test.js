@@ -90,4 +90,30 @@ describe('Combat reflection from player equipment', () => {
     expect(reflectEvents).toHaveLength(1);
     expect(reflectEvents[0].amount).toBe(7);
   });
+
+  test('ally with Reflect does not retaliate when it initiated the attack', () => {
+    const attacker = new Card({
+      id: 'reflect-attacker',
+      name: 'Thornblade Initiate',
+      type: 'ally',
+      data: { attack: 3, health: 6 },
+      keywords: ['Reflect'],
+    });
+    const defender = new Card({
+      id: 'enemy-blocker',
+      name: 'Bulwark Defender',
+      type: 'ally',
+      data: { attack: 4, health: 5 },
+    });
+
+    const combat = new CombatSystem();
+    expect(combat.declareAttacker(attacker)).toBe(true);
+    combat.assignBlocker(attacker.id, defender);
+    const events = combat.resolve();
+
+    const reflectEvents = events.filter(ev => ev.source === attacker && ev.isReflect);
+    expect(reflectEvents).toHaveLength(0);
+    expect(attacker.data.health).toBe(2);
+    expect(defender.data.health).toBe(2);
+  });
 });
