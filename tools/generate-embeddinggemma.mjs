@@ -25,8 +25,8 @@ const CARDS_DIR = path.join(ROOT_DIR, 'data', 'cards');
 const OUTPUT_FILE = path.join(ROOT_DIR, 'data', 'models', 'embeddinggemma.json');
 
 const DEFAULT_BATCH_SIZE = 8;
-const DEFAULT_MODEL = 'embedding-gemma';
-const DEFAULT_PAYLOAD_KEY = 'inputs';
+const DEFAULT_MODEL = 'embeddinggemma';
+const DEFAULT_PAYLOAD_KEY = 'input';
 const DEFAULT_MOCK_DIMENSIONS = 256;
 
 function printUsage() {
@@ -291,46 +291,93 @@ async function safeReadResponseText(response) {
 function normalizeEmbeddingResponse(payload, expected) {
   if (!payload) throw new Error('Empty response from embedding service.');
 
-  const candidateArrays = [];
-
-  if (Array.isArray(payload)) {
-    candidateArrays.push(payload);
+  const backendError = extractBackendError(payload);
+  if (backendError) {
+    throw new Error(`Embedding service error: ${backendError}`);
   }
 
-  if (Array.isArray(payload?.data)) {
-    candidateArrays.push(payload.data.map((item) => extractVector(item)));
+  const candidates = [];
+  const pushCandidate = (value) => {
+    if (Array.isArray(value)) candidates.push(value);
+  };
+
+  pushCandidate(payload);
+  pushCandidate(payload?.data);
+  pushCandidate(payload?.embeddings);
+  pushCandidate(payload?.output);
+  pushCandidate(payload?.results);
+
+  if (payload?.embedding !== undefined) {
+    candidates.push([payload.embedding]);
   }
 
-  if (Array.isArray(payload?.embeddings)) {
-    candidateArrays.push(payload.embeddings);
-  }
-
-  if (Array.isArray(payload?.output)) {
-    candidateArrays.push(payload.output);
-  }
-
-  if (typeof payload?.embedding === 'object' && Array.isArray(payload.embedding)) {
-    candidateArrays.push([payload.embedding]);
-  }
-
-  for (const candidate of candidateArrays) {
-    if (!Array.isArray(candidate)) continue;
-    if (candidate.length !== expected) continue;
-    const normalized = candidate.map((vector, index) => sanitizeVector(vector, index));
+  for (const candidate of candidates) {
+    const normalized = normalizeCandidate(candidate, expected);
     if (normalized) return normalized;
   }
 
-  throw new Error('Unrecognized embedding response shape.');
+  const payloadKeys = Object.keys(payload ?? {});
+  throw new Error(`Unrecognized embedding response shape${payloadKeys.length ? ` (keys: ${payloadKeys.join(', ')})` : ''}.`);
+}
+
+function normalizeCandidate(candidate, expected) {
+  if (!Array.isArray(candidate)) return null;
+
+  if (candidate.length === expected) {
+    try {
+      return candidate.map((item, index) => sanitizeVector(extractVector(item), index));
+    } catch (err) {
+      // fall through to attempt single-vector handling below
+    }
+  }
+
+  if (expected === 1 && candidate.length > 0) {
+    try {
+      const vector = sanitizeVector(extractVector(candidate), 0);
+      return [vector];
+    } catch (err) {
+      // ignore and continue searching
+    }
+  }
+
+  return null;
 }
 
 function extractVector(item) {
   if (!item) return item;
   if (Array.isArray(item)) return item;
-  if (Array.isArray(item.embedding)) return item.embedding;
   if (Array.isArray(item.values)) return item.values;
   if (Array.isArray(item.vector)) return item.vector;
   if (Array.isArray(item.output)) return item.output;
+  if (Array.isArray(item.data)) return item.data;
+  if (Array.isArray(item.embedding)) return item.embedding;
+  if (Array.isArray(item?.embedding?.values)) return item.embedding.values;
+  if (Array.isArray(item?.embedding?.vector)) return item.embedding.vector;
+  if (Array.isArray(item?.embedding?.data)) return item.embedding.data;
+  if (Array.isArray(item?.representation)) return item.representation;
   return item;
+}
+
+function extractBackendError(payload) {
+  if (!payload || typeof payload !== 'object') return '';
+  if (typeof payload.error === 'string' && payload.error.trim()) return payload.error.trim();
+  if (typeof payload.message === 'string' && payload.message.trim()) return payload.message.trim();
+  if (payload.error && typeof payload.error === 'object') {
+    if (typeof payload.error.message === 'string' && payload.error.message.trim()) {
+      return payload.error.message.trim();
+    }
+    if (typeof payload.error.detail === 'string' && payload.error.detail.trim()) {
+      return payload.error.detail.trim();
+    }
+  }
+  if (typeof payload.detail === 'string' && payload.detail.trim()) return payload.detail.trim();
+  if (Array.isArray(payload.errors) && payload.errors.length) {
+    const first = payload.errors.find((item) => typeof item === 'string' && item.trim())
+      || payload.errors.find((item) => item && typeof item.message === 'string' && item.message.trim());
+    if (typeof first === 'string') return first.trim();
+    if (first && typeof first.message === 'string' && first.message.trim()) return first.message.trim();
+  }
+  return '';
 }
 
 function sanitizeVector(vector, index) {
@@ -412,7 +459,7 @@ async function writeEmbeddingFile(records, config) {
   await fs.writeFile(config.outputFile, `${serialized}\n`, 'utf8');
 }
 
-async function main() {
+export async function main() {
   const config = parseCliArgs();
   if (config.help) {
     printUsage();
@@ -441,4 +488,12 @@ async function main() {
   }
 }
 
-main();
+if (process.argv[1] && path.resolve(process.argv[1]) === __filename) {
+  main();
+}
+
+export {
+  normalizeEmbeddingResponse,
+  extractVector,
+  extractBackendError
+};
