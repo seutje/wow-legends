@@ -531,13 +531,16 @@ export class NeuralAI {
     return false;
   }
 
-  async takeTurn(player, opponent = null) {
+  async takeTurn(player, opponent = null, options = {}) {
+    const { skipStart = false } = options;
     if (this._shouldAbortTurn(player, opponent)) return false;
-    this.resources.startTurn(player);
-    if (this._shouldAbortTurn(player, opponent)) return false;
-    const drawn = player.library.draw(1);
-    if (drawn[0]) player.hand.add(drawn[0]);
-    if (this._shouldAbortTurn(player, opponent)) return false;
+    if (!skipStart) {
+      this.resources.startTurn(player);
+      if (this._shouldAbortTurn(player, opponent)) return false;
+      const drawn = player.library.draw(1);
+      if (drawn[0]) player.hand.add(drawn[0]);
+      if (this._shouldAbortTurn(player, opponent)) return false;
+    }
 
     let powerAvailable = !!(player.hero?.active?.length) && !player.hero.powerUsed;
     while (true) {
