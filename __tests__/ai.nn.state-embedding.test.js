@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, test } from '@jest/globals';
 import Game from '../src/js/game.js';
 import Card from '../src/js/entities/card.js';
-import { stateFeatures, HERO_ID_VOCAB } from '../src/js/systems/ai-nn.js';
+import { stateFeatures, HERO_ID_VOCAB, getStateFeatureCount } from '../src/js/systems/ai-nn.js';
 import {
   getLatentSize,
   loadAutoencoder,
@@ -68,6 +68,7 @@ describe('state feature encoding with autoencoder', () => {
     game.player.battlefield.add(b);
 
     const baseline = featuresFor(game);
+    expect(baseline.length).toBe(getStateFeatureCount());
 
     const c = new Card({
       id: 'minion-c',
@@ -80,7 +81,7 @@ describe('state feature encoding with autoencoder', () => {
     game.player.battlefield.cards = [a, c];
 
     const mutated = featuresFor(game);
-    expect(mutated.length).toBe(baseline.length);
+    expect(mutated.length).toBe(getStateFeatureCount());
 
     const heroVecSize = HERO_ID_VOCAB.length + 1;
     const latentSize = getLatentSize();
@@ -113,7 +114,7 @@ describe('state feature encoding with autoencoder', () => {
     game.player.hand.add(delta);
 
     const second = featuresFor(game);
-    expect(second.length).toBe(first.length);
+    expect(second.length).toBe(getStateFeatureCount());
 
     const heroVecSize = HERO_ID_VOCAB.length + 1;
     const latentSize = getLatentSize();

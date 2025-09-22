@@ -33,15 +33,30 @@ const ACTION_FEATURE_COUNT = 15;
 const MAX_BOARD_UNITS = 7;
 const HAND_HASH_BUCKETS = 128;
 const HAND_COUNT_NORMALIZER = 10;
-const LATENT_VECTOR_SIZE = getLatentSize();
 const HAND_VECTOR_SIZE = HAND_HASH_BUCKETS;
-export const STATE_FEATURE_COUNT =
-  STATE_BASE_FEATURE_COUNT
-  + HERO_VECTOR_SIZE * 2
-  + LATENT_VECTOR_SIZE * 2
-  + HAND_VECTOR_SIZE * 2;
-export const MODEL_INPUT_SIZE = STATE_FEATURE_COUNT + ACTION_FEATURE_COUNT;
-export const DEFAULT_MODEL_SHAPE = Object.freeze([MODEL_INPUT_SIZE, 128, 64, 32, 16, 1]);
+const HIDDEN_LAYER_TEMPLATE = Object.freeze([128, 64, 32, 16, 1]);
+
+function computeStateFeatureCount(latentSize) {
+  return STATE_BASE_FEATURE_COUNT
+    + HERO_VECTOR_SIZE * 2
+    + latentSize * 2
+    + HAND_VECTOR_SIZE * 2;
+}
+
+export function getStateFeatureCount(latentSize = getLatentSize()) {
+  const size = Number.isFinite(latentSize) && latentSize > 0
+    ? Math.floor(latentSize)
+    : getLatentSize();
+  return computeStateFeatureCount(size);
+}
+
+export function getModelInputSize(latentSize = getLatentSize()) {
+  return getStateFeatureCount(latentSize) + ACTION_FEATURE_COUNT;
+}
+
+export function getDefaultModelShape(latentSize = getLatentSize()) {
+  return Object.freeze([getModelInputSize(latentSize), ...HIDDEN_LAYER_TEMPLATE]);
+}
 
 export function heroIdToVector(heroId) {
   const vec = new Array(HERO_VECTOR_SIZE).fill(0);
@@ -60,7 +75,7 @@ let ActiveModel = null; // module-level active model
 
 function modelHasExpectedShape(model) {
   if (!model || !Array.isArray(model.sizes)) return false;
-  const expected = DEFAULT_MODEL_SHAPE;
+  const expected = getDefaultModelShape();
   if (model.sizes.length !== expected.length) return false;
   for (let i = 0; i < expected.length; i++) {
     if (model.sizes[i] !== expected[i]) return false;
@@ -73,7 +88,7 @@ function isModelCompatible(model) {
 }
 
 function createDefaultModel() {
-  return new MLP(DEFAULT_MODEL_SHAPE);
+  return new MLP(getDefaultModelShape());
 }
 
 function hasForward(model) {

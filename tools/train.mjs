@@ -16,7 +16,7 @@ const __dirname = path.dirname(__filename);
 
 import Game from '../src/js/game.js';
 import MLP from '../src/js/systems/nn.js';
-import NeuralAI, { setActiveModel, DEFAULT_MODEL_SHAPE } from '../src/js/systems/ai-nn.js';
+import NeuralAI, { setActiveModel, getDefaultModelShape } from '../src/js/systems/ai-nn.js';
 import MCTS_AI from '../src/js/systems/ai-mcts.js';
 import { loadAutoencoder } from '../src/js/systems/autoencoder.js';
 import { setDebugLogging, getOriginalConsole } from '../src/js/utils/logger.js';
@@ -492,14 +492,15 @@ async function main() {
     progress(`[${now()}] Failed to load autoencoder model: ${err?.message || err}. Continuing with fallback encoding.`);
   }
   let savedBest = await loadSavedBest();
-  if (savedBest && !shapesMatch(savedBest.sizes, DEFAULT_MODEL_SHAPE)) {
+  const defaultShape = getDefaultModelShape();
+  if (savedBest && !shapesMatch(savedBest.sizes, defaultShape)) {
     const actualShape = Array.isArray(savedBest?.sizes) ? savedBest.sizes.join('x') : 'unknown';
-    const expectedShape = DEFAULT_MODEL_SHAPE.join('x');
+    const expectedShape = defaultShape.join('x');
     progress(`[${now()}] Saved model shape ${actualShape} does not match expected ${expectedShape}; ignoring saved checkpoint.`);
     savedBest = null;
   }
   const savedBestJSON = savedBest ? savedBest.toJSON() : null;
-  const base = (reset || !savedBest) ? new MLP(DEFAULT_MODEL_SHAPE) : savedBest.clone();
+  const base = (reset || !savedBest) ? new MLP(defaultShape) : savedBest.clone();
   const networkShape = base.sizes.slice();
   const KEEP = Math.max(5, Math.floor(POP * 0.1));
   const effectiveGens = Math.max(1, GENS);
