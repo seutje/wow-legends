@@ -1026,10 +1026,15 @@ export default class Game {
     candidates = candidates?.filter(c => c.type !== 'quest');
     if (!candidates?.length) return null;
 
-    // If it's the AI's turn, favor enemy targets when auto-selecting
-    if (this.turns.activePlayer && this.turns.activePlayer !== this.player) {
-      const active = this.turns.activePlayer;
-      const enemy = active === this.player ? this.opponent : this.player;
+    const activePlayer = this.turns?.activePlayer || null;
+    const aiControlsTurn = !!activePlayer && (
+      this._isAIControlled(activePlayer)
+      || (this.state?.aiThinking && activePlayer === this.player)
+    );
+
+    // If the AI is acting (either the opponent or during autoplay), favor enemy targets
+    if (aiControlsTurn) {
+      const enemy = activePlayer === this.player ? this.opponent : this.player;
       const enemyTargets = candidates.filter(
         c => c === enemy.hero || enemy.battlefield.cards.includes(c)
       );
@@ -1113,6 +1118,17 @@ export default class Game {
 
   async promptOption(options) {
     if (!options?.length) return 0;
+    const activePlayer = this.turns?.activePlayer || null;
+    const aiControlsTurn = !!activePlayer && (
+      this._isAIControlled(activePlayer)
+      || (this.state?.aiThinking && activePlayer === this.player)
+    );
+
+    if (aiControlsTurn) {
+      if (options.length === 1) return 0;
+      return this.rng.randomInt(0, options.length);
+    }
+
     if (typeof document === 'undefined') {
       return 0;
     }
