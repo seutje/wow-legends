@@ -447,6 +447,16 @@ export function renderPlay(container, game, { onUpdate, onOpenDeckBuilder, onNew
           onUpdate?.();
         }
       } }, 'End Turn'),
+      el('button', { class: 'btn-autoplay', onclick: async (ev) => {
+        const btn = ev?.currentTarget;
+        if (btn) btn.disabled = true;
+        try {
+          await game.autoplayTurn();
+        } finally {
+          if (btn) btn.disabled = false;
+          onUpdate?.();
+        }
+      } }, 'Autoplay'),
       el('label', { class: 'lbl-difficulty' }, 'Difficulty: ', diffSelect),
       el('label', { class: 'lbl-debug' }, debugChk, ' Debug logs')
     );
@@ -480,10 +490,13 @@ export function renderPlay(container, game, { onUpdate, onOpenDeckBuilder, onNew
   }
 
   // Update controls disabled states
+  const isPlayerTurn = game.turns?.activePlayer === game.player;
   const heroPowerBtn = controls.querySelector('.btn-hero-power');
   if (heroPowerBtn) heroPowerBtn.disabled = !!(game.state?.aiThinking || game.player.hero.powerUsed || game.resources.pool(game.player) < 2 || game.player.hero.data.freezeTurns > 0);
   const endTurnBtn = controls.querySelector('.btn-end-turn');
   if (endTurnBtn) endTurnBtn.disabled = !!(game.state?.aiThinking);
+  const autoplayBtn = controls.querySelector('.btn-autoplay');
+  if (autoplayBtn) autoplayBtn.disabled = !!(game.state?.aiThinking || !isPlayerTurn);
   const newGameBtn = controls.querySelector('.btn-new-game');
   if (newGameBtn) newGameBtn.disabled = !!(game.state?.aiThinking);
   const deckBtn = controls.querySelector('.btn-deck-builder');

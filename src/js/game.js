@@ -1026,10 +1026,15 @@ export default class Game {
     candidates = candidates?.filter(c => c.type !== 'quest');
     if (!candidates?.length) return null;
 
-    // If it's the AI's turn, favor enemy targets when auto-selecting
-    if (this.turns.activePlayer && this.turns.activePlayer !== this.player) {
-      const active = this.turns.activePlayer;
-      const enemy = active === this.player ? this.opponent : this.player;
+    const activePlayer = this.turns?.activePlayer || null;
+    const aiControlsTurn = !!activePlayer && (
+      this._isAIControlled(activePlayer)
+      || (this.state?.aiThinking && activePlayer === this.player)
+    );
+
+    // If the AI is acting (either the opponent or during autoplay), favor enemy targets
+    if (aiControlsTurn) {
+      const enemy = activePlayer === this.player ? this.opponent : this.player;
       const enemyTargets = candidates.filter(
         c => c === enemy.hero || enemy.battlefield.cards.includes(c)
       );
@@ -1113,6 +1118,17 @@ export default class Game {
 
   async promptOption(options) {
     if (!options?.length) return 0;
+    const activePlayer = this.turns?.activePlayer || null;
+    const aiControlsTurn = !!activePlayer && (
+      this._isAIControlled(activePlayer)
+      || (this.state?.aiThinking && activePlayer === this.player)
+    );
+
+    if (aiControlsTurn) {
+      if (options.length === 1) return 0;
+      return this.rng.randomInt(0, options.length);
+    }
+
     if (typeof document === 'undefined') {
       return 0;
     }
@@ -1232,6 +1248,126 @@ export default class Game {
     return true;
   }
 
+  async _runSimpleAITurn(actor, defender) {
+    if (!actor || !defender) return;
+    const affordable = actor.hand.cards
+      .filter((c) => this.canPlay(actor, c))
+      .sort((a, b) => (a.cost || 0) - (b.cost || 0));
+    if (affordable[0]) {
+      await this.playFromHand(actor, affordable[0]);
+      if (this.isGameOver()) return;
+    }
+
+    const attackers = actor.battlefield.cards.filter((c) => {
+      if (!(c.type === 'ally' || c.type === 'equipment')) return false;
+      const atk = typeof c.totalAttack === 'function' ? c.totalAttack() : (c.data?.attack || 0);
+      const maxAttacks = c?.keywords?.includes?.('Windfury') ? 2 : 1;
+      const used = c?.data?.attacksUsed || 0;
+      return atk > 0 && !c?.data?.summoningSick && used < maxAttacks;
+    });
+    for (const card of attackers) {
+      if (this.isGameOver()) break;
+      const hasRush = !!card?.keywords?.includes?.('Rush');
+      const justEntered = !!(card?.data?.enteredTurn && card.data.enteredTurn === this.turns.turn);
+      const defenders = [
+        defender.hero,
+        ...defender.battlefield.cards.filter((c) => c.type !== 'equipment' && c.type !== 'quest')
+      ];
+      const legal = selectTargets(defenders);
+      if (hasRush && justEntered) {
+        const nonHero = legal.filter((t) => !matchesCardIdentifier(t, defender.hero));
+        if (nonHero.length === 0) continue;
+      }
+      let block = null;
+      if (legal.length === 1) {
+        const only = legal[0];
+        if (!matchesCardIdentifier(only, defender.hero)) block = only;
+      } else if (legal.length > 1) {
+        const choices = legal.filter((t) => !matchesCardIdentifier(t, defender.hero));
+        block = this.rng.pick(choices);
+      }
+      const target = block || defender.hero;
+      await this.throttleAIAction(actor);
+      if (this.isGameOver()) break;
+      const declared = this.combat.declareAttacker(card, target);
+      if (!declared) continue;
+      if (card.data) {
+        card.data.attacked = true;
+        card.data.attacksUsed = (card.data.attacksUsed || 0) + 1;
+      }
+      if (card?.keywords?.includes?.('Stealth')) {
+        card.keywords = card.keywords.filter((k) => k !== 'Stealth');
+      }
+      if (block) this.combat.assignBlocker(getCardInstanceId(card), block);
+      actor.log.push(`Attacked ${target.name} with ${card.name}`);
+    }
+
+    this.combat.setDefenderHero(defender.hero);
+    const events = this.combat.resolve();
+    for (const ev of events) {
+      const srcOwner = [actor.hero, ...actor.battlefield.cards].includes(ev.source) ? actor : defender;
+      this.bus.emit('damageDealt', { player: srcOwner, source: ev.source, amount: ev.amount, target: ev.target });
+    }
+    if (this._uiRerender) {
+      try { this._uiRerender(); } catch {}
+    }
+    await this.cleanupDeaths(defender, actor);
+    await this.cleanupDeaths(actor, defender);
+    this.checkForGameOver();
+  }
+
+  async _takeTurnWithDifficultyAI(actor, defender, difficulty, options = {}) {
+    if (!actor || !defender) return;
+    const {
+      skipStart = false,
+      manageThinking = true,
+      trackPending = false,
+    } = options;
+
+    if (difficulty === 'nightmare' || difficulty === 'hybrid') {
+      try { this._ensureNNModelLoading(); } catch {}
+    }
+
+    let pendingSet = false;
+    if (manageThinking) {
+      if (this.state) {
+        this.state.aiThinking = true;
+        this.state.aiProgress = 0;
+      }
+      this.bus.emit('ai:thinking', { thinking: true });
+    }
+
+    try {
+      if (difficulty === 'nightmare') {
+        const { default: NeuralAI, loadModelFromDiskOrFetch } = await import('./systems/ai-nn.js');
+        await loadModelFromDiskOrFetch();
+        const ai = new NeuralAI({ game: this, resourceSystem: this.resources, combatSystem: this.combat });
+        await ai.takeTurn(actor, defender, { skipStart });
+      } else if (difficulty === 'medium' || difficulty === 'hard' || difficulty === 'hybrid') {
+        if (trackPending && this.state) {
+          this.state.aiPending = { type: 'mcts', stage: 'queued' };
+          pendingSet = true;
+        }
+        const ai = await this._createMctsAI(difficulty);
+        try {
+          if (skipStart) await ai.takeTurn(actor, defender, { resume: true });
+          else await ai.takeTurn(actor, defender);
+        } finally {
+          if (pendingSet && this.state) {
+            this.state.aiPending = null;
+          }
+        }
+      } else {
+        await this._runSimpleAITurn(actor, defender);
+      }
+    } finally {
+      if (manageThinking) {
+        if (this.state) this.state.aiThinking = false;
+        this.bus.emit('ai:thinking', { thinking: false });
+      }
+    }
+  }
+
   async _executeOpponentTurn({ skipSetup = false, preserveTurn = false } = {}) {
     if (!skipSetup) {
       this.turns.setActivePlayer(this.opponent);
@@ -1240,102 +1376,7 @@ export default class Game {
     }
 
     const diff = this.state?.difficulty || this._defaultDifficulty;
-    if (diff === 'nightmare' || diff === 'hybrid') {
-      this._ensureNNModelLoading();
-    }
-    if (diff === 'nightmare') {
-      const { default: NeuralAI, loadModelFromDiskOrFetch } = await import('./systems/ai-nn.js');
-      await loadModelFromDiskOrFetch();
-      const ai = new NeuralAI({ game: this, resourceSystem: this.resources, combatSystem: this.combat });
-      if (this.state) this.state.aiThinking = true;
-      this.bus.emit('ai:thinking', { thinking: true });
-      try {
-        await ai.takeTurn(this.opponent, this.player);
-      } finally {
-        if (this.state) this.state.aiThinking = false;
-        this.bus.emit('ai:thinking', { thinking: false });
-      }
-      if (this.isGameOver()) return;
-    } else if (diff === 'medium' || diff === 'hard' || diff === 'hybrid') {
-      if (this.state) this.state.aiPending = { type: 'mcts', stage: 'queued' };
-      const ai = await this._createMctsAI(diff);
-      if (this.state) this.state.aiThinking = true;
-      this.bus.emit('ai:thinking', { thinking: true });
-      try {
-        await ai.takeTurn(this.opponent, this.player);
-      } finally {
-        if (this.state) {
-          this.state.aiThinking = false;
-          this.state.aiPending = null;
-        }
-        this.bus.emit('ai:thinking', { thinking: false });
-      }
-      if (this.isGameOver()) return;
-    } else {
-      const affordable = this.opponent.hand.cards
-        .filter(c => this.canPlay(this.opponent, c))
-        .sort((a, b) => (a.cost || 0) - (b.cost || 0));
-      if (affordable[0]) {
-        await this.playFromHand(this.opponent, affordable[0]);
-        if (this.isGameOver()) return;
-      }
-      const attackers = this.opponent.battlefield.cards.filter((c) => {
-        if (!(c.type === 'ally' || c.type === 'equipment')) return false;
-        const atk = typeof c.totalAttack === 'function' ? c.totalAttack() : (c.data?.attack || 0);
-        const maxAttacks = c?.keywords?.includes?.('Windfury') ? 2 : 1;
-        const used = c?.data?.attacksUsed || 0;
-        return atk > 0 && !c?.data?.summoningSick && used < maxAttacks;
-      });
-      for (const c of attackers) {
-        if (this.isGameOver()) break;
-        const hasRush = !!c?.keywords?.includes?.('Rush');
-        const justEntered = !!(c?.data?.enteredTurn && c.data.enteredTurn === this.turns.turn);
-        const defenders = [
-          this.player.hero,
-          ...this.player.battlefield.cards.filter((d) => d.type !== 'equipment' && d.type !== 'quest')
-        ];
-        const legal = selectTargets(defenders);
-        if (hasRush && justEntered) {
-          const nonHero = legal.filter((t) => !matchesCardIdentifier(t, this.player.hero));
-          if (nonHero.length === 0) continue;
-        }
-        let block = null;
-        if (legal.length === 1) {
-          const only = legal[0];
-          if (!matchesCardIdentifier(only, this.player.hero)) block = only;
-        } else if (legal.length > 1) {
-          const choices = legal.filter((t) => !matchesCardIdentifier(t, this.player.hero));
-          block = this.rng.pick(choices);
-        }
-        const target = block || this.player.hero;
-        await this.throttleAIAction(this.opponent);
-        if (this.isGameOver()) break;
-        const declared = this.combat.declareAttacker(c, target);
-        if (!declared) continue;
-        if (c.data) {
-          c.data.attacked = true;
-          c.data.attacksUsed = (c.data.attacksUsed || 0) + 1;
-        }
-        if (c?.keywords?.includes?.('Stealth')) {
-          c.keywords = c.keywords.filter((k) => k !== 'Stealth');
-        }
-        if (block) this.combat.assignBlocker(getCardInstanceId(c), block);
-        this.opponent.log.push(`Attacked ${target.name} with ${c.name}`);
-      }
-      this.combat.setDefenderHero(this.player.hero);
-      const events = this.combat.resolve();
-      for (const ev of events) {
-        const srcOwner = [this.opponent.hero, ...this.opponent.battlefield.cards].includes(ev.source) ? this.opponent : this.player;
-        this.bus.emit('damageDealt', { player: srcOwner, source: ev.source, amount: ev.amount, target: ev.target });
-      }
-      if (this._uiRerender) {
-        try { this._uiRerender(); } catch {}
-      }
-      await this.cleanupDeaths(this.player, this.opponent);
-      await this.cleanupDeaths(this.opponent, this.player);
-      this.checkForGameOver();
-      if (this.isGameOver()) return;
-    }
+    await this._takeTurnWithDifficultyAI(this.opponent, this.player, diff, { trackPending: true });
 
     if (this.isGameOver()) return;
 
@@ -1352,6 +1393,44 @@ export default class Game {
         await this.effects.execute(c.deathrattle, { game: this, player, card: c });
       }
       if (killer) this.bus.emit('allyDefeated', { player: killer, card: c });
+    }
+  }
+
+  async autoplayTurn() {
+    if (this.state?.aiThinking) return false;
+    if (this.turns?.activePlayer && this.turns.activePlayer !== this.player) return false;
+    if (this.isGameOver()) return false;
+
+    if (this.state) {
+      this.state.aiThinking = true;
+      this.state.aiProgress = 0;
+    }
+    this.bus.emit('ai:thinking', { thinking: true });
+
+    let completed = false;
+    try {
+      const diff = this.state?.difficulty || this._defaultDifficulty;
+      await this._takeTurnWithDifficultyAI(this.player, this.opponent, diff, {
+        skipStart: true,
+        manageThinking: false,
+      });
+      if (this.isGameOver()) {
+        if (this.state) {
+          this.state.aiThinking = false;
+          this.state.aiProgress = 1;
+        }
+        this.bus.emit('ai:thinking', { thinking: false });
+        completed = true;
+        return true;
+      }
+      await this.endTurn();
+      completed = true;
+      return true;
+    } finally {
+      if (!completed) {
+        this.bus.emit('ai:thinking', { thinking: false });
+        if (this.state) this.state.aiThinking = false;
+      }
     }
   }
 
