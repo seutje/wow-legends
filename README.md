@@ -63,6 +63,12 @@ Developer Notes
   - `node tools/encode-minions.mjs` samples quick AI vs AI matches and writes `data/datasets/minion-encodings.json` with per-minion feature vectors (attack, health, taunt, rush, stealth, divine shield, windfury, reflect, lifesteal).
   - `node tools/train-autoencoder.mjs` fits a sparse autoencoder (≈20 latent dims) over that dataset and saves weights to `data/models/autoencoder.json`.
   - After retraining the autoencoder, rerun `npm run train` (or `node tools/train.mjs`) so the policy network in `data/models/best.json` matches the updated state encoding.
+- EmbeddingGemma text embeddings:
+  - `node tools/generate-embeddinggemma.mjs` loads every definition in `data/cards/*.json`, concatenates useful textual fields, and requests an EmbeddingGemma vector for each card.
+  - Configure the backend via CLI flags or env vars: set `EMBEDDING_GEMMA_URL` (or `--endpoint`) to your inference endpoint, optionally provide `EMBEDDING_GEMMA_API_KEY`/`--api-key`, and append any custom headers with `--header "Name: Value"`. Use `--payload-key` if the service expects something other than `inputs` for the batched text field.
+  - Example: `EMBEDDING_GEMMA_URL=http://localhost:8080/v1/embeddings EMBEDDING_GEMMA_API_KEY=supersecret node tools/generate-embeddinggemma.mjs --batch-size 16 --model embedding-gemma-2b`.
+  - The script writes `data/models/embeddinggemma.json`, sorted by `cardId`, containing `{cardId, vector, metadata}` so downstream tooling can reload the embeddings deterministically.
+  - For offline work you can append `--mock` (or set `EMBEDDING_GEMMA_MOCK=1`) to generate deterministic placeholder vectors without hitting a backend; adjust `--mock-dims` to match your target embedding width. The committed artifact is generated in this mock mode—regenerate with a real backend after changing card text or when you need fresh embeddings.
 - Evaluate NN vs hard MCTS: `npm run eval` — runs a single game with NN as player vs hard MCTS as opponent (max 20 rounds) and prints result summary. Provide a model path to pit two neural AIs: `npm run eval -- data/other-model.json`.
 - Simulation CLI: `npm run simulate` (quick AI turns). Balance sampling: `node tools/balance.mjs`.
 - Content pipeline: `node tools/cards-ingest.mjs` parses `CARDS.md` and writes per-type JSON under `data/cards/` (e.g., `data/cards/hero.json`, `data/cards/spell.json`, `data/cards/ally.json`, etc.).
