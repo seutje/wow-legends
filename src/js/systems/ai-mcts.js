@@ -8,6 +8,7 @@ import Game from '../game.js';
 import Player from '../entities/player.js';
 import Hero from '../entities/hero.js';
 import { cardsMatch, getCardInstanceId, matchesCardIdentifier } from '../utils/card.js';
+import { replaceEquipment } from '../utils/equipment.js';
 
 // Simple Monte Carlo Tree Search AI
 // - Explores sequences of actions (play card / use hero power / end)
@@ -1600,7 +1601,7 @@ export class MCTS_AI {
       if (played.type === 'ally' || played.type === 'equipment' || played.type === 'quest') {
         p.battlefield.cards.push(played);
         if (played.type === 'equipment') {
-          p.hero.equipment = [played];
+          replaceEquipment(p, played);
         }
         if (played.type === 'ally' && !(played.keywords?.includes('Rush') || played.keywords?.includes('Charge'))) {
           played.data = played.data || {};
@@ -2513,7 +2514,7 @@ export class MCTS_AI {
           }
           if (action.card.type === 'ally' || action.card.type === 'equipment' || action.card.type === 'quest') {
             player.hand.moveTo(player.battlefield, action.card);
-            if (action.card.type === 'equipment') player.hero.equipment = [action.card];
+            if (action.card.type === 'equipment') player.equip(action.card);
             if (action.card.type === 'ally' && !action.card.keywords?.includes('Rush')) {
               action.card.data = action.card.data || {};
               action.card.data.attacked = true;

@@ -3,6 +3,7 @@ import { evaluateGameState } from './ai-heuristics.js';
 import { selectTargets } from './targeting.js';
 import Card from '../entities/card.js';
 import { cardsMatch, getCardInstanceId, matchesCardIdentifier } from '../utils/card.js';
+import { replaceEquipment } from '../utils/equipment.js';
 
 export class BasicAI {
   constructor({ resourceSystem, combatSystem } = {}) {
@@ -257,7 +258,7 @@ export class BasicAI {
       if (played.type === 'ally' || played.type === 'equipment' || played.type === 'quest') {
         p.battlefield.cards.push(played);
         if (played.type === 'equipment') {
-          p.hero.equipment = [played];
+          replaceEquipment(p, played);
         }
         if (played.type === 'ally') {
           played.data = played.data || {};
@@ -364,7 +365,7 @@ export class BasicAI {
       if (best.card.effects) this._applySimpleEffects(best.card.effects, player, opponent, pool);
       if (best.card.type === 'ally' || best.card.type === 'equipment' || best.card.type === 'quest') {
         player.hand.moveTo(player.battlefield, best.card);
-        if (best.card.type === 'equipment') player.hero.equipment = [best.card];
+        if (best.card.type === 'equipment') player.equip(best.card);
         if (best.card.type === 'ally') {
           best.card.data = best.card.data || {};
           best.card.data.enteredTurn = this.resources?.turns?.turn ?? 0;

@@ -3,6 +3,7 @@ import Zone from './zone.js';
 import Hand from './hand.js';
 import Hero from './hero.js';
 import Equipment from './equipment.js';
+import { replaceEquipment } from '../utils/equipment.js';
 
 export class Player {
   constructor({ id, name = 'Player', hero = null } = {}) {
@@ -29,11 +30,7 @@ export class Player {
 
   equip(item) {
     const eq = item instanceof Equipment ? item : new Equipment(item);
-    // Only one piece of equipment can be active at a time
-    this.hero.equipment = [eq];
-    if (eq.armor) {
-      this.hero.data.armor = (this.hero.data.armor || 0) + eq.armor;
-    }
+    replaceEquipment(this, eq);
     return eq;
   }
 }
