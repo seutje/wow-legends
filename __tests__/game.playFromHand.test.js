@@ -115,3 +115,22 @@ test('canceling targeted ally keeps its original hand position', async () => {
   expect(g.player.hand.cards.indexOf(targetAlly)).toBe(originalIndex);
   expect(g.player.hand.cards.map(c => c.id)).toEqual(initialOrder);
 });
+
+test('battlecry ally cannot select itself as a minion target', async () => {
+  const g = new Game();
+  const battlecryAlly = new Card({
+    type: 'ally',
+    name: 'Careful Slinger',
+    cost: 0,
+    keywords: ['Battlecry'],
+    data: { attack: 1, health: 2 },
+    effects: [{ type: 'damage', target: 'minion', amount: 1 }],
+  });
+  g.player.hand.add(battlecryAlly);
+  g.resources._pool.set(g.player, 10);
+
+  const played = await g.playFromHand(g.player, battlecryAlly.id);
+
+  expect(played).toBe(true);
+  expect(battlecryAlly.data.health).toBe(2);
+});
