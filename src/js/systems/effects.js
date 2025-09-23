@@ -471,8 +471,15 @@ export class EffectSystem {
       if (newUnit.keywords?.includes('Divine Shield')) {
         newUnit.data.divineShield = true;
       }
-      // Track entry turn for Rush/Charge logic
-      newUnit.data.enteredTurn = this.game?.turns?.turn || 0;
+      // Track entry turn for Rush/Charge logic, ensuring units created during an
+      // opponent turn count as entering on the previous turn so they are ready
+      // when their controller's next turn begins.
+      const turnSystem = this.game?.turns;
+      const currentTurn = (turnSystem && typeof turnSystem.turn === 'number') ? turnSystem.turn : 0;
+      const activePlayer = turnSystem?.activePlayer;
+      const isOwnersTurn = activePlayer == null || activePlayer === player;
+      const enteredTurn = isOwnersTurn ? currentTurn : Math.max(0, currentTurn - 1);
+      newUnit.data.enteredTurn = enteredTurn;
       // Summoning sickness applies unless the unit has Rush or Charge
       if (!(newUnit.keywords?.includes('Rush') || newUnit.keywords?.includes('Charge'))) {
         newUnit.data.attacked = true;
