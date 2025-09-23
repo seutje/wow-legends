@@ -387,12 +387,19 @@ export function renderPlay(container, game, { onUpdate, onOpenDeckBuilder, onNew
   const debugEnabled = !!(game.state?.debug);
   const defaultDifficulty = game?._defaultDifficulty || 'nightmare';
 
-  let controls = container.querySelector('.controls');
+  let headerEl = document.querySelector('header');
+  if (!headerEl) {
+    headerEl = el('header', { 'aria-label': 'App Header' }, el('strong', {}, 'WoW Legends'));
+    document.body.prepend(headerEl);
+  }
+
+  let controls = headerEl.querySelector('.controls');
   let board = container.querySelector('.board');
 
-  const initialMount = !controls || !board;
-  if (initialMount) {
-    container.innerHTML = '';
+  const initialControlsMount = !controls;
+  const initialBoardMount = !board;
+
+  if (initialControlsMount) {
     const diffOptions = ['easy', 'medium', 'hard', 'nightmare', 'hybrid'];
     const currentDifficulty = game.state?.difficulty || defaultDifficulty;
     const diffSelect = el('select', {
@@ -409,7 +416,6 @@ export function renderPlay(container, game, { onUpdate, onOpenDeckBuilder, onNew
     }, ...diffOptions.map(opt => el('option', { value: opt, selected: currentDifficulty === opt }, opt.charAt(0).toUpperCase() + opt.slice(1))));
     diffSelect.value = currentDifficulty;
 
-    // Debug checkbox (default off)
     const debugChk = el('input', { type: 'checkbox', class: 'chk-debug', onchange: (e) => {
       const on = !!e.target.checked;
       if (game.state) game.state.debug = on;
@@ -460,6 +466,11 @@ export function renderPlay(container, game, { onUpdate, onOpenDeckBuilder, onNew
       el('label', { class: 'lbl-difficulty' }, 'Difficulty: ', diffSelect),
       el('label', { class: 'lbl-debug' }, debugChk, ' Debug logs')
     );
+    headerEl.append(controls);
+  }
+
+  if (initialBoardMount) {
+    container.innerHTML = '';
     board = el('div', { class: 'board' });
 
     // AI side
@@ -482,9 +493,10 @@ export function renderPlay(container, game, { onUpdate, onOpenDeckBuilder, onNew
     const pHand = zoneCards('Player Hand', p.hand.cards, { owner: p, clickCard: async (c)=>{ if (!await game.playFromHand(game.player, c)) { /* ignore */ } onUpdate?.(); } }); pHand.classList.add('p-hand');
 
     board.append(aiHero, aiMana, aiHand, aiField, aiLog, pHero, pMana, pField, pHand, pLog);
-    container.append(controls, board);
-  } else {
-    // Keep difficulty UI in sync when not remounting
+    container.append(board);
+  }
+
+  if (!initialControlsMount) {
     const sel = controls.querySelector('select.select-difficulty');
     if (sel && game.state) sel.value = game.state.difficulty || defaultDifficulty;
   }

@@ -5,6 +5,10 @@ import Game from '../src/js/game.js';
 import Card from '../src/js/entities/card.js';
 import { renderPlay } from '../src/js/ui/play.js';
 
+afterEach(() => {
+  document.body.innerHTML = '';
+});
+
 test('playing an ally moves it from hand to battlefield', async () => {
   const g = new Game();
   const ally = new Card({ type: 'ally', name: 'Footman', cost: 0 });

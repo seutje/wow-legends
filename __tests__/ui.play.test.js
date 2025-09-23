@@ -5,6 +5,10 @@ import Hero from '../src/js/entities/hero.js';
 import { loadSettings, saveDifficulty } from '../src/js/utils/settings.js';
 
 describe('UI Play', () => {
+  afterEach(() => {
+    document.body.innerHTML = '';
+  });
+
   test('renders log panes with player and enemy actions', () => {
     const container = document.createElement('div');
     const playerHero = new Hero({ name: 'Player Hero', data: { health: 25, armor: 5 } });
@@ -40,7 +44,7 @@ describe('UI Play', () => {
 
     const onNewGame = jest.fn().mockResolvedValue();
     renderPlay(container, game, { onUpdate: jest.fn(), onNewGame });
-    const controls = container.querySelector('.controls');
+    const controls = document.querySelector('header .controls');
     const buttons = Array.from(controls.querySelectorAll('button'));
     expect(buttons[0].textContent).toContain('New Game');
     expect(buttons[1].textContent).toContain('Deck Builder');
@@ -314,7 +318,7 @@ describe('UI Play', () => {
 
     renderPlay(container, game, { onUpdate: jest.fn() });
 
-    const select = container.querySelector('select.select-difficulty');
+    const select = document.querySelector('header select.select-difficulty');
     expect(select).toBeTruthy();
     const options = Array.from(select.options).map(opt => opt.value);
     expect(options).toContain('hybrid');

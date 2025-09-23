@@ -9,6 +9,10 @@ const cards = JSON.parse(
 );
 const thrallData = cards.find(c => c.id === 'hero-thrall-warchief-of-the-horde');
 
+afterEach(() => {
+  document.body.innerHTML = '';
+});
+
 test('Hero power requires 2 mana', async () => {
   const g = new Game();
   g.player.hero = new Hero(thrallData);
@@ -30,7 +34,7 @@ test('Hero power button disabled when insufficient mana', async () => {
   g.resources.startTurn(g.player);
   const container = document.createElement('div');
   renderPlay(container, g);
-  let btn = [...container.querySelectorAll('button')].find(b => b.textContent === 'Hero Power');
+  const btn = document.querySelector('header .btn-hero-power');
   expect(btn.disabled).toBe(true);
 });
 
@@ -43,6 +47,6 @@ test('Hero power button enabled when sufficient mana', async () => {
   g.resources.startTurn(g.player);
   const container = document.createElement('div');
   renderPlay(container, g);
-  const btn = [...container.querySelectorAll('button')].find(b => b.textContent === 'Hero Power');
+  const btn = document.querySelector('header .btn-hero-power');
   expect(btn.disabled).toBe(false);
 });

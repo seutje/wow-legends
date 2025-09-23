@@ -23,6 +23,10 @@ describe('UI status indicators', () => {
     if (global.__OriginalImage__) global.Image = global.__OriginalImage__;
   });
 
+  afterEach(() => {
+    document.body.innerHTML = '';
+  });
+
   test('adds and removes overlays for divine shield, frozen, windfury, and stealth', () => {
     const container = document.createElement('div');
     const playerHero = new Hero({ name: 'Player', data: { health: 30 } });
@@ -66,4 +70,3 @@ describe('UI status indicators', () => {
     expect(cardEl.classList.contains('status-stealthed')).toBe(false);
   });
 });
-
