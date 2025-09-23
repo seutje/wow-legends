@@ -49,6 +49,30 @@ function buildDeckFromTemplate(template, cardById) {
   return { hero: heroData, cards, name: template.name || null };
 }
 
+function effectListDealsDamageToOthers(effects) {
+  if (!Array.isArray(effects)) return false;
+  for (const effect of effects) {
+    if (!effect || typeof effect !== 'object') continue;
+    if (effect.type === 'damage') {
+      const baseAmount = typeof effect.amount === 'number' ? effect.amount : 0;
+      const comboAmount = typeof effect.comboAmount === 'number' ? effect.comboAmount : 0;
+      if ((baseAmount > 0 || comboAmount > 0) && effect.target !== 'selfHero') {
+        return true;
+      }
+    }
+    if (effect.type === 'chooseOne') {
+      const options = Array.isArray(effect.options) ? effect.options : [];
+      if (options.some((opt) => effectListDealsDamageToOthers(opt?.effects))) {
+        return true;
+      }
+    }
+    if (Array.isArray(effect.effects) && effectListDealsDamageToOthers(effect.effects)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 export default class Game {
   constructor(rootEl, opts = {}) {
     this.rootEl = rootEl;
@@ -706,10 +730,12 @@ export default class Game {
     await this.throttleAIAction(player);
     const finishTargetCapture = this._pushActionTargetScope();
     const loggedTargets = new Set();
+    const heroPowerUsesSpellDamage = effectListDealsDamageToOthers(hero.active);
     const context = {
       game: this,
       player,
       card: hero,
+      spellPowerApplies: heroPowerUsesSpellDamage,
       recordLogTarget: (target) => {
         if (!target) return;
         loggedTargets.add(target);
@@ -853,6 +879,12 @@ export default class Game {
     if (comboActive && card.type === 'spell' && comboEffects) {
       primaryEffects = comboEffects;
       comboEffects = null;
+    }
+
+    if (card.type === 'ally' && card.keywords?.includes('Battlecry')) {
+      const battlecryDealsDamage = effectListDealsDamageToOthers(primaryEffects)
+        || effectListDealsDamageToOthers(comboEffects);
+      if (battlecryDealsDamage) context.spellPowerApplies = true;
     }
 
     const isAlly = card.type === 'ally';
