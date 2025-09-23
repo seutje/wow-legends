@@ -245,7 +245,7 @@ export class EffectSystem {
 
   async dealDamage(effect, context) {
     const { target, amount, freeze, beastBonus, comboAmount, usesSpellDamage, friendlyDamageBuff } = effect;
-    const { game, player, card, comboActive } = context;
+    const { game, player, card, comboActive, spellPowerApplies } = context;
     const opponent = player === game.player ? game.opponent : game.player;
       let dmgAmount = amount;
       if (comboActive && typeof comboAmount === 'number') {
@@ -258,7 +258,11 @@ export class EffectSystem {
       // Apply spell damage bonuses when appropriate:
       // - For spells
       // - For explicit non-spell effects that opt-in via `usesSpellDamage`
-      if (card?.type === 'spell' || usesSpellDamage) {
+      const effectTargetsSelfHero = target === 'selfHero';
+      const shouldApplySpellDamage = card?.type === 'spell'
+        || usesSpellDamage
+        || (spellPowerApplies && !effectTargetsSelfHero);
+      if (shouldApplySpellDamage) {
         const bonus = getSpellDamageBonus(player);
         dmgAmount = computeSpellDamage(dmgAmount, bonus);
       }
