@@ -22,8 +22,10 @@ test('multi-target prompts allow early completion after first pick', async () =>
   );
 
   expect(promptSpy).toHaveBeenCalledTimes(2);
-  expect(promptSpy.mock.calls[0][1]).toEqual({ allowNoMore: false });
-  expect(promptSpy.mock.calls[1][1]).toEqual({ allowNoMore: true });
+  expect(promptSpy.mock.calls[0][1]).toMatchObject({ allowNoMore: false, preferredSide: 'enemy' });
+  expect(promptSpy.mock.calls[0][1].actingPlayer).toBe(player);
+  expect(promptSpy.mock.calls[1][1]).toMatchObject({ allowNoMore: true, preferredSide: 'enemy' });
+  expect(promptSpy.mock.calls[1][1].actingPlayer).toBe(player);
   expect(enemy1.data.health).toBe(1);
   expect(enemy2.data.health).toBe(2);
 });

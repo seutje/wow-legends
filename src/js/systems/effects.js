@@ -126,7 +126,10 @@ export class EffectSystem {
           ]);
           candidates = [...candidates, ...enemy];
         }
-        const chosen = await game.promptTarget(candidates);
+        const chosen = await game.promptTarget(candidates, {
+          preferredSide: isDebuff ? 'enemy' : 'friendly',
+          actingPlayer: player,
+        });
         if (chosen === game.CANCEL) throw game.CANCEL;
         if (chosen) {
           for (const g of grouped) {
@@ -280,7 +283,10 @@ export class EffectSystem {
           ...player.battlefield.cards.filter(c => c.type !== 'quest')
         ].filter((target) => isTargetable(target, { requester: player }));
         const candidates = [...enemy, ...friendly];
-        const chosen = await game.promptTarget(candidates);
+        const chosen = await game.promptTarget(candidates, {
+          preferredSide: 'enemy',
+          actingPlayer: player,
+        });
         if (chosen === game.CANCEL) throw game.CANCEL;
         if (chosen) actualTargets.push(chosen);
         break;
@@ -295,7 +301,10 @@ export class EffectSystem {
           ...opponent.battlefield.cards.filter(c => c.type !== 'quest'),
         ]);
         const candidates = [...friendly, ...enemy];
-        const chosen = await game.promptTarget(candidates);
+        const chosen = await game.promptTarget(candidates, {
+          preferredSide: 'enemy',
+          actingPlayer: player,
+        });
         if (chosen === game.CANCEL) throw game.CANCEL;
         if (chosen) actualTargets.push(chosen);
         break;
@@ -314,7 +323,11 @@ export class EffectSystem {
         for (let i = 0; i < 3; i++) {
           const pick = await game.promptTarget(
             candidates.filter(c => !chosen.has(c)),
-            { allowNoMore: chosen.size > 0 }
+            {
+              allowNoMore: chosen.size > 0,
+              preferredSide: 'enemy',
+              actingPlayer: player,
+            }
           );
           if (pick === game.CANCEL) throw game.CANCEL;
           if (!pick) break;
@@ -353,7 +366,10 @@ export class EffectSystem {
           .filter(c => c.type !== 'quest')
           .filter((target) => isTargetable(target, { requester: player }));
         const candidates = [...enemy, ...friendly];
-        const chosen = await game.promptTarget(candidates);
+        const chosen = await game.promptTarget(candidates, {
+          preferredSide: 'enemy',
+          actingPlayer: player,
+        });
         if (chosen === game.CANCEL) throw game.CANCEL;
         if (chosen) actualTargets.push(chosen);
         break;
@@ -363,7 +379,10 @@ export class EffectSystem {
           opponent.hero,
           ...opponent.battlefield.cards.filter(c => !c.keywords?.includes('Taunt') && c.type !== 'quest'),
         ].filter(isTargetable);
-        const chosen = await game.promptTarget(candidates);
+        const chosen = await game.promptTarget(candidates, {
+          preferredSide: 'enemy',
+          actingPlayer: player,
+        });
         if (chosen === game.CANCEL) throw game.CANCEL;
         if (chosen) actualTargets.push(chosen);
         break;
@@ -708,7 +727,10 @@ export class EffectSystem {
           ...opponent.battlefield.cards.filter(c => c.type !== 'quest')
         ]);
         const candidates = [...friendly, ...enemy];
-        const chosen = await game.promptTarget(candidates);
+        const chosen = await game.promptTarget(candidates, {
+          preferredSide: 'friendly',
+          actingPlayer: player,
+        });
         if (chosen === game.CANCEL) throw game.CANCEL;
         if (chosen) actualTargets.push(chosen);
         break;
@@ -1246,7 +1268,7 @@ export class EffectSystem {
     if (candidates.length === 1) {
       chosen = candidates[0];
     } else {
-      chosen = await game.promptTarget(candidates);
+      chosen = await game.promptTarget(candidates, { actingPlayer: player });
       if (chosen === game.CANCEL) throw game.CANCEL;
       if (!chosen) return;
     }
@@ -1300,7 +1322,11 @@ export class EffectSystem {
     }
 
     // Let the acting side pick a target (AI auto-picks via promptTarget)
-    const chosen = await game.promptTarget(candidates);
+    const preferFriendly = target === 'ally' || target === 'anyAlly';
+    const chosen = await game.promptTarget(candidates, {
+      preferredSide: preferFriendly ? 'friendly' : 'enemy',
+      actingPlayer: player,
+    });
     if (chosen === game.CANCEL) throw game.CANCEL;
     if (!chosen) return;
 
@@ -1330,7 +1356,10 @@ export class EffectSystem {
 
     if (!beasts.length) return;
 
-    const chosen = await game.promptTarget(beasts);
+    const chosen = await game.promptTarget(beasts, {
+      preferredSide: 'friendly',
+      actingPlayer: player,
+    });
     if (chosen === game.CANCEL) throw game.CANCEL;
     if (!chosen) return;
 
@@ -1570,7 +1599,10 @@ export class EffectSystem {
             ]);
             candidates = [...candidates, ...enemy];
           }
-          const chosen = await game.promptTarget(candidates);
+          const chosen = await game.promptTarget(candidates, {
+            preferredSide: isDebuff ? 'enemy' : 'friendly',
+            actingPlayer: player,
+          });
           if (chosen) actualTargets.push(chosen);
         }
         break;
@@ -1750,7 +1782,10 @@ export class EffectSystem {
             ...player.battlefield.cards.filter(c => c.type !== 'quest')
           ].filter((entity) => isTargetable(entity, { requester: player }));
 
-          const chosen = await game.promptTarget(friendly);
+          const chosen = await game.promptTarget(friendly, {
+            preferredSide: 'friendly',
+            actingPlayer: player,
+          });
           if (chosen === game.CANCEL) throw game.CANCEL;
           if (chosen) actualTargets.push(chosen);
         }
@@ -1761,7 +1796,10 @@ export class EffectSystem {
           opponent.hero,
           ...opponent.battlefield.cards.filter(c => c.type !== 'quest')
         ]).filter(isTargetable);
-        const chosen = await game.promptTarget(candidates);
+        const chosen = await game.promptTarget(candidates, {
+          preferredSide: 'enemy',
+          actingPlayer: player,
+        });
         if (chosen === game.CANCEL) throw game.CANCEL;
         if (chosen) actualTargets.push(chosen);
         break;
