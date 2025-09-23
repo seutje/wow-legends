@@ -13,21 +13,19 @@ How To Play
 - Goal: Reduce the enemy hero’s health to 0 before yours reaches 0.
 - At the start of each turn, you automatically draw a card.
 - Your Turn — controls at the top of the page:
-  - Place Resource (first): Pitch the first card from your Hand to your Resources (limit 1 per turn). Resources determine how many costs you can pay this turn.
   - Resolve Combat: Resolves attacks you’ve declared from your Battlefield.
-  - End Turn: Ends your turn and lets the AI take a turn. Your next turn starts and you auto-draw 1 card.
+  - End Turn: Ends your turn and lets the AI take a turn. Your next turn starts, you auto-draw 1 card, and your mana increments.
 - Playing cards:
-  - Click a card in Player Hand to play it to the Battlefield (pays its cost from the current turn’s resource pool).
+  - Click a card in Player Hand to play it to the Battlefield (pays its cost from your current turn’s mana pool).
 - Declaring attackers:
   - Click a unit in Player Battlefield to toggle it as an attacker.
   - Click Resolve Combat to deal damage. Unblocked damage hits the enemy hero.
 - Enemy AI (simple):
-  - On its turn, the AI draws 1, places a resource if possible, plays the cheapest affordable card, then attacks with all.
+  - On its turn, the AI draws 1, gains mana just like the player, plays the cheapest affordable card, then attacks with all.
 
-Turn & Resource Basics
-- Phases: Start → Resource → Main → Combat → End (lightweight in UI).
-- Resources: Each resource you’ve placed provides 1 available energy per turn. Paying costs reduces the turn’s pool; pool refreshes at the start of your next turn.
-- Placement limit: You may place exactly 1 resource per turn.
+Turn & Mana Basics
+- Phases: Start → Main → Combat → End (lightweight in UI).
+- Mana: Your maximum mana automatically increases by 1 at the start of each of your turns. Paying costs reduces the turn’s pool; the pool refreshes at the start of your next turn.
 
 Combat Basics
 - Simultaneous damage between attackers and their blockers.
@@ -37,8 +35,8 @@ Combat Basics
 - Freeze prevents declaring attacks while it lasts.
 
 UI Reference
-- Player section: Battlefield, Hand, Resources zones.
-- Enemy section: Battlefield, hand count, Resources.
+- Player section: Battlefield, Hand, and a Mana indicator.
+- Enemy section: Battlefield, hand count, and Mana indicator.
 
 Troubleshooting
 - Nothing happens on changes: ensure `npm run dev` is running and do not delete or ignore `live-reload.json`.
@@ -77,6 +75,6 @@ Developer Notes
 
 Nightmare AI
 - Uses a small MLP with four hidden layers (128, 64, 32, 16 units) to score Q(s,a).
-- Inputs include normalized state features (health, armor, resources, board/hand metrics) and action features (type, cost, stats, keywords).
+- Inputs include normalized state features (health, armor, mana, board/hand metrics) and action features (type, cost, stats, keywords).
 - Output is a scalar score per candidate action; picks the highest.
 - Training runs population=500 for 10 generations vs an MCTS baseline (by default) and saves the best model to `data/models/best.json`. Use the `--curriculum` flag to introduce a weaker baseline early and escalate the opponent after the population's top score crosses configured thresholds.
