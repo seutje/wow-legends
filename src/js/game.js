@@ -1061,7 +1061,7 @@ export default class Game {
     return true;
   }
 
-  async promptTarget(candidates, { allowNoMore = false } = {}) {
+  async promptTarget(candidates, { allowNoMore = false, preferredSide = 'enemy', actingPlayer = null } = {}) {
     candidates = candidates?.filter(c => c.type !== 'quest');
     const pendingBattlecryCard = this._pendingBattlecryCard;
     if (pendingBattlecryCard) {
@@ -1070,6 +1070,9 @@ export default class Game {
     if (!candidates?.length) return null;
 
     const activePlayer = this.turns?.activePlayer || null;
+    const actor = actingPlayer || activePlayer || this.player;
+    const friendlyPlayer = actor === this.player ? this.player : this.opponent;
+    const enemyPlayer = friendlyPlayer === this.player ? this.opponent : this.player;
     const aiControlsTurn = !!activePlayer && (
       this._isAIControlled(activePlayer)
       || (this.state?.aiThinking && activePlayer === this.player)
@@ -1077,18 +1080,59 @@ export default class Game {
 
     // If the AI is acting (either the opponent or during autoplay), favor enemy targets
     if (aiControlsTurn) {
-      const enemy = activePlayer === this.player ? this.opponent : this.player;
-      const enemyTargets = candidates.filter(
-        c => c === enemy.hero || enemy.battlefield.cards.includes(c)
+      const friendlyTargets = candidates.filter(
+        (c) => c === friendlyPlayer.hero || friendlyPlayer.battlefield.cards.includes(c)
       );
-      const pool = enemyTargets.length ? enemyTargets : candidates;
+      const enemyTargets = candidates.filter(
+        (c) => c === enemyPlayer.hero || enemyPlayer.battlefield.cards.includes(c)
+      );
+      let pool;
+      if (preferredSide === 'friendly') {
+        pool = friendlyTargets.length ? friendlyTargets : candidates;
+      } else if (preferredSide === 'enemy') {
+        pool = enemyTargets.length ? enemyTargets : candidates;
+      } else {
+        pool = candidates;
+      }
       const picked = this.rng.pick(pool);
       if (picked) this.recordActionTarget(picked);
       return picked;
     }
 
+    const orderCandidates = () => {
+      const inCands = new Set(candidates);
+      const ordered = [];
+      const pushSide = (side) => {
+        const hero = side?.hero;
+        if (hero && inCands.has(hero)) ordered.push(hero);
+        const cards = side?.battlefield?.cards || [];
+        for (const c of cards) {
+          if (inCands.has(c)) ordered.push(c);
+        }
+      };
+
+      if (preferredSide === 'friendly') {
+        pushSide(friendlyPlayer);
+        pushSide(enemyPlayer);
+      } else if (preferredSide === 'enemy') {
+        pushSide(enemyPlayer);
+        pushSide(friendlyPlayer);
+      } else {
+        pushSide(enemyPlayer);
+        pushSide(friendlyPlayer);
+      }
+
+      for (const c of candidates) {
+        if (!ordered.includes(c)) ordered.push(c);
+      }
+
+      return ordered;
+    };
+
+    const orderedCandidates = orderCandidates();
+
     if (typeof document === 'undefined') {
-      const chosen = candidates[0] ?? null;
+      const chosen = orderedCandidates[0] ?? null;
       if (chosen) this.recordActionTarget(chosen);
       return chosen;
     }
@@ -1099,31 +1143,14 @@ export default class Game {
 
       const list = document.createElement('ul');
 
-      // Order: enemy hero, enemy allies, player hero, player allies
       const enemy = this.opponent;
-      const me = this.player;
-      const inCands = new Set(candidates);
-
-      const ordered = [];
-      if (inCands.has(enemy.hero)) ordered.push(enemy.hero);
-      for (const c of enemy.battlefield.cards) {
-        if (inCands.has(c)) ordered.push(c);
-      }
-      if (inCands.has(me.hero)) ordered.push(me.hero);
-      for (const c of me.battlefield.cards) {
-        if (inCands.has(c)) ordered.push(c);
-      }
-      // Append any remaining candidates not covered above
-      for (const c of candidates) {
-        if (!ordered.includes(c)) ordered.push(c);
-      }
 
       const finish = (value) => {
         if (value && value !== this.CANCEL) this.recordActionTarget(value);
         resolve(value);
       };
 
-      ordered.forEach((t) => {
+      orderedCandidates.forEach((t) => {
         const li = document.createElement('li');
         const isEnemy = (t === enemy.hero) || enemy.battlefield.cards.includes(t);
         li.textContent = isEnemy ? `${t.name} (AI)` : t.name;
@@ -1254,7 +1281,7 @@ export default class Game {
         const chosen = pool.find((c) => matchesCardIdentifier(c, targetRef)) || null;
         if (chosen && chosen !== defender.hero) target = chosen;
       } else {
-        const choice = await this.promptTarget(pool);
+        const choice = await this.promptTarget(pool, { preferredSide: 'enemy', actingPlayer: player });
         if (choice === this.CANCEL) return false; // respect cancel
         // If the enemy hero was chosen, leave target null to attack hero directly
         if (choice && choice !== defender.hero) target = choice;
