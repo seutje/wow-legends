@@ -178,6 +178,7 @@ export default class Game {
     this._actionTargetStack = [];
     this._pendingTurnIncrement = false;
     this._skipNextTurnAdvance = false;
+    this._pendingBattlecryCard = null;
   }
 
   setUIRerender(fn) {
@@ -881,7 +882,8 @@ export default class Game {
       comboEffects = null;
     }
 
-    if (card.type === 'ally' && card.keywords?.includes('Battlecry')) {
+    const isBattlecryAlly = card.type === 'ally' && card.keywords?.includes('Battlecry');
+    if (isBattlecryAlly) {
       const battlecryDealsDamage = effectListDealsDamageToOthers(primaryEffects)
         || effectListDealsDamageToOthers(comboEffects);
       if (battlecryDealsDamage) context.spellPowerApplies = true;
@@ -948,6 +950,9 @@ export default class Game {
       movedAllyBeforeEffects = false;
     };
 
+    const previousPendingBattlecryCard = this._pendingBattlecryCard;
+    if (isBattlecryAlly) this._pendingBattlecryCard = card;
+
     try {
       if (primaryEffects && primaryEffects.length > 0) {
         const hasDeathrattle = card.keywords?.includes('Deathrattle');
@@ -978,6 +983,8 @@ export default class Game {
       restoreAllyPlacement();
       finishTargetCapture({ discard: true });
       throw err;
+    } finally {
+      if (isBattlecryAlly) this._pendingBattlecryCard = previousPendingBattlecryCard;
     }
 
     if (tempSpellDamage) {
@@ -1056,6 +1063,10 @@ export default class Game {
 
   async promptTarget(candidates, { allowNoMore = false } = {}) {
     candidates = candidates?.filter(c => c.type !== 'quest');
+    const pendingBattlecryCard = this._pendingBattlecryCard;
+    if (pendingBattlecryCard) {
+      candidates = candidates?.filter((c) => c !== pendingBattlecryCard);
+    }
     if (!candidates?.length) return null;
 
     const activePlayer = this.turns?.activePlayer || null;
