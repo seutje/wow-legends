@@ -77,3 +77,73 @@ test('Snake Trap triggers when a friendly ally is attacked', async () => {
   expect(g.player.hero.data.secrets || []).toHaveLength(0);
 });
 
+test('Summoned units on the opponent turn track the previous turn entry', async () => {
+  const g = new Game(null, { aiPlayers: [] });
+  await g.setupMatch();
+
+  g.player.battlefield.cards = [];
+  g.turns.turn = 7;
+  g.turns.setActivePlayer(g.opponent);
+
+  await g.effects.summonUnit(
+    { unit: { name: 'Specter', attack: 1, health: 1 }, count: 1 },
+    { game: g, player: g.player, card: null }
+  );
+
+  const specter = g.player.battlefield.cards.at(-1);
+  expect(specter.data.enteredTurn).toBe(6);
+});
+
+test('Snake Trap snakes can attack the hero on the following turn', async () => {
+  const g = new Game(null, { aiPlayers: [] });
+  await g.setupMatch();
+
+  g.player.hand.cards = [];
+  g.player.battlefield.cards = [];
+  g.opponent.hand.cards = [];
+  g.opponent.battlefield.cards = [];
+  g.resources._pool.set(g.player, 10);
+  g.resources._pool.set(g.opponent, 10);
+
+  const trapData = g.allCards.find(c => c.id === 'spell-snake-trap');
+  const trap = new Card(trapData);
+  g.player.hand.add(trap);
+  await g.playFromHand(g.player, trap.id);
+
+  const defender = new Card({
+    name: 'Friendly Bait',
+    type: 'ally',
+    cost: 1,
+    data: { attack: 0, health: 4 },
+    keywords: [],
+  });
+  g.player.battlefield.add(defender);
+
+  const attacker = new Card({
+    name: 'Enemy Aggressor',
+    type: 'ally',
+    cost: 1,
+    data: { attack: 1, health: 1 },
+    keywords: [],
+  });
+  g.opponent.battlefield.add(attacker);
+
+  g.turns.setActivePlayer(g.opponent);
+  g.turns.current = 'Start';
+  g.turns.startTurn();
+  g.resources.startTurn(g.opponent);
+
+  await g._runSimpleAITurn(g.opponent, g.player);
+  await g._finalizeOpponentTurn();
+
+  const snakes = g.player.battlefield.cards.filter(c => c.name === 'Snake');
+  expect(snakes).toHaveLength(3);
+
+  expect(snakes[0].data.enteredTurn).toBeLessThan(g.turns.turn);
+
+  g.opponent.battlefield.cards = [];
+
+  const result = await g.attack(g.player, snakes[0]);
+  expect(result).toBe(true);
+});
+
