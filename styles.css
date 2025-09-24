@@ -339,6 +339,43 @@ main {
   }
 }
 
+@media (hover: none) and (pointer: coarse) {
+  body {
+    overflow-x: hidden;
+  }
+
+  #app {
+    width: calc(100% / 0.4);
+    min-height: calc(100% / 0.4);
+    transform: scale(0.4);
+    transform-origin: top left;
+  }
+
+  #root .board {
+    grid-template-columns: minmax(180px, 220px) minmax(0, 1fr);
+    grid-template-areas:
+      'ai-hero ai-field'
+      'p-hero p-field'
+      'p-hand p-hand';
+  }
+
+  .ai-log,
+  .p-log {
+    min-height: initial;
+  }
+
+  .combat-log {
+    --toggle-width: 44px;
+    width: var(--drawer-width);
+    top: clamp(64px, 12vh, 128px);
+    bottom: clamp(24px, 12vh, 112px);
+  }
+
+  .combat-log__toggle {
+    font-size: 22px;
+  }
+}
+
 /* Card containers */
 .cards {
   display: flex;
