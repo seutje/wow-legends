@@ -89,6 +89,7 @@ const mainEl = qs('main');
 const game = new Game(root);
 const loadingOverlay = startLoadingOverlay('Loading game data…');
 let initSucceeded = false;
+let deckBuilderOpen = false;
 try {
   setStatus('Loading game data…');
   await game.init();
@@ -143,7 +144,12 @@ async function startNewGame() {
 }
 
 const rerender = () => {
-  renderPlay(board, game, { onUpdate: rerender, onOpenDeckBuilder: openDeckBuilder, onNewGame: startNewGame });
+  renderPlay(board, game, {
+    onUpdate: rerender,
+    onToggleDeckBuilder: toggleDeckBuilder,
+    deckBuilderOpen,
+    onNewGame: startNewGame
+  });
   saveGameState(game);
 };
 
@@ -371,9 +377,25 @@ const rerenderDeck = () => {
   });
   updateUseDeckBtn();
 };
+function updateDeckBuilderButtonLabel() {
+  const btn = document.querySelector('.btn-deck-builder');
+  if (!btn) return;
+  btn.textContent = deckBuilderOpen ? 'Back to game' : 'Deck Builder';
+  btn.setAttribute('aria-pressed', deckBuilderOpen ? 'true' : 'false');
+}
+
+function closeDeckBuilder({ showGame = true } = {}) {
+  deckBuilderOpen = false;
+  deckRoot.style.display = 'none';
+  sidebar.style.display = 'none';
+  if (showGame) toggleGameVisible(true);
+  updateDeckBuilderButtonLabel();
+}
+
 function openDeckBuilder() {
   // Show deck builder in sidebar and hide the game board
   // Load the active deck into the editor state
+  deckBuilderOpen = true;
   try {
     const cur = deriveDeckFromGame(game);
     if (cur.hero) deckState.hero = cur.hero;
@@ -383,8 +405,17 @@ function openDeckBuilder() {
   deckRoot.style.display = 'block';
   sidebar.style.display = 'block';
   toggleGameVisible(false);
+  updateDeckBuilderButtonLabel();
   rerenderDeck();
   ensurePrebuiltDecksLoaded();
+}
+
+function toggleDeckBuilder() {
+  if (deckBuilderOpen) {
+    closeDeckBuilder();
+  } else {
+    openDeckBuilder();
+  }
 }
 fillRandomBtn.addEventListener('click', () => {
   deckState.selectedPrebuiltDeck = null;
@@ -397,19 +428,17 @@ clearDeckBtn.addEventListener('click', () => {
   deckState.selectedPrebuiltDeck = null;
   rerenderDeck();
 });
-  useDeckBtn.addEventListener('click', async () => {
-    if (useDeckBtn.disabled) return;
-    deckRoot.style.display = 'none';
-    sidebar.style.display = 'none';
-    toggleGameVisible(true);
-    clearSavedGameState();
-    await game.reset({ hero: deckState.hero, cards: deckState.cards });
-    // Persist last used deck
-    try { saveLastDeck({ hero: deckState.hero, cards: deckState.cards }); } catch {}
-    saveGameState(game);
-    rerender();
-    // No RAF loop; state updates via DOM events
-  });
+useDeckBtn.addEventListener('click', async () => {
+  if (useDeckBtn.disabled) return;
+  closeDeckBuilder();
+  clearSavedGameState();
+  await game.reset({ hero: deckState.hero, cards: deckState.cards });
+  // Persist last used deck
+  try { saveLastDeck({ hero: deckState.hero, cards: deckState.cards }); } catch {}
+  saveGameState(game);
+  rerender();
+  // No RAF loop; state updates via DOM events
+});
 let logsOn = true;
 renderOptions(optsRoot, { onReset: async () => { deckState.cards.length = 0; deckState.hero = null; deckState.selectedPrebuiltDeck = null; rerenderDeck(); clearSavedGameState(); await game.reset(); saveGameState(game); rerender(); } });
 

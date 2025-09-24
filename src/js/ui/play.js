@@ -641,7 +641,13 @@ import { loadSettings, rehydrateDeck } from '../utils/settings.js';
 
 import { saveDifficulty } from '../utils/settings.js';
 
-export function renderPlay(container, game, { onUpdate, onOpenDeckBuilder, onNewGame } = {}) {
+export function renderPlay(container, game, {
+  onUpdate,
+  onOpenDeckBuilder,
+  onToggleDeckBuilder,
+  onNewGame,
+  deckBuilderOpen = false
+} = {}) {
   const p = game.player; const e = game.opponent;
   const debugEnabled = !!(game.state?.debug);
   const defaultDifficulty = game?._defaultDifficulty || 'nightmare';
@@ -694,6 +700,14 @@ export function renderPlay(container, game, { onUpdate, onOpenDeckBuilder, onNew
     }, 'Fullscreen');
     ensureFullscreenButtonTracking(fullscreenBtn);
 
+    const handleDeckBuilderClick = () => {
+      if (typeof onToggleDeckBuilder === 'function') {
+        onToggleDeckBuilder();
+      } else {
+        onOpenDeckBuilder?.();
+      }
+    };
+
     controls = el('div', { class: 'controls' },
       el('button', { class: 'btn-new-game', onclick: async (ev) => {
         const btn = ev?.currentTarget;
@@ -705,7 +719,11 @@ export function renderPlay(container, game, { onUpdate, onOpenDeckBuilder, onNew
           onUpdate?.();
         }
       } }, 'New Game'),
-      el('button', { class: 'btn-deck-builder', onclick: () => { onOpenDeckBuilder?.(); } }, 'Deck Builder'),
+      el('button', {
+        class: 'btn-deck-builder',
+        onclick: handleDeckBuilderClick,
+        'aria-pressed': deckBuilderOpen ? 'true' : 'false'
+      }, deckBuilderOpen ? 'Back to game' : 'Deck Builder'),
       el('button', { class: 'btn-hero-power', onclick: async () => { await game.useHeroPower(game.player); onUpdate?.(); } }, 'Hero Power'),
       el('button', { class: 'btn-end-turn', onclick: async (ev) => {
         const btn = ev?.currentTarget;
@@ -822,7 +840,11 @@ export function renderPlay(container, game, { onUpdate, onOpenDeckBuilder, onNew
   const newGameBtn = controls.querySelector('.btn-new-game');
   if (newGameBtn) newGameBtn.disabled = !!(game.state?.aiThinking);
   const deckBtn = controls.querySelector('.btn-deck-builder');
-  if (deckBtn) deckBtn.disabled = !!(game.state?.aiThinking);
+  if (deckBtn) {
+    deckBtn.disabled = !!(game.state?.aiThinking);
+    deckBtn.textContent = deckBuilderOpen ? 'Back to game' : 'Deck Builder';
+    deckBtn.setAttribute('aria-pressed', deckBuilderOpen ? 'true' : 'false');
+  }
   const sel = controls.querySelector('select.select-difficulty');
   if (sel) sel.disabled = !!(game.state?.aiThinking);
 

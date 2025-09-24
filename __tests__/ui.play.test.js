@@ -94,6 +94,36 @@ describe('UI Play', () => {
     expect(onNewGame).toHaveBeenCalled();
   });
 
+  test('deck builder button toggles label and triggers handler', () => {
+    const container = document.createElement('div');
+    const playerHero = new Hero({ name: 'Player Hero', data: { health: 30, armor: 0 } });
+    const enemyHero = new Hero({ name: 'Enemy Hero', data: { health: 30, armor: 0 } });
+    const game = {
+      player: { hero: playerHero, battlefield: { cards: [] }, hand: { cards: [], size: () => 0 }, log: [] },
+      opponent: { hero: enemyHero, battlefield: { cards: [] }, hand: { cards: [], size: () => 0 }, log: [] },
+      resources: { pool: () => 0, available: () => 0 },
+      draw: jest.fn(), attack: jest.fn(), endTurn: jest.fn(), autoplayTurn: jest.fn(),
+      useHeroPower: jest.fn(), playFromHand: () => true,
+      state: {},
+    };
+
+    const onToggleDeckBuilder = jest.fn();
+    const onUpdate = jest.fn();
+
+    renderPlay(container, game, { onUpdate, onToggleDeckBuilder, deckBuilderOpen: false });
+    const controls = document.querySelector('header .controls');
+    const deckBtn = controls.querySelector('.btn-deck-builder');
+    expect(deckBtn.textContent).toBe('Deck Builder');
+    expect(deckBtn.getAttribute('aria-pressed')).toBe('false');
+
+    renderPlay(container, game, { onUpdate, onToggleDeckBuilder, deckBuilderOpen: true });
+    expect(deckBtn.textContent).toBe('Back to game');
+    expect(deckBtn.getAttribute('aria-pressed')).toBe('true');
+
+    deckBtn.dispatchEvent(new Event('click'));
+    expect(onToggleDeckBuilder).toHaveBeenCalledTimes(1);
+  });
+
   test('log pane has zone styling and auto-scrolls to bottom', async () => {
     const container = document.createElement('div');
     const playerHero = new Hero({ name: 'Player Hero', data: { health: 25, armor: 5 } });
