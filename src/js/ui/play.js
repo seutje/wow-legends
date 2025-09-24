@@ -656,6 +656,7 @@ export function renderPlay(container, game, { onUpdate, onOpenDeckBuilder, onNew
 
   let controls = headerEl.querySelector('.controls');
   let board = container.querySelector('.board');
+  let pHandSection = container.querySelector('.p-hand');
 
   const initialControlsMount = !controls;
   const initialBoardMount = !board;
@@ -774,7 +775,7 @@ export function renderPlay(container, game, { onUpdate, onOpenDeckBuilder, onNew
     const pHand = zoneCards(null, p.hand.cards, { owner: p, clickCard: async (c)=>{ if (!await game.playFromHand(game.player, c)) { /* ignore */ } onUpdate?.(); } }); pHand.classList.add('p-hand');
     board.append(aiHero);
     if (aiHand) board.append(aiHand);
-    board.append(aiField, pHero, pField, pHand);
+    board.append(aiField, pHero, pField);
 
     const combatLog = el('div', { class: 'combat-log', dataset: { open: '0' } });
     const toggleBtn = el('button', {
@@ -799,7 +800,8 @@ export function renderPlay(container, game, { onUpdate, onOpenDeckBuilder, onNew
     const logContent = el('div', { class: 'combat-log__content', id: 'combat-log-content' }, aiLog, pLog);
     combatLog.append(toggleBtn, logContent);
 
-    container.append(board, combatLog);
+    container.append(board, combatLog, pHand);
+    pHandSection = pHand;
   }
 
   if (!initialControlsMount) {
@@ -839,7 +841,8 @@ export function renderPlay(container, game, { onUpdate, onOpenDeckBuilder, onNew
   // Update zones
   syncCardsSection(board.querySelector('.ai-field'), e.battlefield.cards, { owner: e });
   syncCardsSection(board.querySelector('.p-field'), p.battlefield.cards, { owner: p, clickCard: async (c)=>{ await game.attack(game.player, c); onUpdate?.(); } });
-  syncCardsSection(board.querySelector('.p-hand'), p.hand.cards, { owner: p, clickCard: async (c)=>{ if (!await game.playFromHand(game.player, c)) { /* ignore */ } onUpdate?.(); } });
+  const latestHandSection = pHandSection || container.querySelector('.p-hand');
+  syncCardsSection(latestHandSection, p.hand.cards, { owner: p, clickCard: async (c)=>{ if (!await game.playFromHand(game.player, c)) { /* ignore */ } onUpdate?.(); } });
   let aiHandSection = board.querySelector('.ai-hand');
   if (debugEnabled) {
     if (!aiHandSection || aiHandSection.dataset?.debugView !== '1') {
