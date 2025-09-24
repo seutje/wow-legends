@@ -109,10 +109,15 @@ const TOUCH_PREVIEW_TIMEOUT_MS = 4500;
 let touchPreviewCardEl = null;
 let touchPreviewTimer = 0;
 const cardInteractionState = new WeakMap();
+const doubleTapZoomHandlers = new WeakMap();
 
 function clearTouchPreview(el = touchPreviewCardEl) {
   if (!el) return;
   delete el.dataset.touchPreview;
+  if (el?.style) {
+    el.style.removeProperty('--touch-translate-x');
+    el.style.removeProperty('--touch-translate-y');
+  }
   if (touchPreviewCardEl === el) {
     if (touchPreviewTimer) {
       clearTimeout(touchPreviewTimer);
@@ -129,6 +134,19 @@ function setTouchPreview(el) {
   }
   touchPreviewCardEl = el;
   el.dataset.touchPreview = '1';
+  if (typeof window !== 'undefined' && el.dataset?.type === 'ally' && el.closest('.p-field')) {
+    const rect = el.getBoundingClientRect();
+    const centerX = window.innerWidth / 2;
+    const centerY = window.innerHeight / 2;
+    const elCenterX = rect.left + rect.width / 2;
+    const elCenterY = rect.top + rect.height / 2;
+    const offsetX = Number.isFinite(elCenterX) ? (centerX - elCenterX) : 0;
+    const offsetY = Number.isFinite(elCenterY) ? (centerY - elCenterY) : 0;
+    if (el.style) {
+      el.style.setProperty('--touch-translate-x', `${offsetX}px`);
+      el.style.setProperty('--touch-translate-y', `${offsetY}px`);
+    }
+  }
   if (touchPreviewTimer) clearTimeout(touchPreviewTimer);
   touchPreviewTimer = setTimeout(() => {
     clearTouchPreview(el);
@@ -163,11 +181,17 @@ function attachCardInteractions(node, card, clickCard) {
       const now = getNow();
       const isPreviewed = touchPreviewCardEl === node;
       const timeSinceLastTap = now - state.lastTap;
+      const isFriendlyFieldAlly = state.card?.type === 'ally' && !!node.closest('.p-field');
       state.lastTap = now;
       if (isPreviewed && timeSinceLastTap <= TOUCH_DOUBLE_TAP_MS) {
         clearTouchPreview(node);
         state.lastTap = 0;
         await state.clickCard(state.card);
+        return;
+      }
+      if (isPreviewed && isFriendlyFieldAlly) {
+        clearTouchPreview(node);
+        state.lastTap = 0;
         return;
       }
       setTouchPreview(node);
@@ -182,6 +206,24 @@ function attachCardInteractions(node, card, clickCard) {
   node.addEventListener('pointerup', handlePointerUp);
   node.addEventListener('pointercancel', handlePointerCancel);
   cardInteractionState.set(node, state);
+}
+
+function ensureDoubleTapZoomDisabled(target) {
+  if (!target || doubleTapZoomHandlers.has(target)) return;
+  let lastTouchEnd = 0;
+  const handler = (ev) => {
+    const now = Date.now();
+    if (ev.touches?.length > 1 || ev.changedTouches?.length > 1) {
+      lastTouchEnd = now;
+      return;
+    }
+    if (now - lastTouchEnd <= TOUCH_DOUBLE_TAP_MS) {
+      ev.preventDefault();
+    }
+    lastTouchEnd = now;
+  };
+  target.addEventListener('touchend', handler, { passive: false, capture: true });
+  doubleTapZoomHandlers.set(target, handler);
 }
 
 if (typeof document !== 'undefined') {
@@ -773,6 +815,8 @@ export function renderPlay(container, game, {
   let board = container.querySelector('.board');
   let pHandSection = container.querySelector('.p-hand');
 
+  if (board) ensureDoubleTapZoomDisabled(board);
+
   const initialControlsMount = !controls;
   const initialBoardMount = !board;
 
@@ -870,6 +914,7 @@ export function renderPlay(container, game, {
   if (initialBoardMount) {
     container.innerHTML = '';
     board = el('div', { class: 'board' });
+    ensureDoubleTapZoomDisabled(board);
 
     // AI side
     const aiHero = el(

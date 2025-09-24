@@ -4,6 +4,7 @@ html, body {
   font-family: system-ui, sans-serif;
   background: #0b0f14;
   color: #e5eef8;
+  touch-action: manipulation;
 }
 
 #app {
@@ -136,6 +137,18 @@ main {
 .p-field .cards {
   gap: clamp(12px, 2vw, 20px);
   min-height: 140px;
+}
+
+.p-field .card-tooltip {
+  transition: transform 0.3s ease, filter 0.3s ease, z-index 0.3s ease;
+  will-change: transform;
+  transform-origin: center center;
+}
+
+.p-field .card-tooltip[data-touch-preview='1'] {
+  transform: translate3d(var(--touch-translate-x, 0), var(--touch-translate-y, 0), 0) scale(1.5);
+  z-index: 1500;
+  filter: drop-shadow(0 30px 60px rgba(0, 0, 0, 0.75));
 }
 
 .ai-hand {
@@ -583,6 +596,7 @@ ul.zone-list li {
   width: 220px;
   aspect-ratio: 1024 / 1536;
   text-align: left;
+  touch-action: manipulation;
 }
 
 .card-tooltip img.card-frame,
