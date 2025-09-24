@@ -774,8 +774,32 @@ export function renderPlay(container, game, { onUpdate, onOpenDeckBuilder, onNew
     const pHand = zoneCards(null, p.hand.cards, { owner: p, clickCard: async (c)=>{ if (!await game.playFromHand(game.player, c)) { /* ignore */ } onUpdate?.(); } }); pHand.classList.add('p-hand');
     board.append(aiHero);
     if (aiHand) board.append(aiHand);
-    board.append(aiField, aiLog, pHero, pField, pHand, pLog);
-    container.append(board);
+    board.append(aiField, pHero, pField, pHand);
+
+    const combatLog = el('div', { class: 'combat-log', dataset: { open: '0' } });
+    const toggleBtn = el('button', {
+      type: 'button',
+      class: 'combat-log__toggle',
+      'aria-expanded': 'false',
+      'aria-controls': 'combat-log-content',
+      'aria-label': 'Show combat log'
+    });
+    const updateToggleState = (open) => {
+      combatLog.dataset.open = open ? '1' : '0';
+      toggleBtn.textContent = open ? '>' : '<';
+      toggleBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      toggleBtn.setAttribute('aria-label', open ? 'Hide combat log' : 'Show combat log');
+    };
+    toggleBtn.addEventListener('click', () => {
+      const isOpen = combatLog.dataset.open === '1';
+      updateToggleState(!isOpen);
+    });
+    updateToggleState(false);
+
+    const logContent = el('div', { class: 'combat-log__content', id: 'combat-log-content' }, aiLog, pLog);
+    combatLog.append(toggleBtn, logContent);
+
+    container.append(board, combatLog);
   }
 
   if (!initialControlsMount) {
@@ -835,8 +859,9 @@ export function renderPlay(container, game, { onUpdate, onOpenDeckBuilder, onNew
   }
 
   // Logs
-  syncLogPane(board.querySelector('.ai-log'), e.log);
-  syncLogPane(board.querySelector('.p-log'), p.log);
+  const combatLog = container.querySelector('.combat-log');
+  syncLogPane(combatLog?.querySelector('.ai-log'), e.log);
+  syncLogPane(combatLog?.querySelector('.p-log'), p.log);
 
   // Keep debug checkbox in sync
   const debugEl = controls.querySelector('input.chk-debug');
