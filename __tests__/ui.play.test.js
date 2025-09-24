@@ -29,6 +29,44 @@ describe('UI Play', () => {
     expect(enemyLog.textContent).toContain('Played Other');
   });
 
+  test('displays mana values within hero slots', () => {
+    const container = document.createElement('div');
+    const playerHero = new Hero({ name: 'Player Hero', data: { health: 30 } });
+    const enemyHero = new Hero({ name: 'Enemy Hero', data: { health: 30 } });
+
+    const player = { hero: playerHero, battlefield: { cards: [] }, hand: { cards: [], size: () => 0 }, log: [] };
+    const opponent = { hero: enemyHero, battlefield: { cards: [] }, hand: { cards: [], size: () => 0 }, log: [] };
+    const resources = {
+      pool: jest.fn((owner) => (owner === player ? 5 : 7)),
+      available: jest.fn((owner) => (owner === player ? 3 : 4))
+    };
+
+    const game = {
+      player,
+      opponent,
+      resources,
+      draw: jest.fn(),
+      attack: jest.fn(),
+      endTurn: jest.fn(),
+      playFromHand: () => true
+    };
+
+    renderPlay(container, game);
+
+    const enemyMana = container.querySelector('.ai-hero .hero-mana');
+    expect(enemyMana.textContent).toBe('7/4 Mana');
+    const playerMana = container.querySelector('.p-hero .hero-mana');
+    expect(playerMana.textContent).toBe('5/3 Mana');
+
+    resources.pool.mockImplementation((owner) => (owner === player ? 6 : 8));
+    resources.available.mockImplementation((owner) => (owner === player ? 4 : 5));
+
+    renderPlay(container, game);
+
+    expect(container.querySelector('.ai-hero .hero-mana').textContent).toBe('8/5 Mana');
+    expect(container.querySelector('.p-hero .hero-mana').textContent).toBe('6/4 Mana');
+  });
+
   test('new game button appears before deck builder and calls handler', async () => {
     const container = document.createElement('div');
     const playerHero = new Hero({ name: 'Player Hero', data: { health: 25, armor: 5 } });

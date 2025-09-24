@@ -341,7 +341,10 @@ function zoneCards(title, cards, { clickCard, owner } = {}) {
     if (clickCard) cardEl.addEventListener('click', async () => { await clickCard(c); });
     wrap.append(cardEl);
   }
-  return el('section', { class: 'zone' }, el('h3', {}, title), wrap);
+  const sectionChildren = [];
+  if (title != null && title !== '') sectionChildren.push(el('h3', {}, title));
+  sectionChildren.push(wrap);
+  return el('section', { class: 'zone' }, ...sectionChildren);
 }
 
 function handSize(hand) {
@@ -351,16 +354,15 @@ function handSize(hand) {
 }
 
 function buildAiHandZone(hand, { owner, debugOn } = {}) {
-  if (debugOn) {
-    const section = zoneCards('Enemy Hand', hand?.cards ?? [], { owner });
-    section.classList.add('ai-hand');
-    section.dataset.debugView = '1';
-    return section;
-  }
-  return el('section', { class: 'zone ai-hand', dataset: { debugView: '0' } },
-    el('h3', {}, 'Enemy Hand'),
-    el('p', { class: 'count' }, `${handSize(hand)} cards`)
-  );
+  if (!debugOn) return null;
+  const section = zoneCards('Enemy Hand', hand?.cards ?? [], { owner });
+  section.classList.add('ai-hand');
+  section.dataset.debugView = '1';
+  return section;
+}
+
+function buildAiHandIndicator(hand) {
+  return el('p', { class: 'ai-hand-count' }, `${handSize(hand)} cards`);
 }
 
 function logPane(title, entries = []) {
@@ -478,12 +480,21 @@ function updateCardEl(cardEl, card, { owner } = {}) {
 function syncCardsSection(sectionEl, cards, { clickCard, owner } = {}) {
   if (!sectionEl) return;
   const list = sectionEl.querySelector('.cards') || sectionEl;
+  const cardArray = Array.isArray(cards) ? cards : (cards ? Array.from(cards) : []);
   const byKey = new Map(Array.from(list.children).map(node => [node.dataset.key, node]));
+  const isPlayerHand = sectionEl.classList?.contains('p-hand');
+  if (sectionEl.dataset) sectionEl.dataset.cardCount = String(cardArray.length);
+  if (isPlayerHand) {
+    const initialOverlap = cardArray.length > 1 ? Math.min(120, 32 + cardArray.length * 9) : 0;
+    sectionEl.style.setProperty('--hand-overlap', `${initialOverlap}px`);
+  } else if (sectionEl.style) {
+    sectionEl.style.removeProperty('--hand-overlap');
+  }
   const seen = new Set();
   // Rebuild order with minimal moves; disambiguate duplicates by occurrence index
   const counts = new Map();
   let lastNode = null;
-  for (const c of cards) {
+  for (const c of cardArray) {
     const baseKey = c.instanceId || c.id || 'card';
     const n = (counts.get(baseKey) || 0) + 1; counts.set(baseKey, n);
     const key = c.instanceId || `${baseKey}#${n}`;
@@ -523,6 +534,32 @@ function syncCardsSection(sectionEl, cards, { clickCard, owner } = {}) {
       setTimeout(() => { node.remove(); }, 400);
     } else {
       node.remove();
+    }
+  }
+
+  if (sectionEl.dataset) sectionEl.dataset.cardCount = String(list.children.length);
+  if (isPlayerHand) {
+    const cardEls = Array.from(list.children);
+    const count = cardEls.length;
+    const overlap = count > 1 ? Math.min(120, 32 + count * 9) : 0;
+    sectionEl.style.setProperty('--hand-overlap', `${overlap}px`);
+    const maxAngle = 16;
+    const angleStep = count > 1 ? (maxAngle * 2) / (count - 1) : 0;
+    const center = (count - 1) / 2;
+    cardEls.forEach((node, index) => {
+      const offset = index - center;
+      const angle = count > 1 ? offset * angleStep : 0;
+      const depth = Math.abs(offset);
+      const translate = count > 1 ? Math.pow(depth, 1.2) * 3.6 : 0;
+      node.style.setProperty('--fan-rotate', `${angle.toFixed(2)}deg`);
+      node.style.setProperty('--fan-translate', `${translate.toFixed(2)}`);
+      node.style.setProperty('--fan-z', `${100 + index}`);
+    });
+  } else if (list.children?.length) {
+    for (const node of list.children) {
+      node.style.removeProperty('--fan-rotate');
+      node.style.removeProperty('--fan-translate');
+      node.style.removeProperty('--fan-z');
     }
   }
 }
@@ -707,25 +744,37 @@ export function renderPlay(container, game, { onUpdate, onOpenDeckBuilder, onNew
     board = el('div', { class: 'board' });
 
     // AI side
-    const aiHero = el('div', { class: 'slot ai-hero' }, el('h3', {}, 'AI hero'), buildCardEl(e.hero));
-    const aiMana = el('div', { class: 'slot ai-mana' }, el('h3', {}, 'Mana'), el('div', { class: 'mana' }, `${game.resources.pool(e)} / ${game.resources.available(e)}`));
+    const aiHero = el(
+      'div',
+      { class: 'slot ai-hero' },
+      el('h3', {}, 'AI hero'),
+      el('div', { class: 'hero-mana' }, `${game.resources.pool(e)}/${game.resources.available(e)} Mana`),
+      buildCardEl(e.hero),
+      buildAiHandIndicator(e.hand)
+    );
     const aiLog = logPane('Enemy Log', e.log); aiLog.classList.add('ai-log');
     const aiHand = buildAiHandZone(e.hand, { owner: e, debugOn: debugEnabled });
     const aiField = zoneCards('Enemy Battlefield', e.battlefield.cards, { owner: e }); aiField.classList.add('ai-field');
 
     // Player side
-    const pHero = el('div', { class: 'slot p-hero' }, el('h3', {}, 'Player hero'), buildCardEl(p.hero));
+    const pHero = el(
+      'div',
+      { class: 'slot p-hero' },
+      el('h3', {}, 'Player hero'),
+      el('div', { class: 'hero-mana' }, `${game.resources.pool(p)}/${game.resources.available(p)} Mana`),
+      buildCardEl(p.hero)
+    );
     const heroEl = pHero.querySelector('.card-tooltip');
     if (heroEl && !heroEl.dataset.clickAttached) {
       heroEl.addEventListener('click', async () => { await game.attack(game.player, game.player.hero); onUpdate?.(); });
       heroEl.dataset.clickAttached = '1';
     }
-    const pMana = el('div', { class: 'slot p-mana' }, el('h3', {}, 'Mana'), el('div', { class: 'mana' }, `${game.resources.pool(p)} / ${game.resources.available(p)}`));
     const pLog = logPane('Player Log', p.log); pLog.classList.add('p-log');
     const pField = zoneCards('Player Battlefield', p.battlefield.cards, { owner: p, clickCard: async (c)=>{ await game.attack(game.player, c); onUpdate?.(); } }); pField.classList.add('p-field');
-    const pHand = zoneCards('Player Hand', p.hand.cards, { owner: p, clickCard: async (c)=>{ if (!await game.playFromHand(game.player, c)) { /* ignore */ } onUpdate?.(); } }); pHand.classList.add('p-hand');
-
-    board.append(aiHero, aiMana, aiHand, aiField, aiLog, pHero, pMana, pField, pHand, pLog);
+    const pHand = zoneCards(null, p.hand.cards, { owner: p, clickCard: async (c)=>{ if (!await game.playFromHand(game.player, c)) { /* ignore */ } onUpdate?.(); } }); pHand.classList.add('p-hand');
+    board.append(aiHero);
+    if (aiHand) board.append(aiHand);
+    board.append(aiField, aiLog, pHero, pField, pHand, pLog);
     container.append(board);
   }
 
@@ -752,35 +801,37 @@ export function renderPlay(container, game, { onUpdate, onOpenDeckBuilder, onNew
   if (sel) sel.disabled = !!(game.state?.aiThinking);
 
   // Update mana displays
-  const [aiManaEl] = board.getElementsByClassName('ai-mana');
-  aiManaEl?.querySelector('.mana')?.replaceChildren(`${game.resources.pool(e)} / ${game.resources.available(e)}`);
-  const [pManaEl] = board.getElementsByClassName('p-mana');
-  pManaEl?.querySelector('.mana')?.replaceChildren(`${game.resources.pool(p)} / ${game.resources.available(p)}`);
+  const aiManaEl = board.querySelector('.ai-hero .hero-mana');
+  aiManaEl?.replaceChildren(`${game.resources.pool(e)}/${game.resources.available(e)} Mana`);
+  const playerManaEl = board.querySelector('.p-hero .hero-mana');
+  playerManaEl?.replaceChildren(`${game.resources.pool(p)}/${game.resources.available(p)} Mana`);
 
   // Update hero cards
   updateCardEl(board.querySelector('.ai-hero .card-tooltip'), e.hero);
   updateCardEl(board.querySelector('.p-hero .card-tooltip'), p.hero);
+  const aiHandCountEl = board.querySelector('.ai-hero .ai-hand-count');
+  aiHandCountEl?.replaceChildren(`${handSize(e.hand)} cards`);
 
   // Update zones
   syncCardsSection(board.querySelector('.ai-field'), e.battlefield.cards, { owner: e });
   syncCardsSection(board.querySelector('.p-field'), p.battlefield.cards, { owner: p, clickCard: async (c)=>{ await game.attack(game.player, c); onUpdate?.(); } });
   syncCardsSection(board.querySelector('.p-hand'), p.hand.cards, { owner: p, clickCard: async (c)=>{ if (!await game.playFromHand(game.player, c)) { /* ignore */ } onUpdate?.(); } });
   let aiHandSection = board.querySelector('.ai-hand');
-  if (!aiHandSection || ((aiHandSection.dataset?.debugView === '1') !== debugEnabled)) {
-    const replacement = buildAiHandZone(e.hand, { owner: e, debugOn: debugEnabled });
-    if (aiHandSection) aiHandSection.replaceWith(replacement);
-    else {
-      const aiFieldEl = board.querySelector('.ai-field');
-      if (aiFieldEl?.parentNode) aiFieldEl.parentNode.insertBefore(replacement, aiFieldEl);
-      else board.append(replacement);
-    }
-    aiHandSection = replacement;
-  }
   if (debugEnabled) {
-    syncCardsSection(aiHandSection, e.hand.cards, { owner: e });
-  } else {
-    const countEl = aiHandSection?.querySelector('.count');
-    if (countEl) countEl.textContent = `${handSize(e.hand)} cards`;
+    if (!aiHandSection || aiHandSection.dataset?.debugView !== '1') {
+      const replacement = buildAiHandZone(e.hand, { owner: e, debugOn: true });
+      if (aiHandSection) {
+        aiHandSection.replaceWith(replacement);
+      } else {
+        const aiFieldEl = board.querySelector('.ai-field');
+        if (aiFieldEl?.parentNode) aiFieldEl.parentNode.insertBefore(replacement, aiFieldEl);
+        else board.append(replacement);
+      }
+      aiHandSection = replacement;
+    }
+    if (aiHandSection) syncCardsSection(aiHandSection, e.hand.cards, { owner: e });
+  } else if (aiHandSection) {
+    aiHandSection.remove();
   }
 
   // Logs
