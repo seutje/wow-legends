@@ -104,6 +104,96 @@ function buildCardEl(card, { owner } = {}) {
   return wrap;
 }
 
+const TOUCH_DOUBLE_TAP_MS = 350;
+const TOUCH_PREVIEW_TIMEOUT_MS = 4500;
+let touchPreviewCardEl = null;
+let touchPreviewTimer = 0;
+const cardInteractionState = new WeakMap();
+
+function clearTouchPreview(el = touchPreviewCardEl) {
+  if (!el) return;
+  delete el.dataset.touchPreview;
+  if (touchPreviewCardEl === el) {
+    if (touchPreviewTimer) {
+      clearTimeout(touchPreviewTimer);
+      touchPreviewTimer = 0;
+    }
+    touchPreviewCardEl = null;
+  }
+}
+
+function setTouchPreview(el) {
+  if (!el) return;
+  if (touchPreviewCardEl && touchPreviewCardEl !== el) {
+    clearTouchPreview(touchPreviewCardEl);
+  }
+  touchPreviewCardEl = el;
+  el.dataset.touchPreview = '1';
+  if (touchPreviewTimer) clearTimeout(touchPreviewTimer);
+  touchPreviewTimer = setTimeout(() => {
+    clearTouchPreview(el);
+  }, TOUCH_PREVIEW_TIMEOUT_MS);
+}
+
+function isTouchPointer(ev) {
+  return ev?.pointerType === 'touch' || ev?.pointerType === 'pen';
+}
+
+function attachCardInteractions(node, card, clickCard) {
+  if (!node || typeof clickCard !== 'function') return;
+  let state = cardInteractionState.get(node);
+  if (state) {
+    state.card = card;
+    state.clickCard = clickCard;
+    return;
+  }
+  state = {
+    card,
+    clickCard,
+    lastTap: 0,
+  };
+  const getNow = () => (typeof performance !== 'undefined' && typeof performance.now === 'function'
+    ? performance.now()
+    : Date.now());
+  const handlePointerUp = async (ev) => {
+    if (!state.clickCard) return;
+    if (isTouchPointer(ev)) {
+      ev.preventDefault();
+      ev.stopPropagation();
+      const now = getNow();
+      const isPreviewed = touchPreviewCardEl === node;
+      const timeSinceLastTap = now - state.lastTap;
+      state.lastTap = now;
+      if (isPreviewed && timeSinceLastTap <= TOUCH_DOUBLE_TAP_MS) {
+        clearTouchPreview(node);
+        state.lastTap = 0;
+        await state.clickCard(state.card);
+        return;
+      }
+      setTouchPreview(node);
+      return;
+    }
+    clearTouchPreview();
+    await state.clickCard(state.card);
+  };
+  const handlePointerCancel = () => {
+    state.lastTap = 0;
+  };
+  node.addEventListener('pointerup', handlePointerUp);
+  node.addEventListener('pointercancel', handlePointerCancel);
+  cardInteractionState.set(node, state);
+}
+
+if (typeof document !== 'undefined') {
+  document.addEventListener('pointerdown', (ev) => {
+    if (!isTouchPointer(ev)) return;
+    const targetCard = ev.target?.closest?.('.p-hand .card-tooltip');
+    if (!targetCard || targetCard !== touchPreviewCardEl) {
+      clearTouchPreview();
+    }
+  });
+}
+
 const ATTACK_LAYER_ID = 'attack-anim-layer';
 const ATTACK_ANIM_FLAG = Symbol('attackAnimBound');
 const ATTACK_ANIM_DURATION_MS = 480;
@@ -338,7 +428,7 @@ function zoneCards(title, cards, { clickCard, owner } = {}) {
     if (instanceId != null) cardEl.dataset.cardId = String(instanceId);
     if (c.id != null) cardEl.dataset.templateId = String(c.id);
     cardEl.dataset.key = key;
-    if (clickCard) cardEl.addEventListener('click', async () => { await clickCard(c); });
+    if (clickCard) attachCardInteractions(cardEl, c, clickCard);
     wrap.append(cardEl);
   }
   const sectionChildren = [];
@@ -506,14 +596,12 @@ function syncCardsSection(sectionEl, cards, { clickCard, owner } = {}) {
       if (instanceId != null) node.dataset.cardId = String(instanceId);
       if (c.id != null) node.dataset.templateId = String(c.id);
       node.dataset.key = key;
-      if (clickCard && !node.dataset.clickAttached) {
-        node.addEventListener('click', async () => { await clickCard(c); });
-        node.dataset.clickAttached = '1';
-      }
+      attachCardInteractions(node, c, clickCard);
     } else {
       updateCardEl(node, c, { owner });
       byKey.delete(key);
       node.dataset.key = key;
+      attachCardInteractions(node, c, clickCard);
     }
     if (lastNode) {
       if (node.previousSibling !== lastNode) list.insertBefore(node, lastNode.nextSibling);
@@ -528,11 +616,13 @@ function syncCardsSection(sectionEl, cards, { clickCard, owner } = {}) {
     if (seen.has(k)) continue;
     // If this is a battlefield ally, fade out before removing
     if (isBattlefield && node?.dataset?.type === 'ally') {
+      clearTouchPreview(node);
       if (node.dataset.removing === '1') continue; // already animating out
       node.dataset.removing = '1';
       node.classList.add('fade-out');
       setTimeout(() => { node.remove(); }, 400);
     } else {
+      clearTouchPreview(node);
       node.remove();
     }
   }
