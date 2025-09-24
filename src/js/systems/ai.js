@@ -77,6 +77,9 @@ export class BasicAI {
               data: { attack: unit.attack, health: unit.health },
               keywords: unit.keywords
             });
+            const turnValue = this.resources?.turns?.turn ?? 0;
+            summoned.data = summoned.data || {};
+            summoned.data.enteredTurn = turnValue;
             if (!summoned.keywords?.includes('Rush')) {
               summoned.data.attacked = true;
             }

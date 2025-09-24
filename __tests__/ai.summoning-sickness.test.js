@@ -40,3 +40,25 @@ test('AI does not attack with summoned ally', () => {
   expect(g.opponent.hero.data.health).toBe(10);
 });
 
+test('AI rush ally cannot attack opponent hero on entry', () => {
+  const g = new Game();
+  const ai = new BasicAI({ resourceSystem: g.resources, combatSystem: g.combat });
+  g.player.hero = new Hero({ name: 'AI', data: { health: 10 } });
+  g.opponent.hero = new Hero({ name: 'Opponent', data: { health: 10 } });
+  const rush = new Card({
+    type: 'ally',
+    name: 'Sprinter',
+    cost: 0,
+    data: { attack: 2, health: 1 },
+    keywords: ['Rush']
+  });
+  g.player.hand.add(rush);
+  g.turns.setActivePlayer(g.player);
+  g.turns.startTurn();
+  ai.takeTurn(g.player, g.opponent);
+  const played = g.player.battlefield.cards.find(c => c.name === 'Sprinter');
+  expect(played).toBeDefined();
+  expect(played.data.enteredTurn).toBe(g.turns.turn);
+  expect(g.opponent.hero.data.health).toBe(10);
+});
+
