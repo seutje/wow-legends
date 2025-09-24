@@ -18,6 +18,7 @@ import { getCardInstanceId, matchesCardIdentifier } from './utils/card.js';
 import { chooseStartingPlayerKey } from './utils/turnOrder.js';
 
 const DEFAULT_AI_ACTION_DELAY_MS = 1000;
+const PROMPT_SHOW_DELAY_MS = 250;
 
 function buildDeckFromTemplate(template, cardById) {
   if (!template || typeof template !== 'object') return null;
@@ -1140,12 +1141,18 @@ export default class Game {
     return new Promise((resolve) => {
       const overlay = document.createElement('div');
       overlay.className = 'target-prompt';
+      let resolved = false;
+      let showTimer = null;
 
       const list = document.createElement('ul');
 
       const enemy = this.opponent;
 
       const finish = (value) => {
+        if (resolved) return;
+        resolved = true;
+        if (showTimer) clearTimeout(showTimer);
+        if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
         if (value && value !== this.CANCEL) this.recordActionTarget(value);
         resolve(value);
       };
@@ -1155,7 +1162,6 @@ export default class Game {
         const isEnemy = (t === enemy.hero) || enemy.battlefield.cards.includes(t);
         li.textContent = isEnemy ? `${t.name} (AI)` : t.name;
         li.addEventListener('click', () => {
-          document.body.removeChild(overlay);
           finish(t);
         });
         list.appendChild(li);
@@ -1167,7 +1173,6 @@ export default class Game {
         const done = document.createElement('button');
         done.textContent = 'No more targets';
         done.addEventListener('click', () => {
-          document.body.removeChild(overlay);
           finish(null);
         });
         overlay.appendChild(done);
@@ -1177,12 +1182,16 @@ export default class Game {
       const cancel = document.createElement('button');
       cancel.textContent = 'Cancel';
       cancel.addEventListener('click', () => {
-        document.body.removeChild(overlay);
         finish(this.CANCEL);
       });
       overlay.appendChild(cancel);
 
-      document.body.appendChild(overlay);
+      const showOverlay = () => {
+        if (resolved || overlay.parentNode) return;
+        document.body.appendChild(overlay);
+      };
+
+      showTimer = setTimeout(showOverlay, PROMPT_SHOW_DELAY_MS);
     });
   }
 
@@ -1205,6 +1214,16 @@ export default class Game {
     return new Promise((resolve) => {
       const overlay = document.createElement('div');
       overlay.className = 'option-prompt';
+      let resolved = false;
+      let showTimer = null;
+
+      const finish = (value) => {
+        if (resolved) return;
+        resolved = true;
+        if (showTimer) clearTimeout(showTimer);
+        if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+        resolve(value);
+      };
 
       const list = document.createElement('ul');
 
@@ -1212,8 +1231,7 @@ export default class Game {
         const li = document.createElement('li');
         li.textContent = t;
         li.addEventListener('click', () => {
-          document.body.removeChild(overlay);
-          resolve(idx);
+          finish(idx);
         });
         list.appendChild(li);
       });
@@ -1224,11 +1242,16 @@ export default class Game {
       const cancel = document.createElement('button');
       cancel.textContent = 'Cancel';
       cancel.addEventListener('click', () => {
-        document.body.removeChild(overlay);
-        resolve(this.CANCEL);
+        finish(this.CANCEL);
       });
       overlay.appendChild(cancel);
-      document.body.appendChild(overlay);
+
+      const showOverlay = () => {
+        if (resolved || overlay.parentNode) return;
+        document.body.appendChild(overlay);
+      };
+
+      showTimer = setTimeout(showOverlay, PROMPT_SHOW_DELAY_MS);
     });
   }
 
