@@ -766,20 +766,18 @@ export function renderPlay(container, game, {
     const aiHero = el(
       'div',
       { class: 'slot ai-hero' },
-      el('h3', {}, 'AI hero'),
       el('div', { class: 'hero-mana' }, `${game.resources.pool(e)}/${game.resources.available(e)} Mana`),
       buildCardEl(e.hero),
       buildAiHandIndicator(e.hand)
     );
     const aiLog = logPane('Enemy Log', e.log); aiLog.classList.add('ai-log');
     const aiHand = buildAiHandZone(e.hand, { owner: e, debugOn: debugEnabled });
-    const aiField = zoneCards('Enemy Battlefield', e.battlefield.cards, { owner: e }); aiField.classList.add('ai-field');
+    const aiField = zoneCards(null, e.battlefield.cards, { owner: e }); aiField.classList.add('ai-field');
 
     // Player side
     const pHero = el(
       'div',
       { class: 'slot p-hero' },
-      el('h3', {}, 'Player hero'),
       el('div', { class: 'hero-mana' }, `${game.resources.pool(p)}/${game.resources.available(p)} Mana`),
       buildCardEl(p.hero)
     );
@@ -789,7 +787,7 @@ export function renderPlay(container, game, {
       heroEl.dataset.clickAttached = '1';
     }
     const pLog = logPane('Player Log', p.log); pLog.classList.add('p-log');
-    const pField = zoneCards('Player Battlefield', p.battlefield.cards, { owner: p, clickCard: async (c)=>{ await game.attack(game.player, c); onUpdate?.(); } }); pField.classList.add('p-field');
+    const pField = zoneCards(null, p.battlefield.cards, { owner: p, clickCard: async (c)=>{ await game.attack(game.player, c); onUpdate?.(); } }); pField.classList.add('p-field');
     const pHand = zoneCards(null, p.hand.cards, { owner: p, clickCard: async (c)=>{ if (!await game.playFromHand(game.player, c)) { /* ignore */ } onUpdate?.(); } }); pHand.classList.add('p-hand');
     board.append(aiHero);
     if (aiHand) board.append(aiHand);
