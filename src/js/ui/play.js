@@ -349,9 +349,26 @@ function animateAttackFlight(attacker, defender) {
   cloneStyle.position = 'fixed';
   cloneStyle.left = `${attackerRect.left}px`;
   cloneStyle.top = `${attackerRect.top}px`;
-  cloneStyle.width = `${attackerRect.width}px`;
-  cloneStyle.height = `${attackerRect.height}px`;
-  cloneStyle.transform = 'translate3d(0, 0, 0)';
+  const rawWidth = attackerNode.offsetWidth || attackerNode.clientWidth || attackerRect.width || 1;
+  const rawHeight = attackerNode.offsetHeight || attackerNode.clientHeight || attackerRect.height || 1;
+  let scaleX = rawWidth ? attackerRect.width / rawWidth : 1;
+  let scaleY = rawHeight ? attackerRect.height / rawHeight : 1;
+  if (!Number.isFinite(scaleX) || scaleX <= 0) scaleX = 1;
+  if (!Number.isFinite(scaleY) || scaleY <= 0) scaleY = 1;
+  const roundScale = value => Math.round(value * 10000) / 10000;
+  const buildTransform = (dxVal, dyVal, scaleMultiplier = 1) => {
+    const translatePart = `translate3d(${dxVal}px, ${dyVal}px, 0)`;
+    const sx = roundScale(scaleX * scaleMultiplier);
+    const sy = roundScale(scaleY * scaleMultiplier);
+    const needsScale = Math.abs(sx - 1) > 0.0001 || Math.abs(sy - 1) > 0.0001;
+    if (!needsScale) return translatePart;
+    const scalePart = Math.abs(sx - sy) <= 0.0001 ? `scale(${sx})` : `scale(${sx}, ${sy})`;
+    return `${translatePart} ${scalePart}`;
+  };
+  cloneStyle.width = `${rawWidth}px`;
+  cloneStyle.height = `${rawHeight}px`;
+  cloneStyle.transformOrigin = 'top left';
+  cloneStyle.transform = buildTransform(0, 0);
   cloneStyle.pointerEvents = 'none';
   cloneStyle.willChange = 'transform';
   layer.append(clone);
@@ -376,24 +393,26 @@ function animateAttackFlight(attacker, defender) {
   const useWAAPI = typeof clone.animate === 'function';
   if (useWAAPI) {
     const impactFrames = [
-      { transform: 'translate3d(0, 0, 0) scale(1)', offset: 0 },
-      { transform: `translate3d(${dx * 0.82}px, ${dy * 0.82}px, 0) scale(1.05)`, offset: 0.55 },
-      { transform: `translate3d(${dx}px, ${dy}px, 0) scale(0.96)`, offset: 0.7 },
-      { transform: `translate3d(${dx * 0.6}px, ${dy * 0.6}px, 0) scale(1.02)`, offset: 0.86 },
-      { transform: 'translate3d(0, 0, 0) scale(1)', offset: 1 },
+      { transform: buildTransform(0, 0, 1), offset: 0 },
+      { transform: buildTransform(dx * 0.82, dy * 0.82, 1.05), offset: 0.55 },
+      { transform: buildTransform(dx, dy, 0.96), offset: 0.7 },
+      { transform: buildTransform(dx * 0.6, dy * 0.6, 1.02), offset: 0.86 },
+      { transform: buildTransform(0, 0, 1), offset: 1 },
     ];
     const anim = clone.animate(impactFrames, { duration: ATTACK_ANIM_DURATION_MS, easing: 'ease-in-out' });
     const cleanup = () => { clone.remove(); };
     anim.addEventListener('finish', cleanup, { once: true });
     anim.addEventListener('cancel', cleanup, { once: true });
   } else {
-    cloneStyle.transition = `transform ${Math.floor(ATTACK_ANIM_DURATION_MS * 0.6)}ms ease-in-out`;
+    const forwardDuration = Math.floor(ATTACK_ANIM_DURATION_MS * 0.6);
+    const returnDuration = Math.floor(ATTACK_ANIM_DURATION_MS * 0.4);
+    cloneStyle.transition = `transform ${forwardDuration}ms ease-in-out`;
     requestFrame(() => {
-      cloneStyle.transform = `translate3d(${dx}px, ${dy}px, 0)`;
+      cloneStyle.transform = buildTransform(dx, dy, 0.96);
       setTimeout(() => {
-        cloneStyle.transition = `transform ${Math.floor(ATTACK_ANIM_DURATION_MS * 0.4)}ms ease-in-out`;
-        cloneStyle.transform = 'translate3d(0, 0, 0)';
-      }, Math.floor(ATTACK_ANIM_DURATION_MS * 0.6));
+        cloneStyle.transition = `transform ${returnDuration}ms ease-in-out`;
+        cloneStyle.transform = buildTransform(0, 0, 1);
+      }, forwardDuration);
     });
   }
 
