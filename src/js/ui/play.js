@@ -119,6 +119,99 @@ function escapeAttrValue(value) {
   return str.replace(/["\\]/g, '\\$&');
 }
 
+const FULLSCREEN_EVENT_NAMES = ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'MSFullscreenChange'];
+let fullscreenButtonRef = null;
+let fullscreenChangeHandler = null;
+
+function getFullscreenDocument() {
+  if (typeof document === 'undefined') return null;
+  return document;
+}
+
+function getFullscreenElement() {
+  const doc = getFullscreenDocument();
+  if (!doc) return null;
+  return doc.fullscreenElement || doc.webkitFullscreenElement || doc.mozFullScreenElement || doc.msFullscreenElement || null;
+}
+
+function getFullscreenTarget() {
+  const doc = getFullscreenDocument();
+  if (!doc) return null;
+  return doc.documentElement || doc.body || null;
+}
+
+function getRequestFullscreenFn(target) {
+  if (!target) return null;
+  return target.requestFullscreen || target.webkitRequestFullscreen || target.mozRequestFullScreen || target.msRequestFullscreen || null;
+}
+
+function getExitFullscreenFn(doc) {
+  if (!doc) return null;
+  return doc.exitFullscreen || doc.webkitExitFullscreen || doc.mozCancelFullScreen || doc.msExitFullscreen || null;
+}
+
+function isFullscreenSupported() {
+  const target = getFullscreenTarget();
+  return !!target && !!getRequestFullscreenFn(target);
+}
+
+function isFullscreenActive() {
+  return !!getFullscreenElement();
+}
+
+function updateFullscreenButton(button) {
+  if (!button) return;
+  const supported = isFullscreenSupported();
+  button.disabled = !supported;
+  if (supported) button.removeAttribute('title');
+  else button.setAttribute('title', 'Fullscreen is not supported in this browser.');
+  const active = isFullscreenActive();
+  button.textContent = active ? 'Exit Fullscreen' : 'Fullscreen';
+  button.setAttribute('aria-pressed', active ? 'true' : 'false');
+}
+
+function ensureFullscreenButtonTracking(button) {
+  if (!button) return;
+  const doc = getFullscreenDocument();
+  if (!doc) return;
+  fullscreenButtonRef = button;
+  updateFullscreenButton(button);
+  if (!fullscreenChangeHandler) {
+    fullscreenChangeHandler = () => {
+      if (fullscreenButtonRef?.isConnected) updateFullscreenButton(fullscreenButtonRef);
+    };
+    for (const evt of FULLSCREEN_EVENT_NAMES) {
+      doc.addEventListener(evt, fullscreenChangeHandler);
+    }
+  }
+}
+
+async function toggleFullscreen(button) {
+  const doc = getFullscreenDocument();
+  if (!doc) return;
+  const active = isFullscreenActive();
+  try {
+    if (active) {
+      const exitFn = getExitFullscreenFn(doc);
+      if (exitFn) {
+        const result = exitFn.call(doc);
+        if (result && typeof result.then === 'function') await result;
+      }
+    } else {
+      const target = getFullscreenTarget();
+      const requestFn = getRequestFullscreenFn(target);
+      if (target && requestFn) {
+        const result = requestFn.call(target);
+        if (result && typeof result.then === 'function') await result;
+      }
+    }
+  } catch {
+    /* ignore fullscreen toggle errors */
+  } finally {
+    if (button) updateFullscreenButton(button);
+  }
+}
+
 function resolveDomCardKey(card) {
   if (!card) return null;
   if (card.instanceId != null) return String(card.instanceId);
@@ -555,6 +648,14 @@ export function renderPlay(container, game, { onUpdate, onOpenDeckBuilder, onNew
     } });
     debugChk.checked = !!(game.state?.debug);
 
+    let fullscreenBtn;
+    fullscreenBtn = el('button', {
+      class: 'btn-fullscreen',
+      type: 'button',
+      onclick: async () => { await toggleFullscreen(fullscreenBtn); }
+    }, 'Fullscreen');
+    ensureFullscreenButtonTracking(fullscreenBtn);
+
     controls = el('div', { class: 'controls' },
       el('button', { class: 'btn-new-game', onclick: async (ev) => {
         const btn = ev?.currentTarget;
@@ -595,6 +696,7 @@ export function renderPlay(container, game, { onUpdate, onOpenDeckBuilder, onNew
         }
       } }, 'Autoplay'),
       el('label', { class: 'lbl-difficulty' }, 'Difficulty: ', diffSelect),
+      fullscreenBtn,
       el('label', { class: 'lbl-debug' }, debugChk, ' Debug logs')
     );
     headerEl.append(controls);
@@ -630,6 +732,8 @@ export function renderPlay(container, game, { onUpdate, onOpenDeckBuilder, onNew
   if (!initialControlsMount) {
     const sel = controls.querySelector('select.select-difficulty');
     if (sel && game.state) sel.value = game.state.difficulty || defaultDifficulty;
+    const fullscreenBtn = controls.querySelector('.btn-fullscreen');
+    if (fullscreenBtn) ensureFullscreenButtonTracking(fullscreenBtn);
   }
 
   // Update controls disabled states
