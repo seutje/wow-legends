@@ -206,8 +206,8 @@ main {
   left: 0;
   right: 0;
   bottom: 0;
-  height: 350px;
-  padding-top: 220px;
+  height: 410px;
+  padding-top: 310px;
   overflow: hidden;
   --hand-overlap: 100px;
   z-index: 450;
