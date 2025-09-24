@@ -478,12 +478,21 @@ function updateCardEl(cardEl, card, { owner } = {}) {
 function syncCardsSection(sectionEl, cards, { clickCard, owner } = {}) {
   if (!sectionEl) return;
   const list = sectionEl.querySelector('.cards') || sectionEl;
+  const cardArray = Array.isArray(cards) ? cards : (cards ? Array.from(cards) : []);
   const byKey = new Map(Array.from(list.children).map(node => [node.dataset.key, node]));
+  const isPlayerHand = sectionEl.classList?.contains('p-hand');
+  if (sectionEl.dataset) sectionEl.dataset.cardCount = String(cardArray.length);
+  if (isPlayerHand) {
+    const initialOverlap = cardArray.length > 1 ? Math.min(120, 32 + cardArray.length * 9) : 0;
+    sectionEl.style.setProperty('--hand-overlap', `${initialOverlap}px`);
+  } else if (sectionEl.style) {
+    sectionEl.style.removeProperty('--hand-overlap');
+  }
   const seen = new Set();
   // Rebuild order with minimal moves; disambiguate duplicates by occurrence index
   const counts = new Map();
   let lastNode = null;
-  for (const c of cards) {
+  for (const c of cardArray) {
     const baseKey = c.instanceId || c.id || 'card';
     const n = (counts.get(baseKey) || 0) + 1; counts.set(baseKey, n);
     const key = c.instanceId || `${baseKey}#${n}`;
@@ -523,6 +532,32 @@ function syncCardsSection(sectionEl, cards, { clickCard, owner } = {}) {
       setTimeout(() => { node.remove(); }, 400);
     } else {
       node.remove();
+    }
+  }
+
+  if (sectionEl.dataset) sectionEl.dataset.cardCount = String(list.children.length);
+  if (isPlayerHand) {
+    const cardEls = Array.from(list.children);
+    const count = cardEls.length;
+    const overlap = count > 1 ? Math.min(120, 32 + count * 9) : 0;
+    sectionEl.style.setProperty('--hand-overlap', `${overlap}px`);
+    const maxAngle = 16;
+    const angleStep = count > 1 ? (maxAngle * 2) / (count - 1) : 0;
+    const center = (count - 1) / 2;
+    cardEls.forEach((node, index) => {
+      const offset = index - center;
+      const angle = count > 1 ? offset * angleStep : 0;
+      const depth = Math.abs(offset);
+      const translate = count > 1 ? Math.pow(depth, 1.2) * 3.6 : 0;
+      node.style.setProperty('--fan-rotate', `${angle.toFixed(2)}deg`);
+      node.style.setProperty('--fan-translate', `${translate.toFixed(2)}`);
+      node.style.setProperty('--fan-z', `${100 + index}`);
+    });
+  } else if (list.children?.length) {
+    for (const node of list.children) {
+      node.style.removeProperty('--fan-rotate');
+      node.style.removeProperty('--fan-translate');
+      node.style.removeProperty('--fan-z');
     }
   }
 }
