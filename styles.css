@@ -452,3 +452,32 @@ ul.zone-list li {
   opacity: 0;
   transition: opacity 0.4s ease;
 }
+
+/* Attack animation overlay */
+.attack-animation-layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 900;
+}
+
+.attack-flyer {
+  pointer-events: none;
+  z-index: 901;
+  filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.45));
+}
+
+.attack-flyer img,
+.attack-flyer .card-info {
+  pointer-events: none;
+}
+
+@keyframes attack-bump {
+  0% { transform: translate3d(0, 0, 0) scale(1); }
+  45% { transform: translate3d(3px, -4px, 0) scale(1.05); }
+  100% { transform: translate3d(0, 0, 0) scale(1); }
+}
+
+.card-tooltip.attack-bump {
+  animation: attack-bump 0.28s ease;
+}

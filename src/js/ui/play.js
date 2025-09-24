@@ -104,6 +104,135 @@ function buildCardEl(card, { owner } = {}) {
   return wrap;
 }
 
+const ATTACK_LAYER_ID = 'attack-anim-layer';
+const ATTACK_ANIM_FLAG = Symbol('attackAnimBound');
+const ATTACK_ANIM_DURATION_MS = 480;
+
+const requestFrame = (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function')
+  ? window.requestAnimationFrame.bind(window)
+  : (cb) => setTimeout(() => cb(Date.now()), 16);
+
+function escapeAttrValue(value) {
+  if (value == null) return '';
+  const str = String(value);
+  if (typeof window !== 'undefined' && window.CSS?.escape) return window.CSS.escape(str);
+  return str.replace(/["\\]/g, '\\$&');
+}
+
+function resolveDomCardKey(card) {
+  if (!card) return null;
+  if (card.instanceId != null) return String(card.instanceId);
+  if (card.id != null) return String(card.id);
+  return null;
+}
+
+function findCardNodeByKey(key) {
+  if (!key || typeof document === 'undefined') return null;
+  const escaped = escapeAttrValue(key);
+  return document.querySelector(`.board [data-card-id="${escaped}"]`);
+}
+
+function ensureAttackLayer() {
+  if (typeof document === 'undefined') return null;
+  let layer = document.getElementById(ATTACK_LAYER_ID);
+  if (!layer) {
+    layer = document.createElement('div');
+    layer.id = ATTACK_LAYER_ID;
+    layer.className = 'attack-animation-layer';
+    layer.setAttribute('aria-hidden', 'true');
+    document.body.append(layer);
+  }
+  return layer;
+}
+
+function animateAttackFlight(attacker, defender) {
+  if (typeof document === 'undefined') return;
+  if (!attacker || !(attacker.type === 'ally' || attacker.type === 'hero')) return;
+
+  const attackerKey = resolveDomCardKey(attacker);
+  if (!attackerKey) return;
+  const attackerNode = findCardNodeByKey(attackerKey);
+  if (!attackerNode) return;
+
+  const attackerRect = attackerNode.getBoundingClientRect();
+  if (!attackerRect?.width || !attackerRect?.height) return;
+
+  const layer = ensureAttackLayer();
+  if (!layer) return;
+
+  const clone = attackerNode.cloneNode(true);
+  clone.classList.add('attack-flyer');
+  const cloneStyle = clone.style;
+  cloneStyle.position = 'fixed';
+  cloneStyle.left = `${attackerRect.left}px`;
+  cloneStyle.top = `${attackerRect.top}px`;
+  cloneStyle.width = `${attackerRect.width}px`;
+  cloneStyle.height = `${attackerRect.height}px`;
+  cloneStyle.transform = 'translate3d(0, 0, 0)';
+  cloneStyle.pointerEvents = 'none';
+  cloneStyle.willChange = 'transform';
+  layer.append(clone);
+
+  const targetKey = resolveDomCardKey(defender);
+  const targetNode = targetKey ? findCardNodeByKey(targetKey) : null;
+  const targetRect = targetNode?.getBoundingClientRect();
+
+  const startX = attackerRect.left + attackerRect.width / 2;
+  const startY = attackerRect.top + attackerRect.height / 2;
+  let dx = 0;
+  let dy = 0;
+  if (targetRect) {
+    const endX = targetRect.left + targetRect.width / 2;
+    const endY = targetRect.top + targetRect.height / 2;
+    dx = endX - startX;
+    dy = endY - startY;
+  } else if (typeof window !== 'undefined') {
+    dy = (startY < window.innerHeight / 2) ? -80 : 80;
+  }
+
+  const useWAAPI = typeof clone.animate === 'function';
+  if (useWAAPI) {
+    const impactFrames = [
+      { transform: 'translate3d(0, 0, 0) scale(1)', offset: 0 },
+      { transform: `translate3d(${dx * 0.82}px, ${dy * 0.82}px, 0) scale(1.05)`, offset: 0.55 },
+      { transform: `translate3d(${dx}px, ${dy}px, 0) scale(0.96)`, offset: 0.7 },
+      { transform: `translate3d(${dx * 0.6}px, ${dy * 0.6}px, 0) scale(1.02)`, offset: 0.86 },
+      { transform: 'translate3d(0, 0, 0) scale(1)', offset: 1 },
+    ];
+    const anim = clone.animate(impactFrames, { duration: ATTACK_ANIM_DURATION_MS, easing: 'ease-in-out' });
+    const cleanup = () => { clone.remove(); };
+    anim.addEventListener('finish', cleanup, { once: true });
+    anim.addEventListener('cancel', cleanup, { once: true });
+  } else {
+    cloneStyle.transition = `transform ${Math.floor(ATTACK_ANIM_DURATION_MS * 0.6)}ms ease-in-out`;
+    requestFrame(() => {
+      cloneStyle.transform = `translate3d(${dx}px, ${dy}px, 0)`;
+      setTimeout(() => {
+        cloneStyle.transition = `transform ${Math.floor(ATTACK_ANIM_DURATION_MS * 0.4)}ms ease-in-out`;
+        cloneStyle.transform = 'translate3d(0, 0, 0)';
+      }, Math.floor(ATTACK_ANIM_DURATION_MS * 0.6));
+    });
+  }
+
+  setTimeout(() => { clone.remove(); }, ATTACK_ANIM_DURATION_MS + 180);
+
+  if (targetNode) {
+    targetNode.classList.add('attack-bump');
+    setTimeout(() => { targetNode.classList.remove('attack-bump'); }, 320);
+  }
+}
+
+function ensureAttackAnimationSubscription(game) {
+  if (!game || !game.bus || typeof document === 'undefined') return;
+  if (game[ATTACK_ANIM_FLAG]) return;
+  const handler = ({ attacker, defender }) => {
+    if (!attacker || !(attacker.type === 'ally' || attacker.type === 'hero')) return;
+    requestFrame(() => { animateAttackFlight(attacker, defender); });
+  };
+  game.bus.on('attackCommitted', handler);
+  game[ATTACK_ANIM_FLAG] = true;
+}
+
 function zoneCards(title, cards, { clickCard, owner } = {}) {
   const wrap = el('div', { class: 'cards' });
   const counts = new Map();
@@ -386,6 +515,8 @@ export function renderPlay(container, game, { onUpdate, onOpenDeckBuilder, onNew
   const p = game.player; const e = game.opponent;
   const debugEnabled = !!(game.state?.debug);
   const defaultDifficulty = game?._defaultDifficulty || 'nightmare';
+
+  ensureAttackAnimationSubscription(game);
 
   let headerEl = document.querySelector('header');
   if (!headerEl) {

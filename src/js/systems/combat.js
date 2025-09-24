@@ -72,6 +72,13 @@ export class CombatSystem {
     }
     const key = getCardInstanceId(attacker) || attacker;
     this._attacks.set(key, { attacker, blockers: [] });
+    if (this.bus) {
+      try {
+        this.bus.emit('attackCommitted', { attacker, defender });
+      } catch (e) {
+        console.error(e);
+      }
+    }
     return true;
   }
 
