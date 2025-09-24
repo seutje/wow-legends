@@ -247,7 +247,8 @@ export default class Game {
 
   async throttleAIAction(player) {
     if (!this._shouldThrottleAI) return;
-    if (!this._isAIControlled(player)) return;
+    const autoplayingPlayer = this.state?.aiThinking && player === this.player;
+    if (!this._isAIControlled(player) && !autoplayingPlayer) return;
     const delay = this._aiActionDelayMs;
     if (!(delay > 0)) return;
     await new Promise((resolve) => {

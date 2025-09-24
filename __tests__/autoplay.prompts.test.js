@@ -1,3 +1,4 @@
+import { jest } from '@jest/globals';
 import Game from '../src/js/game.js';
 
 describe('autoplay prompt handling', () => {
@@ -29,5 +30,29 @@ describe('autoplay prompt handling', () => {
     const selection = await g.promptOption(['One', 'Two', 'Three']);
 
     expect(selection).toBe(2);
+  });
+
+  test('player actions throttle while autoplaying', async () => {
+    jest.useFakeTimers();
+    try {
+      const g = new Game();
+      await g.setupMatch();
+
+      g._shouldThrottleAI = true;
+      g.state.aiThinking = true;
+
+      const pending = g.throttleAIAction(g.player);
+      let resolved = false;
+      pending.then(() => { resolved = true; });
+
+      await Promise.resolve();
+      expect(resolved).toBe(false);
+
+      jest.advanceTimersByTime(1000);
+      await pending;
+      expect(resolved).toBe(true);
+    } finally {
+      jest.useRealTimers();
+    }
   });
 });
