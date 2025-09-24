@@ -10,12 +10,92 @@ import { saveGameState, loadSavedGameState, clearSavedGameState } from './utils/
 
 function qs(sel) { return document.querySelector(sel); }
 
+function startLoadingOverlay(message = 'Loading game data…') {
+  if (typeof document === 'undefined') return null;
+  const parent = document.body || document.documentElement;
+  if (!parent) return null;
+  const overlay = document.createElement('div');
+  overlay.className = 'ai-overlay';
+  overlay.dataset.loading = '1';
+  const panel = document.createElement('div');
+  panel.className = 'panel';
+  const msgEl = document.createElement('p');
+  msgEl.className = 'msg';
+  msgEl.textContent = message;
+  const progressEl = document.createElement('div');
+  progressEl.className = 'progress';
+  progressEl.dataset.complete = '0';
+  const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+  let progressPos = 0.12;
+  progressEl.style.setProperty('--progress-pos', progressPos.toFixed(4));
+  panel.append(msgEl, progressEl);
+  overlay.append(panel);
+  parent.appendChild(overlay);
+
+  let done = false;
+  let frameId = 0;
+  const min = 0.08;
+  const max = 0.92;
+  let direction = 1;
+  const hasRAF = typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function';
+  const hasCancelRAF = typeof window !== 'undefined' && typeof window.cancelAnimationFrame === 'function';
+  const schedule = (cb) => {
+    if (hasRAF) return window.requestAnimationFrame(cb);
+    return setTimeout(cb, 80);
+  };
+  const cancel = (id) => {
+    if (hasRAF && hasCancelRAF) {
+      window.cancelAnimationFrame(id);
+    } else {
+      clearTimeout(id);
+    }
+  };
+  const step = () => {
+    frameId = 0;
+    if (done) return;
+    progressPos += direction * 0.012;
+    if (progressPos >= max || progressPos <= min) {
+      direction *= -1;
+      progressPos = clamp(progressPos, min, max);
+    }
+    progressEl.style.setProperty('--progress-pos', progressPos.toFixed(4));
+    frameId = schedule(step);
+  };
+  frameId = schedule(step);
+
+  return {
+    finish(success = true) {
+      if (done) return;
+      done = true;
+      if (frameId) {
+        cancel(frameId);
+        frameId = 0;
+      }
+      if (success) {
+        progressEl.dataset.complete = '1';
+        progressEl.style.setProperty('--progress-pos', '1');
+        setTimeout(() => overlay.remove(), 180);
+      } else {
+        overlay.remove();
+      }
+    },
+  };
+}
+
 const root = qs('#root');
 const statusEl = qs('#status');
 const mainEl = qs('main');
 
 const game = new Game(root);
-await game.init();
+const loadingOverlay = startLoadingOverlay('Loading game data…');
+let initSucceeded = false;
+try {
+  setStatus('Loading game data…');
+  await game.init();
+  initSucceeded = true;
+} finally {
+  loadingOverlay?.finish(initSucceeded);
+}
 
 // Load persisted settings: difficulty and last used deck
 try {
