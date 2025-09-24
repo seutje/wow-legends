@@ -623,15 +623,16 @@ ul.zone-list li {
 
 .card-tooltip .stat {
   position: absolute;
-  width: 32px;
-  height: 32px;
+  width: 35px;
+  height: 35px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: bold;
-  color: #fff;
+  color: #000;
   z-index: 3;
+  font-size: 28px;
 }
 
 .card-tooltip .stat.cost,
