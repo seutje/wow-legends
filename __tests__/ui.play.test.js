@@ -11,6 +11,7 @@ describe('UI Play', () => {
 
   test('renders log panes with player and enemy actions', () => {
     const container = document.createElement('div');
+    document.body.append(container);
     const playerHero = new Hero({ name: 'Player Hero', data: { health: 25, armor: 5 } });
     const enemyHero = new Hero({ name: 'Enemy Hero', data: { health: 20, armor: 3 } });
 
@@ -31,6 +32,7 @@ describe('UI Play', () => {
 
   test('displays mana values within hero slots', () => {
     const container = document.createElement('div');
+    document.body.append(container);
     const playerHero = new Hero({ name: 'Player Hero', data: { health: 30 } });
     const enemyHero = new Hero({ name: 'Enemy Hero', data: { health: 30 } });
 
@@ -403,7 +405,7 @@ describe('UI Play', () => {
     localStorage.removeItem('wow-legends:settings');
   });
 
-  test('single tapping a friendly ally centers and enlarges it, second tap restores size', () => {
+  test('single tap previews a friendly ally and second tap attacks', async () => {
     if (typeof PointerEvent === 'undefined') {
       global.PointerEvent = class extends Event {
         constructor(type, params = {}) {
@@ -450,16 +452,17 @@ describe('UI Play', () => {
     nowValue = 1000;
     const secondTap = new PointerEvent('pointerup', { pointerType: 'touch', bubbles: true, cancelable: true });
     cardEl.dispatchEvent(secondTap);
+    await Promise.resolve();
 
     expect(cardEl.dataset.touchPreview).toBeUndefined();
     expect(cardEl.style.getPropertyValue('--touch-translate-x')).toBe('');
     expect(cardEl.style.getPropertyValue('--touch-translate-y')).toBe('');
-    expect(attack).not.toHaveBeenCalled();
+    expect(attack).toHaveBeenCalledTimes(1);
 
     nowSpy.mockRestore();
   });
 
-  test('double tapping a friendly ally triggers an attack', async () => {
+  test('tapping outside the previewed ally clears the enlargement without attacking', () => {
     if (typeof PointerEvent === 'undefined') {
       global.PointerEvent = class extends Event {
         constructor(type, params = {}) {
@@ -495,18 +498,123 @@ describe('UI Play', () => {
 
     const cardEl = container.querySelector('.p-field .card-tooltip');
     expect(cardEl).toBeTruthy();
+    const boardEl = container.querySelector('.board');
+    expect(boardEl).toBeTruthy();
 
     const firstTap = new PointerEvent('pointerup', { pointerType: 'touch', bubbles: true, cancelable: true });
     cardEl.dispatchEvent(firstTap);
+    expect(cardEl.dataset.touchPreview).toBe('1');
+
+    nowValue = 750;
+    const outsideTap = new PointerEvent('pointerdown', { pointerType: 'touch', bubbles: true, cancelable: true });
+    document.dispatchEvent(outsideTap);
+
+    expect(cardEl.dataset.touchPreview).toBeUndefined();
+    expect(attack).not.toHaveBeenCalled();
+
+    nowSpy.mockRestore();
+  });
+
+  test('single tap previews a hand card and second tap plays it', async () => {
+    if (typeof PointerEvent === 'undefined') {
+      global.PointerEvent = class extends Event {
+        constructor(type, params = {}) {
+          super(type, params);
+          this.pointerType = params.pointerType || '';
+        }
+      };
+    }
+
+    let nowValue = 0;
+    const nowSpy = jest.spyOn(performance, 'now').mockImplementation(() => nowValue);
+
+    const container = document.createElement('div');
+    const playerHero = new Hero({ name: 'Player', data: { health: 30 } });
+    const enemyHero = new Hero({ name: 'Enemy', data: { health: 30 } });
+    const handCard = {
+      id: 'hand-touch-test',
+      name: 'Tap to Play',
+      text: 'Tap again to play.',
+      type: 'spell',
+      cost: 2,
+      data: {}
+    };
+    const playFromHand = jest.fn().mockResolvedValue(true);
+    const game = {
+      player: { hero: playerHero, battlefield: { cards: [] }, hand: { cards: [handCard], size: () => 1 }, log: [] },
+      opponent: { hero: enemyHero, battlefield: { cards: [] }, hand: { cards: [], size: () => 0 }, log: [] },
+      resources: { pool: () => 0, available: () => 0 },
+      draw: jest.fn(), attack: jest.fn(), endTurn: jest.fn(), playFromHand,
+    };
+
+    renderPlay(container, game, { onUpdate: jest.fn() });
+
+    const cardEl = container.querySelector('.p-hand .card-tooltip');
+    expect(cardEl).toBeTruthy();
+
+    const firstTap = new PointerEvent('pointerup', { pointerType: 'touch', bubbles: true, cancelable: true });
+    cardEl.dispatchEvent(firstTap);
+    expect(cardEl.dataset.touchPreview).toBe('1');
 
     nowValue = 200;
     const secondTap = new PointerEvent('pointerup', { pointerType: 'touch', bubbles: true, cancelable: true });
     cardEl.dispatchEvent(secondTap);
     await Promise.resolve();
 
-    expect(attack).toHaveBeenCalledTimes(1);
-    expect(attack.mock.calls[0][1]).toBe(ally);
+    expect(playFromHand).toHaveBeenCalledTimes(1);
+    expect(playFromHand.mock.calls[0][1]).toBe(handCard);
     expect(cardEl.dataset.touchPreview).toBeUndefined();
+
+    nowSpy.mockRestore();
+  });
+
+  test('tapping outside the previewed hand card clears it without playing the card', () => {
+    if (typeof PointerEvent === 'undefined') {
+      global.PointerEvent = class extends Event {
+        constructor(type, params = {}) {
+          super(type, params);
+          this.pointerType = params.pointerType || '';
+        }
+      };
+    }
+
+    let nowValue = 0;
+    const nowSpy = jest.spyOn(performance, 'now').mockImplementation(() => nowValue);
+
+    const container = document.createElement('div');
+    const playerHero = new Hero({ name: 'Player', data: { health: 30 } });
+    const enemyHero = new Hero({ name: 'Enemy', data: { health: 30 } });
+    const handCard = {
+      id: 'hand-touch-test-dismiss',
+      name: 'Tap to Preview',
+      text: 'Tap outside to close.',
+      type: 'spell',
+      cost: 3,
+      data: {}
+    };
+    const playFromHand = jest.fn().mockResolvedValue(true);
+    const game = {
+      player: { hero: playerHero, battlefield: { cards: [] }, hand: { cards: [handCard], size: () => 1 }, log: [] },
+      opponent: { hero: enemyHero, battlefield: { cards: [] }, hand: { cards: [], size: () => 0 }, log: [] },
+      resources: { pool: () => 0, available: () => 0 },
+      draw: jest.fn(), attack: jest.fn(), endTurn: jest.fn(), playFromHand,
+    };
+
+    renderPlay(container, game, { onUpdate: jest.fn() });
+
+    const cardEl = container.querySelector('.p-hand .card-tooltip');
+    expect(cardEl).toBeTruthy();
+
+    const firstTap = new PointerEvent('pointerup', { pointerType: 'touch', bubbles: true, cancelable: true });
+    cardEl.dispatchEvent(firstTap);
+    expect(cardEl.dataset.touchPreview).toBe('1');
+
+    nowValue = 650;
+    const outsideTap = new PointerEvent('pointerdown', { pointerType: 'touch', bubbles: true, cancelable: true });
+    document.dispatchEvent(outsideTap);
+
+    expect(cardEl.dataset.touchPreview).toBeUndefined();
+    expect(playFromHand).not.toHaveBeenCalled();
 
     nowSpy.mockRestore();
   });

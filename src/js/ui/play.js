@@ -180,18 +180,13 @@ function attachCardInteractions(node, card, clickCard) {
       ev.stopPropagation();
       const now = getNow();
       const isPreviewed = touchPreviewCardEl === node;
-      const timeSinceLastTap = now - state.lastTap;
       const isFriendlyFieldAlly = state.card?.type === 'ally' && !!node.closest('.p-field');
+      const isPlayerHandCard = !!node.closest('.p-hand');
       state.lastTap = now;
-      if (isPreviewed && timeSinceLastTap <= TOUCH_DOUBLE_TAP_MS) {
+      if (isPreviewed) {
         clearTouchPreview(node);
         state.lastTap = 0;
-        await state.clickCard(state.card);
-        return;
-      }
-      if (isPreviewed && isFriendlyFieldAlly) {
-        clearTouchPreview(node);
-        state.lastTap = 0;
+        if (isFriendlyFieldAlly || isPlayerHandCard) await state.clickCard(state.card);
         return;
       }
       setTouchPreview(node);
@@ -229,7 +224,7 @@ function ensureDoubleTapZoomDisabled(target) {
 if (typeof document !== 'undefined') {
   document.addEventListener('pointerdown', (ev) => {
     if (!isTouchPointer(ev)) return;
-    const targetCard = ev.target?.closest?.('.p-hand .card-tooltip');
+    const targetCard = ev.target?.closest?.('.card-tooltip');
     if (!targetCard || targetCard !== touchPreviewCardEl) {
       clearTouchPreview();
     }
