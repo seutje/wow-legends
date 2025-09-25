@@ -38,6 +38,72 @@ describe('hero effects', () => {
     expect(g.player.hero.data.armor).toBe(2);
   });
 
+  test("Anduin passive discounts first heal from spells and hero power", async () => {
+    const g = new Game();
+    g.player.hero = new Hero({
+      passive: [
+        { type: 'firstHealCostReduction', amount: 1 },
+      ],
+      active: [
+        { type: 'heal', target: 'character', amount: 2 },
+      ],
+    });
+
+    const healSpellA = new Card({
+      id: 'test-heal-a',
+      type: 'spell',
+      cost: 2,
+      effects: [
+        { type: 'heal', target: 'character', amount: 3 },
+      ],
+    });
+
+    const healSpellB = new Card({
+      id: 'test-heal-b',
+      type: 'spell',
+      cost: 2,
+      effects: [
+        { type: 'heal', target: 'character', amount: 3 },
+      ],
+    });
+
+    g.player.hand.add(healSpellA);
+    g.player.hand.add(healSpellB);
+
+    g.turns.setActivePlayer(g.player);
+    g.turns.turn = 2;
+    g.turns.bus.emit('turn:start', { player: g.player });
+    await Promise.resolve();
+    g.resources.startTurn(g.player);
+
+    g.resources.pay(g.player, 1);
+    expect(g.resources.pool(g.player)).toBe(1);
+    expect(g.canPlay(g.player, healSpellA)).toBe(true);
+
+    await expect(g.playFromHand(g.player, healSpellA)).resolves.toBe(true);
+    expect(g.resources.pool(g.player)).toBe(0);
+
+    g.resources.restore(g.player, 2);
+    expect(g.resources.pool(g.player)).toBe(2);
+
+    await expect(g.useHeroPower(g.player)).resolves.toBe(true);
+    expect(g.resources.pool(g.player)).toBe(0);
+
+    g.turns.turn = 3;
+    g.turns.bus.emit('turn:start', { player: g.player });
+    await Promise.resolve();
+    g.resources.startTurn(g.player);
+
+    g.resources.pay(g.player, 2);
+    expect(g.resources.pool(g.player)).toBe(1);
+
+    await expect(g.useHeroPower(g.player)).resolves.toBe(true);
+    expect(g.resources.pool(g.player)).toBe(0);
+
+    g.resources.restore(g.player, 1);
+    expect(g.canPlay(g.player, healSpellB)).toBe(false);
+  });
+
   test("Valeera passive discounts only the first combo card each turn", async () => {
     const g = new Game();
     g.player.hero = new Hero({
