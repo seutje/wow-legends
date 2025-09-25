@@ -174,6 +174,9 @@ export class EffectSystem {
         case 'buffOnArmorGain':
           this.buffOnArmorGain(effect, context);
           break;
+        case 'heroAttackOnArmorGain':
+          this.heroAttackOnArmorGain(effect, context);
+          break;
         case 'overload':
           this.applyOverload(effect, context);
           break;
@@ -2520,6 +2523,38 @@ export class EffectSystem {
     const offReturn = this._trackCleanup(game.bus.on('cardReturned', ({ card: returned }) => {
       if (returned === card) remove();
     }));
+  }
+
+  heroAttackOnArmorGain(effect, context) {
+    const rawAmount = Number(effect?.amount);
+    const amount = Number.isFinite(rawAmount) ? rawAmount : 1;
+    if (!amount) return;
+
+    const { game, player, card } = context || {};
+    if (!game || !player?.hero || !card) return;
+
+    const grantAttack = () => {
+      if (player.hero !== card) return;
+      const hero = card;
+      if (!hero) return;
+      if (!hero.data) hero.data = {};
+      hero.data.attack = (hero.data.attack || 0) + amount;
+      const revert = () => {
+        if (!hero?.data) return;
+        hero.data.attack = (hero.data.attack || 0) - amount;
+        if (hero.data.attack < 0) hero.data.attack = 0;
+      };
+      this.temporaryEffects.push({ revert });
+      console.log(`Granted temporary +${amount} ATK to ${hero.name} after gaining armor.`);
+    };
+
+    const handler = ({ player: armorPlayer }) => {
+      if (armorPlayer !== player) return;
+      if (player.hero !== card) return;
+      grantAttack();
+    };
+
+    this._trackCleanup(game.bus.on('armorGained', handler));
   }
 
   buffOnSurviveDamage(effect, context) {
