@@ -47,6 +47,7 @@ main {
 /* Hide sidebar by default; shown when deck builder is active */
 #sidebar {
   display: none;
+  padding-top: 32px;
 }
 
 /* Board layout inside #root */
