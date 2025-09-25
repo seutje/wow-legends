@@ -51,6 +51,15 @@ function buildDeckFromTemplate(template, cardById) {
   return { hero: heroData, cards, name: template.name || null };
 }
 
+function hasKeyword(entity, keyword) {
+  if (!entity || !keyword) return false;
+  const normalized = keyword.trim().toLowerCase();
+  if (!normalized) return false;
+  const list = entity.keywords;
+  if (!Array.isArray(list) || list.length === 0) return false;
+  return list.some((kw) => typeof kw === 'string' && kw.trim().toLowerCase() === normalized);
+}
+
 function effectListDealsDamageToOthers(effects) {
   if (!Array.isArray(effects)) return false;
   for (const effect of effects) {
@@ -745,7 +754,8 @@ export default class Game {
     await this.throttleAIAction(player);
     const finishTargetCapture = this._pushActionTargetScope();
     const loggedTargets = new Set();
-    const heroPowerUsesSpellDamage = effectListDealsDamageToOthers(hero.active);
+    const heroPowerUsesSpellDamage = effectListDealsDamageToOthers(hero.active)
+      && !hasKeyword(hero, 'Unaffected by spellpower');
     const context = {
       game: this,
       player,

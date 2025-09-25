@@ -46,7 +46,7 @@ test("Jaina's hero power deals base damage without Spell Damage", async () => {
   expect(target.data.health).toBe(before - 1);
 });
 
-test("Illidan's hero power scales with Spell Damage bonuses", async () => {
+test("Illidan's hero power ignores Spell Damage bonuses", async () => {
   expect(illidan).toBeDefined();
   const g = new Game();
   setupHeroPowerTest(g, illidan);
@@ -61,6 +61,6 @@ test("Illidan's hero power scales with Spell Damage bonuses", async () => {
 
   await g.useHeroPower(g.player);
 
-  expect(g.opponent.hero.data.health).toBe(heroBefore - 2);
-  expect(enemyMinion.data.health).toBe(minionBefore - 2);
+  expect(g.opponent.hero.data.health).toBe(heroBefore - 1);
+  expect(enemyMinion.data.health).toBe(minionBefore - 1);
 });
