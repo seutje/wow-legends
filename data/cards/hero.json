@@ -307,6 +307,14 @@
         "amount": 2
       }
     ],
+    "passive": [
+      {
+        "type": "keywordCostReduction",
+        "keyword": "Secret",
+        "amount": 1,
+        "minimum": 0
+      }
+    ],
     "keywords": [
       "Undead",
       "Arrows of the Banshee — Your secrets cost (1) less."
