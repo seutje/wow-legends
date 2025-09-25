@@ -96,13 +96,6 @@
         }
       }
     ],
-    "combo": [
-      {
-        "type": "costReduction",
-        "target": "ability",
-        "amount": 1
-      }
-    ],
     "keywords": [
       "The first combo card you play each turn costs (1) less (1 minimum)."
     ],
