@@ -729,8 +729,18 @@ export default class Game {
     if (!hero || hero.powerUsed) return false;
     if (hero.data?.freezeTurns > 0) return false;
     if (!hero.active?.length) return false;
-    const cost = 2;
+    const baseCost = 2;
+    const healEval = this._evaluateFirstHealCostReduction(player, hero, {
+      baseCost,
+      sourceType: 'heroPower',
+    });
+    const evaluatedCost = typeof healEval?.cost === 'number' ? healEval.cost : baseCost;
+    const cost = Number.isFinite(evaluatedCost) ? Math.max(0, evaluatedCost) : baseCost;
     if (!this.resources.pay(player, cost)) return false;
+    let revertFirstHealCostReduction = null;
+    if (typeof healEval?.consume === 'function') {
+      revertFirstHealCostReduction = healEval.consume() || null;
+    }
     await this.throttleAIAction(player);
     const finishTargetCapture = this._pushActionTargetScope();
     const loggedTargets = new Set();
@@ -752,7 +762,22 @@ export default class Game {
       logTargets = finishTargetCapture();
     } catch (err) {
       finishTargetCapture({ discard: true });
+      if (err === this.CANCEL) {
+        if (typeof revertFirstHealCostReduction === 'function') {
+          try { revertFirstHealCostReduction(); } catch {}
+          revertFirstHealCostReduction = null;
+        }
+        if (typeof this.resources.refund === 'function') this.resources.refund(player, cost);
+        else this.resources.restore(player, cost);
+        return false;
+      }
+      if (typeof revertFirstHealCostReduction === 'function') {
+        try { revertFirstHealCostReduction(); } catch {}
+        revertFirstHealCostReduction = null;
+      }
       throw err;
+    } finally {
+      revertFirstHealCostReduction = null;
     }
     hero.powerUsed = true;
     try { this.bus.emit('heroPowerUsed', { player, hero, cost }); } catch {}
@@ -789,9 +814,105 @@ export default class Game {
     this.state.frame++;
   }
 
-  _evaluateFirstKeywordCostReduction(player, card) {
-    const baseCost = Number(card?.cost ?? 0);
-    const normalizedBaseCost = Number.isFinite(baseCost) ? baseCost : 0;
+  _effectListContainsImmediateHeal(effects) {
+    if (!Array.isArray(effects)) return false;
+    return effects.some((effect) => effect?.type === 'heal');
+  }
+
+  _cardProducesImmediateHeal(card, { comboActive = false } = {}) {
+    if (!card || typeof card !== 'object') return false;
+    const type = card.type;
+    if (type !== 'spell' && type !== 'consumable') return false;
+
+    const hasCombo = Array.isArray(card.combo) && card.combo.length > 0;
+
+    if (comboActive && type === 'spell' && hasCombo) {
+      return this._effectListContainsImmediateHeal(card.combo);
+    }
+
+    if (this._effectListContainsImmediateHeal(card.effects)) return true;
+
+    if (comboActive && hasCombo && this._effectListContainsImmediateHeal(card.combo)) return true;
+
+    return false;
+  }
+
+  _evaluateFirstHealCostReduction(player, source, options = {}) {
+    let baseCost = Number(options?.baseCost);
+    if (!Number.isFinite(baseCost)) {
+      baseCost = Number(source?.cost ?? 0);
+    }
+    const normalizedBaseCost = Number.isFinite(baseCost) ? Math.max(0, baseCost) : 0;
+
+    const hero = player?.hero;
+    const data = hero?.data;
+    if (!hero || !data) {
+      return { cost: normalizedBaseCost };
+    }
+
+    const state = data.firstHealCostReduction;
+    if (!state || typeof state !== 'object') {
+      return { cost: normalizedBaseCost };
+    }
+
+    const currentTurn = this.turns?.turn ?? null;
+    const preparedTurn = state.turnPrepared ?? null;
+    if (preparedTurn != null && currentTurn != null && preparedTurn !== currentTurn) {
+      return { cost: normalizedBaseCost };
+    }
+
+    const ready = state.ready !== false;
+    if (!ready) return { cost: normalizedBaseCost };
+
+    const amountRaw = Number(state.amount ?? 0);
+    const amount = Number.isFinite(amountRaw) && amountRaw > 0 ? amountRaw : 0;
+    if (amount <= 0) return { cost: normalizedBaseCost };
+
+    const sourceType = options?.sourceType || null;
+    let qualifies = false;
+    if (sourceType === 'heroPower') {
+      qualifies = this._effectListContainsImmediateHeal(hero?.active);
+    } else {
+      const comboActive = options?.comboActive === true;
+      qualifies = this._cardProducesImmediateHeal(source, { comboActive });
+    }
+
+    if (!qualifies) return { cost: normalizedBaseCost };
+
+    const reduction = Math.min(amount, normalizedBaseCost);
+    if (reduction <= 0) return { cost: normalizedBaseCost };
+
+    const token = Symbol('firstHealCostReduction');
+
+    const consume = () => {
+      if (state.ready === false) return () => {};
+      state.ready = false;
+      state.usedTurn = currentTurn;
+      state.lastToken = token;
+      state.lastReduction = reduction;
+      return () => {
+        if (state.lastToken === token) {
+          state.ready = true;
+          state.usedTurn = null;
+          state.lastToken = null;
+          state.lastReduction = 0;
+        }
+      };
+    };
+
+    return {
+      cost: normalizedBaseCost - reduction,
+      reduction,
+      consume,
+    };
+  }
+
+  _evaluateFirstKeywordCostReduction(player, card, baseCostOverride = null) {
+    let baseCost = Number(baseCostOverride);
+    if (!Number.isFinite(baseCost)) {
+      baseCost = Number(card?.cost ?? 0);
+    }
+    const normalizedBaseCost = Number.isFinite(baseCost) ? Math.max(0, baseCost) : 0;
 
     const hero = player?.hero;
     const data = hero?.data;
@@ -865,12 +986,21 @@ export default class Game {
   }
 
   canPlay(player, card) {
-    const evalResult = this._evaluateFirstKeywordCostReduction(player, card);
-    const cost = typeof evalResult?.cost === 'number' ? evalResult.cost : (card?.cost || 0);
+    const baseCostRaw = Number(card?.cost ?? 0);
+    const normalizedBaseCost = Number.isFinite(baseCostRaw) ? Math.max(0, baseCostRaw) : 0;
+    const comboActive = player?.cardsPlayedThisTurn > 0;
+    const healEval = this._evaluateFirstHealCostReduction(player, card, {
+      baseCost: normalizedBaseCost,
+      comboActive,
+    });
+    const costAfterHeal = typeof healEval?.cost === 'number' ? healEval.cost : normalizedBaseCost;
+    const keywordEval = this._evaluateFirstKeywordCostReduction(player, card, costAfterHeal);
+    const finalCost = typeof keywordEval?.cost === 'number' ? keywordEval.cost : costAfterHeal;
+    const cost = Number.isFinite(finalCost) ? Math.max(0, finalCost) : 0;
     return this.resources.canPay(player, cost);
   }
 
-  
+
 
   async playFromHand(player, cardRef) {
     if (!this._isParticipant(player)) return false;
@@ -882,10 +1012,22 @@ export default class Game {
       card = player.hand.cards.find((c) => matchesCardIdentifier(c, cardRef)) || null;
     }
     if (!card) return false;
+    const comboActive = player.cardsPlayedThisTurn > 0;
+    let revertFirstHealCostReduction = null;
     let revertFirstKeywordCostReduction = null;
-    const reductionEval = this._evaluateFirstKeywordCostReduction(player, card);
-    const costToPay = typeof reductionEval?.cost === 'number' ? reductionEval.cost : (card.cost || 0);
+    const baseCostRaw = Number(card?.cost ?? 0);
+    const normalizedBaseCost = Number.isFinite(baseCostRaw) ? Math.max(0, baseCostRaw) : 0;
+    const healEval = this._evaluateFirstHealCostReduction(player, card, {
+      baseCost: normalizedBaseCost,
+      comboActive,
+    });
+    const costAfterHeal = typeof healEval?.cost === 'number' ? healEval.cost : normalizedBaseCost;
+    const reductionEval = this._evaluateFirstKeywordCostReduction(player, card, costAfterHeal);
+    const costToPay = typeof reductionEval?.cost === 'number' ? reductionEval.cost : costAfterHeal;
     if (!this.resources.pay(player, costToPay)) return false;
+    if (typeof healEval?.consume === 'function') {
+      revertFirstHealCostReduction = healEval.consume() || null;
+    }
     if (typeof reductionEval?.consume === 'function') {
       revertFirstKeywordCostReduction = reductionEval.consume() || null;
     }
@@ -945,7 +1087,6 @@ export default class Game {
       bonusSourceId = bonus.sourceCardId || null;
     }
 
-    const comboActive = player.cardsPlayedThisTurn > 0;
     const loggedTargets = new Set();
     const context = {
       game: this,
@@ -1056,6 +1197,10 @@ export default class Game {
     } catch (err) {
       if (err === this.CANCEL) {
         restoreAllyPlacement();
+        if (typeof revertFirstHealCostReduction === 'function') {
+          try { revertFirstHealCostReduction(); } catch {}
+          revertFirstHealCostReduction = null;
+        }
         if (typeof revertFirstKeywordCostReduction === 'function') {
           try { revertFirstKeywordCostReduction(); } catch {}
           revertFirstKeywordCostReduction = null;
@@ -1071,6 +1216,10 @@ export default class Game {
         return false;
       }
       restoreAllyPlacement();
+      if (typeof revertFirstHealCostReduction === 'function') {
+        try { revertFirstHealCostReduction(); } catch {}
+        revertFirstHealCostReduction = null;
+      }
       if (typeof revertFirstKeywordCostReduction === 'function') {
         try { revertFirstKeywordCostReduction(); } catch {}
         revertFirstKeywordCostReduction = null;
@@ -1078,6 +1227,7 @@ export default class Game {
       finishTargetCapture({ discard: true });
       throw err;
     } finally {
+      revertFirstHealCostReduction = null;
       revertFirstKeywordCostReduction = null;
       if (isBattlecryAlly) this._pendingBattlecryCard = previousPendingBattlecryCard;
     }

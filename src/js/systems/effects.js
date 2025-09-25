@@ -255,6 +255,9 @@ export class EffectSystem {
         case 'firstKeywordCostReduction':
           this.firstKeywordCostReduction(effect, context);
           break;
+        case 'firstHealCostReduction':
+          this.firstHealCostReduction(effect, context);
+          break;
         case 'summonOnManaSpent':
           this.summonOnManaSpent(effect, context);
           break;
@@ -1069,6 +1072,34 @@ export class EffectSystem {
     entry.usedTurn = null;
     entry.lastCardInstanceId = null;
     entry.lastReduction = 0;
+  }
+
+  firstHealCostReduction(effect, context) {
+    const { player, game } = context || {};
+    const hero = player?.hero;
+    if (!hero) return;
+
+    const amountRaw = Number(effect?.amount ?? 0);
+    const amount = Number.isFinite(amountRaw) && amountRaw > 0 ? amountRaw : 0;
+
+    const heroData = hero.data || (hero.data = {});
+    const state = heroData.firstHealCostReduction ||= {};
+
+    const currentTurn = game?.turns?.turn ?? null;
+    const previousPreparedTurn = state.turnPrepared ?? null;
+
+    if (previousPreparedTurn !== currentTurn) {
+      state.ready = amount > 0;
+      state.usedTurn = null;
+      state.lastToken = null;
+      state.lastReduction = 0;
+    }
+
+    state.turnPrepared = currentTurn;
+    state.amount = amount;
+    if (amount <= 0) {
+      state.ready = false;
+    }
   }
 
   keywordCostReduction(effect, context) {

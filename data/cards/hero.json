@@ -283,6 +283,12 @@
         "amount": 2
       }
     ],
+    "passive": [
+      {
+        "type": "firstHealCostReduction",
+        "amount": 1
+      }
+    ],
     "keywords": [
       "Inspiration — The first heal each turn costs (1) less."
     ],
