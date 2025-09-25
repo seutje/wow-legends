@@ -19,6 +19,7 @@ export class Player {
     this.cardsPlayedThisTurn = 0;
     this.armorGainedThisTurn = 0;
     this.log = [];
+    this.logTurn = 1;
 
     this.library = new Deck('library');
     this.hand = new Hand('hand');
@@ -28,9 +29,9 @@ export class Player {
     this.removed = new Zone('removed');
   }
 
-  equip(item) {
+  equip(item, options = {}) {
     const eq = item instanceof Equipment ? item : new Equipment(item);
-    replaceEquipment(this, eq);
+    replaceEquipment(this, eq, options);
     return eq;
   }
 }

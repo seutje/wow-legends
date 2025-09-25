@@ -20,7 +20,7 @@ test('logs when player uses hero power', async () => {
 
   const ok = await g.useHeroPower(g.player);
   expect(ok).toBe(true);
-  expect(g.player.log[g.player.log.length - 1]).toBe('Used hero power');
+  expect(g.player.log[g.player.log.length - 1]).toBe('2: Used hero power');
 });
 
 test('logs when AI uses hero power', async () => {
@@ -35,5 +35,5 @@ test('logs when AI uses hero power', async () => {
 
   const ok = await g.useHeroPower(g.opponent);
   expect(ok).toBe(true);
-  expect(g.opponent.log[g.opponent.log.length - 1]).toBe('Used hero power');
+  expect(g.opponent.log[g.opponent.log.length - 1]).toBe('2: Used hero power');
 });

@@ -2,6 +2,7 @@ import Game from '../src/js/game.js';
 import Card from '../src/js/entities/card.js';
 import { getCardInstanceId } from '../src/js/utils/card.js';
 import { captureGameState, restoreCapturedState } from '../src/js/utils/savegame.js';
+import { appendLogEntry } from '../src/js/utils/combatLog.js';
 
 describe('savegame utilities', () => {
   test('capture and restore round trip', async () => {
@@ -15,7 +16,7 @@ describe('savegame utilities', () => {
     game.turns.turn = 3;
     game.turns.current = 'Main';
     game.resources._pool.set(game.player, 2);
-    game.player.log.push('Test entry');
+    appendLogEntry(game.player, 'Test entry', { turn: game.turns.turn });
 
     const snapshot = captureGameState(game);
     expect(snapshot).toBeTruthy();
@@ -25,7 +26,7 @@ describe('savegame utilities', () => {
     const ok = restoreCapturedState(clone, snapshot);
     expect(ok).toBe(true);
     expect(clone.player.hero.data.health).toBe(game.player.hero.data.health);
-    expect(clone.player.log.slice(-1)[0]).toBe('Test entry');
+    expect(clone.player.log.slice(-1)[0]).toBe('3: Test entry');
     expect(clone.turns.turn).toBe(3);
     expect(clone.turns.current).toBe('Main');
     expect(clone.resources.pool(clone.player)).toBe(2);
