@@ -155,6 +155,13 @@
         "duration": "thisTurn"
       }
     ],
+    "passive": [
+      {
+        "type": "summonOnManaSpent",
+        "cardId": "ally-silver-hand-recruit",
+        "threshold": 5
+      }
+    ],
     "keywords": [
       "Summon a 1/1 Silver Hand Recruit every 5 mana spent this game."
     ],

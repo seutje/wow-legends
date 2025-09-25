@@ -2240,5 +2240,19 @@
     },
     "text": "Taunt.",
     "prompt": "A massive guardian beast stands firm beneath Ashenvale boughs, bark-like fur bristling."
+  },
+  {
+    "id": "ally-silver-hand-recruit",
+    "name": "Silver Hand Recruit",
+    "type": "ally",
+    "cost": 1,
+    "effects": [],
+    "keywords": [],
+    "data": {
+      "attack": 1,
+      "health": 1
+    },
+    "text": "",
+    "prompt": "Art to be provided by user."
   }
 ]

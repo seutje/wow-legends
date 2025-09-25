@@ -249,6 +249,9 @@ export class EffectSystem {
         case 'firstKeywordCostReduction':
           this.firstKeywordCostReduction(effect, context);
           break;
+        case 'summonOnManaSpent':
+          this.summonOnManaSpent(effect, context);
+          break;
         case 'chooseOne':
           await this.handleChooseOne(effect, context);
           break;
@@ -798,6 +801,149 @@ export class EffectSystem {
     track(game.turns.bus.on('turn:start', ({ player: turnPlayer }) => {
       if (turnPlayer === player) update();
     }));
+  }
+
+  summonOnManaSpent(effect, context) {
+    const { game, player, card } = context;
+    if (!game || !player || !card) return;
+    const bus = game.bus;
+    if (!bus || typeof bus.on !== 'function') return;
+
+    const hero = player.hero;
+    if (!hero || hero !== card) return;
+
+    const thresholdRaw = effect?.threshold ?? effect?.every ?? effect?.amount;
+    const parsedThreshold = Number(thresholdRaw);
+    if (!Number.isFinite(parsedThreshold)) return;
+    const threshold = Math.max(1, Math.floor(parsedThreshold));
+
+    const heroData = hero.data || (hero.data = {});
+    const keyBase = `summonOnManaSpent:${card?.id || card?.name || 'unknown'}`;
+    const registeredKey = `${keyBase}:registered`;
+    if (heroData[registeredKey]) return;
+    heroData[registeredKey] = true;
+
+    const remainderKey = `${keyBase}:remainder`;
+    const queueKey = `${keyBase}:pending`;
+    const unitKey = `${keyBase}:unitTemplate`;
+    if (!Number.isFinite(heroData[remainderKey])) heroData[remainderKey] = 0;
+    if (!Array.isArray(heroData[queueKey])) heroData[queueKey] = [];
+
+    const ensureKeywords = (list) => Array.isArray(list)
+      ? list.filter((kw) => typeof kw === 'string')
+      : [];
+
+    const resolveUnitTemplate = () => {
+      if (heroData[unitKey]) return heroData[unitKey];
+      let template = null;
+      const cardId = typeof effect?.cardId === 'string' ? effect.cardId.trim() : '';
+      if (cardId) {
+        const sourceCard = Array.isArray(game?.allCards)
+          ? game.allCards.find((c) => c?.id === cardId)
+          : null;
+        if (sourceCard) {
+          const atk = Number(sourceCard?.data?.attack);
+          const hp = Number(sourceCard?.data?.health);
+          template = {
+            id: sourceCard.id,
+            name: sourceCard.name,
+            attack: Number.isFinite(atk) ? atk : 0,
+            health: Number.isFinite(hp) ? hp : 0,
+            keywords: ensureKeywords(sourceCard.keywords),
+          };
+        }
+      }
+
+      if (!template && effect?.unit && typeof effect.unit === 'object') {
+        const atk = Number(effect.unit.attack ?? effect.unit.data?.attack);
+        const hp = Number(effect.unit.health ?? effect.unit.data?.health);
+        template = {
+          id: typeof effect.unit.id === 'string' ? effect.unit.id : null,
+          name: effect.unit.name ?? null,
+          attack: Number.isFinite(atk) ? atk : 0,
+          health: Number.isFinite(hp) ? hp : 0,
+          keywords: ensureKeywords(effect.unit.keywords),
+        };
+      }
+
+      if (!template) return null;
+      heroData[unitKey] = template;
+      return template;
+    };
+
+    const commitPending = async (fallbackAmount = null) => {
+      const queue = heroData[queueKey];
+      let amount = null;
+      while (queue.length > 0) {
+        const candidate = queue.shift();
+        const parsed = Number(candidate);
+        if (Number.isFinite(parsed) && parsed > 0) {
+          amount = parsed;
+          break;
+        }
+      }
+
+      if ((!Number.isFinite(amount) || amount <= 0) && Number.isFinite(fallbackAmount) && fallbackAmount > 0) {
+        amount = fallbackAmount;
+      }
+
+      if (!Number.isFinite(amount) || amount <= 0) return;
+
+      let remainder = Number(heroData[remainderKey]) || 0;
+      remainder += amount;
+      const triggers = Math.floor(remainder / threshold);
+      remainder = remainder % threshold;
+      heroData[remainderKey] = remainder;
+
+      if (triggers <= 0) return;
+      const unit = resolveUnitTemplate();
+      if (!unit) return;
+
+      const summonEffect = { type: 'summon', unit, count: triggers };
+      await this.summonUnit(summonEffect, { game, player, card: hero });
+    };
+
+    const queueSpend = ({ player: evtPlayer, amount }) => {
+      if (evtPlayer !== player) return;
+      const parsed = Number(amount);
+      if (!Number.isFinite(parsed) || parsed <= 0) return;
+      heroData[queueKey].push(parsed);
+    };
+
+    const undoSpend = ({ player: evtPlayer, amount }) => {
+      if (evtPlayer !== player) return;
+      const parsed = Number(amount);
+      if (!Number.isFinite(parsed) || parsed <= 0) return;
+      const queue = heroData[queueKey];
+      if (queue.length > 0) {
+        const idx = queue.lastIndexOf(parsed);
+        if (idx >= 0) {
+          queue.splice(idx, 1);
+          return;
+        }
+      }
+      let remainder = Number(heroData[remainderKey]) || 0;
+      remainder -= parsed;
+      if (remainder < 0) remainder = 0;
+      heroData[remainderKey] = remainder;
+    };
+
+    const finalizeCard = (payload) => {
+      if (payload?.player !== player) return;
+      commitPending().catch(() => {});
+    };
+
+    const finalizeHeroPower = (payload) => {
+      if (payload?.player !== player) return;
+      const parsed = Number(payload?.cost);
+      commitPending(Number.isFinite(parsed) && parsed > 0 ? parsed : null).catch(() => {});
+    };
+
+    const track = (off) => this._trackCleanup(off);
+    track(bus.on('resources:spent', queueSpend));
+    track(bus.on('resources:refunded', undoSpend));
+    track(bus.on('cardPlayed', finalizeCard));
+    track(bus.on('heroPowerUsed', finalizeHeroPower));
   }
 
   firstKeywordCostReduction(effect, context) {
