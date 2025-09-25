@@ -5,6 +5,7 @@ import { logSecretTriggered } from '../utils/combatLog.js';
 import { freezeTarget, getSpellDamageBonus, computeSpellDamage, isTargetable } from './keywords.js';
 import { selectTargets } from './targeting.js';
 import { getCardInstanceId, matchesCardIdentifier } from '../utils/card.js';
+import { addHandHookDescriptor, registerPostAddHookHandler } from './post-add-hooks.js';
 
 function slugifyTokenName(name) {
   if (!name) return '';
@@ -42,6 +43,51 @@ function normalizeCardText(value) {
   if (value == null) return '';
   return String(value);
 }
+
+const HAND_HOOK_TYPE_KEYWORD_COST_REDUCTION = 'keywordCostReduction';
+
+function cardHasNormalizedKeyword(cardEntity, normalizedKeyword) {
+  if (!cardEntity || typeof normalizedKeyword !== 'string' || !normalizedKeyword) return false;
+  const list = cardEntity.keywords;
+  if (!Array.isArray(list) || list.length === 0) return false;
+  return list.some((kw) => typeof kw === 'string' && kw.toLowerCase() === normalizedKeyword);
+}
+
+function applyKeywordCostReductionDescriptorToCard(cardEntity, descriptor) {
+  if (!cardEntity || !descriptor || typeof descriptor !== 'object') return;
+  const { modKey, normalizedKeyword, amount, minimumCost } = descriptor;
+  if (!modKey || typeof normalizedKeyword !== 'string') return;
+
+  if (!cardEntity.data) cardEntity.data = {};
+  const mods = cardEntity.data.keywordCostReductions ||= {};
+  const previous = typeof mods[modKey] === 'number' ? mods[modKey] : 0;
+  if (previous > 0) {
+    const priorCost = Number(cardEntity.cost ?? 0);
+    const restored = Number.isFinite(priorCost) ? priorCost + previous : previous;
+    cardEntity.cost = restored;
+    delete mods[modKey];
+  }
+
+  if (!cardHasNormalizedKeyword(cardEntity, normalizedKeyword)) return;
+
+  let currentCost = Number(cardEntity.cost ?? 0);
+  if (!Number.isFinite(currentCost)) currentCost = 0;
+  if (currentCost <= minimumCost) return;
+
+  let reduction = amount;
+  if (!Number.isFinite(reduction)) return;
+  if (currentCost - reduction < minimumCost) {
+    reduction = currentCost - minimumCost;
+  }
+  if (reduction <= 0) return;
+
+  cardEntity.cost = currentCost - reduction;
+  mods[modKey] = reduction;
+}
+
+registerPostAddHookHandler(HAND_HOOK_TYPE_KEYWORD_COST_REDUCTION, (hand, cardEntity, descriptor) => {
+  applyKeywordCostReductionDescriptorToCard(cardEntity, descriptor);
+});
 
 export class EffectSystem {
   constructor(game) {
@@ -1121,79 +1167,41 @@ export class EffectSystem {
     const minimum = Number(effect?.minimum ?? 0);
     const minimumCost = Number.isFinite(minimum) ? Math.max(0, minimum) : 0;
 
+    const hand = player.hand;
     const hero = player.hero;
-    if (!hero) return;
+    if (!hero || !hand) return;
+
+    if (Object.prototype.hasOwnProperty.call(hand, 'add')) {
+      delete hand.add;
+    }
+    if (Object.prototype.hasOwnProperty.call(hand, '__postAddHooks')) {
+      delete hand.__postAddHooks;
+    }
+    if (Object.prototype.hasOwnProperty.call(hand, '__postAddHooked')) {
+      delete hand.__postAddHooked;
+    }
 
     const heroData = hero.data || (hero.data = {});
     const state = heroData.keywordCostReductionState ||= {};
     const keyBase = `keywordCostReduction:${hero.id || hero.name || 'hero'}:${normalizedKeyword}`;
     const modKey = `${keyBase}:${amount}:${minimumCost}`;
-
-    const hasKeyword = (cardEntity) => {
-      if (!cardEntity) return false;
-      const list = cardEntity.keywords;
-      if (!Array.isArray(list)) return false;
-      return list.some((kw) => typeof kw === 'string' && kw.toLowerCase() === normalizedKeyword);
+    const descriptor = {
+      id: `${modKey}:hook`,
+      type: HAND_HOOK_TYPE_KEYWORD_COST_REDUCTION,
+      modKey,
+      normalizedKeyword,
+      amount,
+      minimumCost,
     };
 
-    const applyToCard = (cardEntity) => {
-      if (!cardEntity) return;
-      if (!cardEntity.data) cardEntity.data = {};
-      const mods = cardEntity.data.keywordCostReductions ||= {};
-      const previous = typeof mods[modKey] === 'number' ? mods[modKey] : 0;
-      if (previous > 0) {
-        const priorCost = Number(cardEntity.cost ?? 0);
-        const restored = Number.isFinite(priorCost) ? priorCost + previous : previous;
-        cardEntity.cost = restored;
-        delete mods[modKey];
-      }
-      if (!hasKeyword(cardEntity)) return;
-      let currentCost = Number(cardEntity.cost ?? 0);
-      if (!Number.isFinite(currentCost)) currentCost = 0;
-      if (currentCost <= minimumCost) return;
-      let reduction = amount;
-      if (currentCost - reduction < minimumCost) {
-        reduction = currentCost - minimumCost;
-      }
-      if (reduction <= 0) return;
-      cardEntity.cost = currentCost - reduction;
-      mods[modKey] = reduction;
-    };
-
-    const applyToHand = () => {
-      const cards = Array.isArray(player.hand?.cards) ? player.hand.cards : [];
-      for (const handCard of cards) {
-        applyToCard(handCard);
-      }
-    };
-
-    applyToHand();
-
-    const hand = player.hand;
-    if (!hand.__postAddHooked) {
-      const originalAdd = hand.add.bind(hand);
-      hand.__postAddHooks = new Set();
-      hand.add = function wrappedAdd(cardEntity) {
-        const added = originalAdd(cardEntity);
-        if (added && hand.__postAddHooks?.size) {
-          for (const hook of hand.__postAddHooks) {
-            try { hook(added); } catch {}
-          }
-        }
-        return added;
-      };
-      hand.__postAddHooked = true;
+    const cards = Array.isArray(hand?.cards) ? hand.cards : [];
+    for (const handCard of cards) {
+      applyKeywordCostReductionDescriptorToCard(handCard, descriptor);
     }
 
-    const hooks = hand.__postAddHooks;
-    if (!hooks) return;
-
-    const hookKey = `${modKey}:hook`;
-    if (state[hookKey]) return;
-
-    const hookFn = (cardEntity) => applyToCard(cardEntity);
-    hooks.add(hookFn);
-    state[hookKey] = hookFn;
+    const hookKey = descriptor.id;
+    addHandHookDescriptor(hand, descriptor);
+    state[hookKey] = true;
   }
 
   async healCharacter(effect, context) {
