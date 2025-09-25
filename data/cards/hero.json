@@ -258,6 +258,13 @@
         "amount": 2
       }
     ],
+    "passive": [
+      {
+        "type": "summonBuff",
+        "keyword": "Demon",
+        "attack": 1
+      }
+    ],
     "keywords": [
       "Demons you summon have +1 ATK."
     ],

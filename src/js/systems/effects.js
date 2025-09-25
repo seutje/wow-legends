@@ -552,15 +552,38 @@ export class EffectSystem {
     const { keyword, attack = 0, health = 0 } = effect;
     const { game, player, card } = context;
 
+    if (!game || !player || !player.hero) return;
+    if (typeof keyword !== 'string' || keyword.trim() === '') return;
+
+    if (card && typeof card === 'object' && card.data == null) card.data = {};
+    const hostData = card?.data;
+    if (hostData) {
+      const keyBase = `summonBuff:${card?.id || card?.name || 'unknown'}:${keyword}:${attack}:${health}`;
+      const registeredKey = `${keyBase}:registered`;
+      if (hostData[registeredKey]) return;
+      hostData[registeredKey] = true;
+    }
+
+    const isEquipmentCard = card instanceof Equipment || card?.type === 'equipment';
+    const requiresEquipped = effect.requireEquipped !== false && isEquipmentCard;
+
+    const matchesEquipment = (eq) => {
+      if (!eq) return false;
+      if (eq === card) return true;
+      if (matchesCardIdentifier(eq, card)) return true;
+      if (eq?.name && card?.name && eq.name === card.name) return true;
+      return false;
+    };
+
+    const hasRequiredSource = () => {
+      if (!requiresEquipped) return true;
+      const eqList = Array.isArray(player.hero?.equipment) ? player.hero.equipment : [];
+      return eqList.some(matchesEquipment);
+    };
+
     const applyBuff = (unit) => {
-        const equipped = Array.isArray(player.hero.equipment) && player.hero.equipment.some(eq => {
-          if (eq === card) return true;
-          if (matchesCardIdentifier(eq, card)) return true;
-          if (eq?.name && card?.name && eq.name === card.name) return true;
-          return false;
-        });
-      if (!equipped) return;
-      if (!unit.keywords?.includes(keyword)) return;
+      if (!unit?.keywords?.includes?.(keyword)) return;
+      if (!hasRequiredSource()) return;
       unit.data = unit.data || {};
       unit.data.attack = (unit.data.attack || 0) + attack;
       unit.data.health = (unit.data.health || 0) + health;
@@ -576,7 +599,7 @@ export class EffectSystem {
     const onPlay = ({ player: evtPlayer, card: played }) => {
       if (evtPlayer !== player) return;
       if (played === card) return;
-      if (played.type !== 'ally') return;
+      if (played?.type !== 'ally') return;
       applyBuff(played);
     };
 
