@@ -11,6 +11,16 @@
         "freeze": 1
       }
     ],
+    "passive": [
+      {
+        "type": "spellDamageWhileControl",
+        "amount": 1,
+        "cardIds": [
+          "token-water-elemental",
+          "ally-water-elemental-guardian"
+        ]
+      }
+    ],
     "keywords": [
       "Freeze",
       "Spell Damage +1 while you control a Water Elemental."
