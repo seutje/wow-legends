@@ -371,6 +371,12 @@
     "id": "hero-arthas-menethil-deathlord",
     "name": "Arthas Menethil, Deathlord",
     "type": "hero",
+    "passive": [
+      {
+        "type": "gainArmorAtEndOfTurn",
+        "amount": 1
+      }
+    ],
     "effects": [
       {
         "type": "damage",
