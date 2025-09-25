@@ -578,6 +578,38 @@ describe.each(effectCards)('$id executes its effect', (card) => {
         }
         break;
       }
+      case 'friendlyAuraBuff': {
+        const recruitA = new Card({
+          id: 'ally-silver-hand-recruit',
+          name: 'Silver Hand Recruit A',
+          type: 'ally',
+          data: { attack: 1, health: 1 },
+        });
+        const recruitB = new Card({
+          id: 'ally-silver-hand-recruit',
+          name: 'Silver Hand Recruit B',
+          type: 'ally',
+          data: { attack: 1, health: 1 },
+        });
+
+        g.player.battlefield.add(recruitA);
+        g.player.battlefield.add(recruitB);
+
+        await g.playFromHand(g.player, card.id);
+
+        expect(recruitA.data.attack).toBe(1 + effect.amount);
+        expect(recruitB.data.attack).toBe(1 + effect.amount);
+
+        const lieutenant = g.player.battlefield.cards.find(c => c.id === card.id);
+        if (lieutenant) {
+          g.player.battlefield.remove(lieutenant);
+          g.bus.emit('allyDefeated', { player: g.player, card: lieutenant });
+        }
+
+        expect(recruitA.data.attack).toBe(1);
+        expect(recruitB.data.attack).toBe(1);
+        break;
+      }
       default:
         throw new Error('Unhandled effect type: ' + effect.type);
     }
