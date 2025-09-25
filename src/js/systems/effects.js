@@ -532,6 +532,12 @@ export class EffectSystem {
         newUnit.data.summoningSick = true;
       }
       player.battlefield.add(newUnit);
+      if (game?.enforceBattlefieldAllyLimit) {
+        const allyCount = player.battlefield.cards.filter(c => c?.type === 'ally').length;
+        if (allyCount > 5) {
+          await game.enforceBattlefieldAllyLimit(player, { source: newUnit });
+        }
+      }
       console.log(`Summoned ${newUnit.name} to battlefield.`);
       game?.bus.emit('unitSummoned', { player, card: newUnit });
 

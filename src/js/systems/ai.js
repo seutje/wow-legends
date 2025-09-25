@@ -4,6 +4,7 @@ import { selectTargets } from './targeting.js';
 import Card from '../entities/card.js';
 import { cardsMatch, getCardInstanceId, matchesCardIdentifier } from '../utils/card.js';
 import { replaceEquipment } from '../utils/equipment.js';
+import { removeOverflowAllies } from '../utils/allies.js';
 
 export class BasicAI {
   constructor({ resourceSystem, combatSystem } = {}) {
@@ -84,6 +85,7 @@ export class BasicAI {
               summoned.data.attacked = true;
             }
             player.battlefield.cards.push(summoned);
+            removeOverflowAllies(player);
           }
           break;
         }
@@ -264,6 +266,7 @@ export class BasicAI {
           replaceEquipment(p, played);
         }
         if (played.type === 'ally') {
+          removeOverflowAllies(p);
           played.data = played.data || {};
           played.data.enteredTurn = this.resources?.turns?.turn ?? 0;
           if (!played.keywords?.includes('Rush')) {

@@ -16,6 +16,7 @@ import { logSecretTriggered } from './utils/combatLog.js';
 import { fillDeckRandomly } from './utils/deckbuilder.js';
 import { getCardInstanceId, matchesCardIdentifier } from './utils/card.js';
 import { chooseStartingPlayerKey } from './utils/turnOrder.js';
+import { removeOverflowAllies } from './utils/allies.js';
 
 const DEFAULT_AI_ACTION_DELAY_MS = 1000;
 const PROMPT_SHOW_DELAY_MS = 250;
@@ -1131,6 +1132,10 @@ export default class Game {
           data.divineShield = true;
         }
       }
+      const allyCount = player.battlefield.cards.filter(c => c?.type === 'ally').length;
+      if (allyCount > 5) {
+        await this.enforceBattlefieldAllyLimit(player, { source: card });
+      }
     } else if (card.type === 'quest') {
       player.hand.moveTo(player.battlefield, card);
       this.quests.addQuest(player, card);
@@ -1153,6 +1158,27 @@ export default class Game {
     player.cardsPlayedThisTurn += 1;
 
     return true;
+  }
+
+  async enforceBattlefieldAllyLimit(player, { source = null } = {}) {
+    if (!player?.battlefield) return;
+
+    const removed = removeOverflowAllies(player, { limit: 5 });
+    if (!removed.length) return;
+
+    const sourceName = source?.name || 'a new ally';
+
+    for (const card of removed) {
+      if (card?.keywords?.includes?.('Deathrattle') && Array.isArray(card.deathrattle) && card.deathrattle.length) {
+        await this.effects.execute(card.deathrattle, { game: this, player, card });
+      }
+      if (player?.log) {
+        player.log.push(`${card.name} was destroyed to make room for ${sourceName}.`);
+      }
+      try { this.bus.emit('allyDefeated', { player, card }); } catch {}
+    }
+
+    try { this._uiRerender?.(); } catch {}
   }
 
   async promptTarget(candidates, { allowNoMore = false, preferredSide = 'enemy', actingPlayer = null } = {}) {
