@@ -186,6 +186,9 @@ export class EffectSystem {
         case 'drawOnHeal':
           this.drawOnHeal(effect, context);
           break;
+        case 'drawOnFullHeal':
+          this.drawOnFullHeal(effect, context);
+          break;
         case 'healAtEndOfTurn':
           this.healAtEndOfTurn(effect, context);
           break;
@@ -959,16 +962,37 @@ export class EffectSystem {
     for (const t of actualTargets) {
       this._recordTarget(context, t);
       // Determine max health with sensible fallbacks (heroes default to 30)
-      const cur = t?.data?.health ?? t?.health;
-      const max = (t?.data?.maxHealth ?? t?.maxHealth ?? (t?.type === 'hero' ? 30 : cur));
+      const curRaw = t?.data?.health ?? t?.health;
+      const maxRaw = t?.data?.maxHealth ?? t?.maxHealth ?? (t?.type === 'hero' ? 30 : curRaw);
+      const healAmountRaw = Number(amount ?? 0);
+      const healAmount = Number.isFinite(healAmountRaw) ? healAmountRaw : 0;
+      let current = Number(curRaw);
+      if (!Number.isFinite(current)) current = 0;
+      let max = Number(maxRaw);
+      if (!Number.isFinite(max)) max = current;
+      const nextHealth = Math.min(current + healAmount, max);
+      const actualAmount = Math.max(0, nextHealth - current);
       if (t?.data && t.data.health != null) {
-        t.data.health = Math.min(cur + amount, max);
-        console.log(`${t.name} healed for ${amount}. Current health: ${t.data.health}`);
+        t.data.health = nextHealth;
+        console.log(`${t.name} healed for ${healAmount}. Current health: ${t.data.health}`);
       } else if (t?.health != null) {
-        t.health = Math.min(cur + amount, max);
-        console.log(`${t.name} healed for ${amount}. Current health: ${t.health}`);
+        t.health = nextHealth;
+        console.log(`${t.name} healed for ${healAmount}. Current health: ${t.health}`);
       }
-      game.bus.emit('characterHealed', { player, target: t, amount, source: card });
+      const becameFull = Number.isFinite(max) ? current < max && nextHealth >= max : false;
+      const wasFullBefore = Number.isFinite(max) ? current >= max : false;
+      game.bus.emit('characterHealed', {
+        player,
+        target: t,
+        amount: healAmount,
+        actualAmount,
+        previousHealth: current,
+        newHealth: nextHealth,
+        maxHealth: max,
+        source: card,
+        becameFull,
+        wasFullBefore,
+      });
     }
   }
 
@@ -1249,10 +1273,12 @@ export class EffectSystem {
     const { count = 1, threshold = 0 } = effect;
     const { game, player, card } = context;
 
-    const handler = ({ player: healedPlayer, amount }) => {
+    const handler = ({ player: healedPlayer, amount, actualAmount }) => {
       if (healedPlayer !== player) return;
       card.data = card.data || {};
-      card.data.healedThisTurn = (card.data.healedThisTurn || 0) + amount;
+      const healedValueRaw = typeof actualAmount === 'number' ? actualAmount : amount;
+      const healedValue = Number.isFinite(healedValueRaw) ? healedValueRaw : 0;
+      card.data.healedThisTurn = (card.data.healedThisTurn || 0) + healedValue;
       if (card.data.drawnThisTurn) return;
       if (card.data.healedThisTurn >= threshold) {
         game.draw(player, count);
@@ -1284,6 +1310,90 @@ export class EffectSystem {
     const offReturn = this._trackCleanup(game.bus.on('cardReturned', ({ card: returned }) => {
       if (returned === card) remove();
     }));
+  }
+
+  drawOnFullHeal(effect, context) {
+    const { count = 1 } = effect || {};
+    const { game, player, card } = context || {};
+    if (!game || !player || !card) return;
+
+    card.data = card.data || {};
+    const state = card.data.drawOnFullHealState ||= {};
+    const sanitizedCountRaw = Number(count ?? 1);
+    const sanitizedCount = Number.isFinite(sanitizedCountRaw)
+      ? Math.max(1, Math.floor(sanitizedCountRaw))
+      : 1;
+    state.count = sanitizedCount;
+
+    if (state.initialized) return;
+
+    state.initialized = true;
+    state.drawnThisTurn = false;
+
+    const toFinite = (value) => {
+      const n = Number(value);
+      return Number.isFinite(n) ? n : null;
+    };
+
+    const isFriendlyTarget = (target) => {
+      if (!target) return false;
+      if (target === player.hero) return true;
+      const battlefieldCards = player?.battlefield?.cards;
+      return Array.isArray(battlefieldCards) && battlefieldCards.includes(target);
+    };
+
+    const didReachFullHealth = (payload = {}) => {
+      if (payload.becameFull != null) return Boolean(payload.becameFull);
+      const previous = toFinite(payload.previousHealth);
+      const next = toFinite(payload.newHealth);
+      const max = toFinite(payload.maxHealth);
+      if (previous != null && next != null && max != null) {
+        return previous < max && next >= max;
+      }
+      return false;
+    };
+
+    const handler = (payload = {}) => {
+      const { player: healedPlayer, target } = payload;
+      if (healedPlayer !== player) return;
+      if (!isFriendlyTarget(target)) return;
+      if (!didReachFullHealth(payload)) return;
+      if (state.drawnThisTurn) return;
+      game.draw(player, state.count || 1);
+      state.drawnThisTurn = true;
+    };
+
+    const reset = ({ player: turnPlayer } = {}) => {
+      if (turnPlayer === player) state.drawnThisTurn = false;
+    };
+
+    const cleanupFns = [];
+    const offHeal = this._trackCleanup(game.bus.on('characterHealed', handler));
+    if (offHeal) cleanupFns.push(offHeal);
+    const offTurn = this._trackCleanup(game.turns.bus.on('turn:start', reset));
+    if (offTurn) cleanupFns.push(offTurn);
+
+    const remove = () => {
+      while (cleanupFns.length) {
+        const off = cleanupFns.pop();
+        try { off?.(); } catch {}
+      }
+      state.initialized = false;
+      state.drawnThisTurn = false;
+      state.cleanup = null;
+    };
+
+    const offDeath = this._trackCleanup(game.bus.on('allyDefeated', ({ card: dead }) => {
+      if (dead === card) remove();
+    }));
+    if (offDeath) cleanupFns.push(offDeath);
+
+    const offReturn = this._trackCleanup(game.bus.on('cardReturned', ({ card: returned }) => {
+      if (returned === card) remove();
+    }));
+    if (offReturn) cleanupFns.push(offReturn);
+
+    state.cleanup = remove;
   }
 
   healAtEndOfTurn(effect, context) {
@@ -1325,19 +1435,40 @@ export class EffectSystem {
       const targetChar = game.rng.pick(candidates);
 
       // Determine max health with sensible fallbacks (heroes default to 30)
-      const cur = targetChar?.data?.health ?? targetChar?.health;
-      const max = (targetChar?.data?.maxHealth ?? targetChar?.maxHealth ?? (targetChar?.type === 'hero' ? 30 : cur));
+      const curRaw = targetChar?.data?.health ?? targetChar?.health;
+      const maxRaw = targetChar?.data?.maxHealth ?? targetChar?.maxHealth ?? (targetChar?.type === 'hero' ? 30 : curRaw);
+      const healAmountRaw = Number(amount ?? 0);
+      const healAmount = Number.isFinite(healAmountRaw) ? healAmountRaw : 0;
+      let current = Number(curRaw);
+      if (!Number.isFinite(current)) current = 0;
+      let max = Number(maxRaw);
+      if (!Number.isFinite(max)) max = current;
+      const nextHealth = Math.min(current + healAmount, max);
+      const actualAmount = Math.max(0, nextHealth - current);
       if (targetChar?.data && targetChar.data.health != null) {
-        targetChar.data.health = Math.min(cur + amount, max);
-        console.log(`${targetChar.name} healed for ${amount}. Current health: ${targetChar.data.health}`);
+        targetChar.data.health = nextHealth;
+        console.log(`${targetChar.name} healed for ${healAmount}. Current health: ${targetChar.data.health}`);
       } else if (targetChar?.health != null) {
-        targetChar.health = Math.min(cur + amount, max);
-        console.log(`${targetChar.name} healed for ${amount}. Current health: ${targetChar.health}`);
+        targetChar.health = nextHealth;
+        console.log(`${targetChar.name} healed for ${healAmount}. Current health: ${targetChar.health}`);
       }
 
+      const becameFull = Number.isFinite(max) ? current < max && nextHealth >= max : false;
+      const wasFullBefore = Number.isFinite(max) ? current >= max : false;
       const healedPlayer =
         targetChar === player.hero || player.battlefield.cards.includes(targetChar) ? player : opponent;
-      game.bus.emit('characterHealed', { player: healedPlayer, target: targetChar, amount, source: card });
+      game.bus.emit('characterHealed', {
+        player: healedPlayer,
+        target: targetChar,
+        amount: healAmount,
+        actualAmount,
+        previousHealth: current,
+        newHealth: nextHealth,
+        maxHealth: max,
+        source: card,
+        becameFull,
+        wasFullBefore,
+      });
     };
 
     const offTurn = this._trackCleanup(game.turns.bus.on('turn:start', handler));

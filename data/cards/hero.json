@@ -122,6 +122,12 @@
         "amount": 2
       }
     ],
+    "passive": [
+      {
+        "type": "drawOnFullHeal",
+        "count": 1
+      }
+    ],
     "keywords": [
       "When you restore HP to full draw a card (once per turn)."
     ],
