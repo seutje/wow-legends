@@ -315,7 +315,7 @@ if (!sidebar.parentElement) root.appendChild(sidebar);
 // Hide aside by default; only visible while deck builder is open
 sidebar.style.display = 'none';
 
-const deckState = { hero: null, cards: [], selectedPrebuiltDeck: null };
+const deckState = { hero: null, cards: [], selectedPrebuiltDeck: null, selectedOpponentHeroId: null };
 let availablePrebuiltDecks = [];
 let prebuiltDecksPromise = null;
 
@@ -340,6 +340,13 @@ function handleSelectPrebuilt(deckName) {
   deckState.hero = match.hero || null;
   deckState.cards = Array.isArray(match.cards) ? match.cards.slice() : [];
   deckState.selectedPrebuiltDeck = match.name || normalized;
+  rerenderDeck();
+}
+
+function handleSelectOpponentHero(heroId) {
+  const normalized = heroId || null;
+  if ((deckState.selectedOpponentHeroId || null) === normalized) return;
+  deckState.selectedOpponentHeroId = normalized;
   rerenderDeck();
 }
 
@@ -377,6 +384,7 @@ const rerenderDeck = () => {
     onChange: rerenderDeck,
     prebuiltDecks: availablePrebuiltDecks,
     onSelectPrebuilt: handleSelectPrebuilt,
+    onSelectOpponent: handleSelectOpponentHero,
   });
   updateUseDeckBtn();
 };
@@ -429,13 +437,16 @@ clearDeckBtn.addEventListener('click', () => {
   deckState.cards.length = 0;
   deckState.hero = null;
   deckState.selectedPrebuiltDeck = null;
+  deckState.selectedOpponentHeroId = null;
   rerenderDeck();
 });
 useDeckBtn.addEventListener('click', async () => {
   if (useDeckBtn.disabled) return;
   closeDeckBuilder();
   clearSavedGameState();
-  await game.reset({ hero: deckState.hero, cards: deckState.cards });
+  const deckPayload = { hero: deckState.hero, cards: deckState.cards };
+  if (deckState.selectedOpponentHeroId) deckPayload.opponentHeroId = deckState.selectedOpponentHeroId;
+  await game.reset(deckPayload);
   // Persist last used deck
   try { saveLastDeck({ hero: deckState.hero, cards: deckState.cards }); } catch {}
   saveGameState(game);
@@ -443,7 +454,7 @@ useDeckBtn.addEventListener('click', async () => {
   // No RAF loop; state updates via DOM events
 });
 let logsOn = true;
-renderOptions(optsRoot, { onReset: async () => { deckState.cards.length = 0; deckState.hero = null; deckState.selectedPrebuiltDeck = null; rerenderDeck(); clearSavedGameState(); await game.reset(); saveGameState(game); rerender(); } });
+renderOptions(optsRoot, { onReset: async () => { deckState.cards.length = 0; deckState.hero = null; deckState.selectedPrebuiltDeck = null; deckState.selectedOpponentHeroId = null; rerenderDeck(); clearSavedGameState(); await game.reset(); saveGameState(game); rerender(); } });
 
 // Ensure logs mirror saved preference (defaults to false)
 setDebugLogging(!!game.state?.debug);

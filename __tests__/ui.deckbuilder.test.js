@@ -50,13 +50,40 @@ describe('deckbuilder UI', () => {
     const onSelect = jest.fn();
     const rerender = () => renderDeckBuilder(container, { state, allCards, onChange: rerender, prebuiltDecks, onSelectPrebuilt: onSelect });
     rerender();
-    const select = container.querySelector('select');
+    const select = container.querySelector('select[data-role="prebuilt-deck-select"]');
     expect(select).not.toBeNull();
     expect(Array.from(select.options).map(opt => opt.value)).toContain('starter');
     expect(Array.from(select.options).map(opt => opt.textContent)).toContain('starter (Valeera)');
     select.value = 'starter';
     select.dispatchEvent(new window.Event('change'));
     expect(onSelect).toHaveBeenCalledWith('starter');
+  });
+
+  test('opponent dropdown lists heroes and triggers callback', () => {
+    const hero1 = { id: 'h1', name: 'Valeera', type: 'hero', text: '', data: { armor: 0 } };
+    const hero2 = { id: 'h2', name: 'Thrall', type: 'hero', text: '', data: { armor: 0 } };
+    const ally = { id: 'a1', name: 'Ally', type: 'ally', text: '', cost: 1, data: { attack: 1, health: 1 } };
+    const allCards = [hero1, hero2, ally];
+    const state = { hero: null, cards: [], selectedOpponentHeroId: null };
+    const container = document.createElement('div');
+    const onSelectOpponent = jest.fn();
+    const rerender = () => renderDeckBuilder(container, {
+      state,
+      allCards,
+      onChange: rerender,
+      onSelectOpponent,
+    });
+    rerender();
+    const select = container.querySelector('select[data-role="opponent-deck-select"]');
+    expect(select).not.toBeNull();
+    const optionValues = Array.from(select.options).map(opt => opt.value);
+    expect(optionValues).toContain('');
+    expect(optionValues).toContain('h1');
+    expect(optionValues).toContain('h2');
+    expect(select.options[0].textContent).toBe('Random');
+    select.value = 'h2';
+    select.dispatchEvent(new window.Event('change'));
+    expect(onSelectOpponent).toHaveBeenCalledWith('h2');
   });
 
   test('adding a card clears prefab selection state', () => {

@@ -387,6 +387,18 @@ export default class Game {
     this._playerDeckTemplates = null;
     this._pendingTurnIncrement = false;
 
+    let forcedOpponentHero = null;
+    if (playerDeck && playerDeck.opponentHeroId != null) {
+      const desiredId = String(playerDeck.opponentHeroId);
+      if (desiredId) {
+        const candidate = cardById.get(desiredId);
+        if (candidate?.type === 'hero') forcedOpponentHero = candidate;
+      }
+    } else if (playerDeck && playerDeck.opponentHero && playerDeck.opponentHero.type === 'hero') {
+      forcedOpponentHero = playerDeck.opponentHero;
+    }
+    const opponentHeroForced = !!forcedOpponentHero;
+
     const rng = this.rng;
     const createRandomDeckState = (excludeHeroId = null) => {
       const state = { hero: null, cards: [] };
@@ -520,13 +532,14 @@ export default class Game {
       opponentDeckState = pickPrebuiltDeck(this.player.hero?.id);
     }
     if (!opponentDeckState) {
-      opponentDeckState = createRandomDeckState(this.player.hero?.id);
+      const excludeHeroId = opponentHeroForced ? null : this.player.hero?.id;
+      opponentDeckState = createRandomDeckState(excludeHeroId);
     }
-    let opponentHeroData = opponentDeckState.hero;
+    let opponentHeroData = opponentHeroForced ? forcedOpponentHero : opponentDeckState.hero;
     if (!opponentHeroData && heroes.length > 0) {
       opponentHeroData = rng.pick(heroes);
     }
-    if (opponentHeroData && this.player?.hero) {
+    if (!opponentHeroForced && opponentHeroData && this.player?.hero) {
       const guardLimit = heroes.length > 0 ? heroes.length * 3 : 0;
       let guard = 0;
       while (this.player.hero && opponentHeroData?.id === this.player.hero.id && guard < guardLimit) {

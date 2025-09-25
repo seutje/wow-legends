@@ -45,7 +45,7 @@ test('clear deck button empties deck and disables use', async () => {
   main.append(root, sidebar);
   document.body.append(main);
 
-  const deckState = { hero: null, cards: [] };
+  const deckState = { hero: null, cards: [], selectedOpponentHeroId: null };
   const toggleGameVisible = (show) => {
     board.style.display = show ? 'block' : 'none';
     root.style.display = show ? 'block' : 'none';
@@ -54,8 +54,18 @@ test('clear deck button empties deck and disables use', async () => {
   function updateUseDeckBtn() {
     useDeckBtn.disabled = !(deckState.hero && deckState.cards.length === 60);
   }
-  const rerenderDeck = () => {
-    renderDeckBuilder(deckRoot, { state: deckState, allCards: game.allCards, onChange: rerenderDeck });
+  let rerenderDeck = () => {};
+  const onSelectOpponent = (heroId) => {
+    deckState.selectedOpponentHeroId = heroId;
+    rerenderDeck();
+  };
+  rerenderDeck = () => {
+    renderDeckBuilder(deckRoot, {
+      state: deckState,
+      allCards: game.allCards,
+      onChange: rerenderDeck,
+      onSelectOpponent,
+    });
     updateUseDeckBtn();
   };
 
@@ -67,13 +77,16 @@ test('clear deck button empties deck and disables use', async () => {
   clearDeckBtn.addEventListener('click', () => {
     deckState.cards.length = 0;
     deckState.hero = null;
+    deckState.selectedOpponentHeroId = null;
     rerenderDeck();
   });
   useDeckBtn.addEventListener('click', async () => {
     if (useDeckBtn.disabled) return;
     deckRoot.style.display = 'none';
     toggleGameVisible(true);
-    await game.reset({ hero: deckState.hero, cards: deckState.cards });
+    const payload = { hero: deckState.hero, cards: deckState.cards };
+    if (deckState.selectedOpponentHeroId) payload.opponentHeroId = deckState.selectedOpponentHeroId;
+    await game.reset(payload);
   });
 
   // Fill random first to enable use
