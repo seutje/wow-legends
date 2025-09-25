@@ -208,6 +208,9 @@ export class EffectSystem {
         case 'equipmentKeywordAura':
           this.registerEquipmentKeywordAura(effect, context);
           break;
+        case 'friendlyAuraBuff':
+          this.registerFriendlyAuraBuff(effect, context);
+          break;
         case 'buff':
           await this.applyBuff(effect, context);
           break;
@@ -811,6 +814,202 @@ export class EffectSystem {
     }));
 
     // Ensure existing allies are buffed once equipped (cardPlayed event will trigger post-equip).
+  }
+
+  registerFriendlyAuraBuff(effect, context) {
+    const { game, player, card } = context;
+    if (!game || !player || !card) return;
+
+    const amount = Number(effect?.amount ?? 0);
+    if (!Number.isFinite(amount) || amount === 0) return;
+
+    const propertyRaw = typeof effect?.property === 'string' ? effect.property.trim() : '';
+    const property = propertyRaw || 'attack';
+
+    const identifierList = [];
+    const appendIdentifiers = (list) => {
+      if (!Array.isArray(list)) return;
+      for (const value of list) {
+        if (value == null) continue;
+        if (typeof value === 'string') {
+          const trimmed = value.trim();
+          if (trimmed) identifierList.push(trimmed);
+        } else {
+          identifierList.push(value);
+        }
+      }
+    };
+
+    appendIdentifiers(effect?.targetIdentifiers);
+    appendIdentifiers(effect?.targetCardIds);
+    appendIdentifiers(effect?.targetCards);
+
+    const targetNameSet = new Set(
+      (Array.isArray(effect?.targetNames) ? effect.targetNames : [])
+        .filter((name) => typeof name === 'string' && name.trim().length)
+        .map((name) => name.trim().toLowerCase())
+    );
+
+    const targetKeywordSet = new Set(
+      (Array.isArray(effect?.targetKeywords) ? effect.targetKeywords : [])
+        .filter((kw) => typeof kw === 'string' && kw.trim().length)
+        .map((kw) => kw.trim().toLowerCase())
+    );
+
+    const includeSelf = effect?.includeSelf === true;
+
+    const auraId = getCardInstanceId(card) || card.id || card.name || 'unknown';
+    const keyBase = `friendlyAuraBuff:${auraId}:${property}`;
+    const valueKey = `${keyBase}:value`;
+
+    const ensureData = (unit) => {
+      if (!unit.data) unit.data = {};
+      return unit.data;
+    };
+
+    const applyBonus = (unit, value) => {
+      const data = ensureData(unit);
+      const current = Number.isFinite(data[valueKey]) ? data[valueKey] : 0;
+      if (current === value) return;
+      const delta = value - current;
+
+      if (property === 'attack') {
+        const base = Number.isFinite(data.attack)
+          ? data.attack
+          : Number.isFinite(unit.attack)
+            ? unit.attack
+            : 0;
+        const next = base + delta;
+        data.attack = next;
+      } else if (property === 'health') {
+        const baseHealth = Number.isFinite(data.health)
+          ? data.health
+          : Number.isFinite(unit.health)
+            ? unit.health
+            : 0;
+        const baseMax = Number.isFinite(data.maxHealth)
+          ? data.maxHealth
+          : baseHealth;
+        let nextHealth = baseHealth + delta;
+        let nextMax = baseMax + delta;
+        if (delta < 0) {
+          nextMax = Math.max(0, nextMax);
+          nextHealth = Math.max(0, Math.min(nextHealth, nextMax));
+        }
+        data.health = nextHealth;
+        data.maxHealth = nextMax;
+      } else {
+        const baseValue = Number.isFinite(data[property])
+          ? data[property]
+          : Number.isFinite(unit[property])
+            ? unit[property]
+            : 0;
+        data[property] = baseValue + delta;
+      }
+
+      if (value === 0) delete data[valueKey];
+      else data[valueKey] = value;
+    };
+
+    const matchesTarget = (unit) => {
+      if (!unit || unit.type !== 'ally') return false;
+      if (!includeSelf && matchesCardIdentifier(unit, card)) return false;
+
+      if (identifierList.length > 0) {
+        for (const identifier of identifierList) {
+          if (matchesCardIdentifier(unit, identifier)) return true;
+        }
+      }
+
+      if (targetNameSet.size > 0 && typeof unit.name === 'string') {
+        const normalized = unit.name.trim().toLowerCase();
+        if (targetNameSet.has(normalized)) return true;
+      }
+
+      if (targetKeywordSet.size > 0 && Array.isArray(unit.keywords)) {
+        for (const kw of unit.keywords) {
+          if (typeof kw === 'string' && targetKeywordSet.has(kw.trim().toLowerCase())) return true;
+        }
+      }
+
+      if (identifierList.length === 0 && targetNameSet.size === 0 && targetKeywordSet.size === 0) {
+        return true;
+      }
+
+      return false;
+    };
+
+    const applyToAllies = (value) => {
+      if (!player?.battlefield?.cards) return;
+      for (const ally of player.battlefield.cards) {
+        if (!ally || ally.type !== 'ally') continue;
+        if (matchesTarget(ally)) {
+          applyBonus(ally, value);
+        } else if (ally?.data && typeof ally.data[valueKey] === 'number') {
+          applyBonus(ally, 0);
+        }
+      }
+    };
+
+    let active = true;
+
+    const offFns = [];
+    const track = (off) => {
+      if (typeof off === 'function') {
+        const wrapped = this._trackCleanup(off);
+        offFns.push(wrapped);
+        return wrapped;
+      }
+      return off;
+    };
+
+    const dispose = () => {
+      if (!active) return;
+      active = false;
+      applyToAllies(0);
+      while (offFns.length) {
+        const off = offFns.pop();
+        try { off(); } catch {}
+      }
+    };
+
+    const update = () => {
+      applyToAllies(active ? amount : 0);
+    };
+
+    update();
+
+    const handleFriendlyChange = ({ player: evtPlayer }) => {
+      if (!active) return;
+      if (evtPlayer !== player) return;
+      update();
+    };
+
+    track(game.bus.on('cardPlayed', handleFriendlyChange));
+    track(game.bus.on('unitSummoned', handleFriendlyChange));
+
+    track(game.bus.on('allyDefeated', ({ player: evtPlayer, card: defeated }) => {
+      if (!active) return;
+      if (matchesCardIdentifier(defeated, card)) {
+        dispose();
+        return;
+      }
+      if (evtPlayer === player) update();
+    }));
+
+    track(game.bus.on('cardReturned', ({ player: evtPlayer, card: returned }) => {
+      if (!active) return;
+      if (matchesCardIdentifier(returned, card)) {
+        dispose();
+        return;
+      }
+      if (evtPlayer === player) update();
+    }));
+
+    track(game.turns.bus.on('turn:start', ({ player: turnPlayer }) => {
+      if (!active) return;
+      if (turnPlayer === player) update();
+    }));
   }
 
   spellDamageWhileControl(effect, context) {

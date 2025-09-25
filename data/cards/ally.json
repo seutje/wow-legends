@@ -23,8 +23,12 @@
     "cost": 3,
     "effects": [
       {
-        "type": "rawText",
-        "text": "Your Recruits have +1 ATK."
+        "type": "friendlyAuraBuff",
+        "property": "attack",
+        "amount": 1,
+        "targetCardIds": [
+          "ally-silver-hand-recruit"
+        ]
       }
     ],
     "keywords": [
