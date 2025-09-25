@@ -54,6 +54,7 @@
  * @property {Keyword[]=} keywords
  * @property {Record<string, any>=} data
  * @property {Card=} summonedBy
+ * @property {Card=} tokenSource
  * @property {Object=} requirement
  * @property {Object[]=} reward
  */

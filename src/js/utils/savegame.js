@@ -56,6 +56,19 @@ function serializeCard(card) {
       cost: card.summonedBy.cost ?? null,
     });
   }
+  if (card.tokenSource?.id) {
+    base.tokenSourceId = card.tokenSource.id;
+  } else if (card.tokenSource) {
+    base.tokenSource = deepClone({
+      id: card.tokenSource.id ?? null,
+      type: card.tokenSource.type ?? null,
+      name: card.tokenSource.name ?? '',
+      text: card.tokenSource.text ?? '',
+      keywords: card.tokenSource.keywords ?? [],
+      data: card.tokenSource.data ?? null,
+      cost: card.tokenSource.cost ?? null,
+    });
+  }
   return base;
 }
 
@@ -84,6 +97,13 @@ function deserializeCard(data, game) {
     else if (data.summonedBy) card.summonedBy = deepClone(data.summonedBy);
   } else if (data.summonedBy) {
     card.summonedBy = deepClone(data.summonedBy);
+  }
+  if (data.tokenSourceId) {
+    const base = game?.allCards?.find?.((c) => c.id === data.tokenSourceId);
+    if (base) card.tokenSource = base;
+    else if (data.tokenSource) card.tokenSource = deepClone(data.tokenSource);
+  } else if (data.tokenSource) {
+    card.tokenSource = deepClone(data.tokenSource);
   }
   return card;
 }
