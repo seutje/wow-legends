@@ -258,6 +258,9 @@ export class EffectSystem {
         case 'summonOnManaSpent':
           this.summonOnManaSpent(effect, context);
           break;
+        case 'chooseBothOnManaSpent':
+          this.chooseBothOnManaSpent(effect, context);
+          break;
         case 'chooseOne':
           await this.handleChooseOne(effect, context);
           break;
@@ -961,6 +964,54 @@ export class EffectSystem {
     track(bus.on('resources:refunded', undoSpend));
     track(bus.on('cardPlayed', finalizeCard));
     track(bus.on('heroPowerUsed', finalizeHeroPower));
+  }
+
+  chooseBothOnManaSpent(effect, context) {
+    const { game, player, card } = context || {};
+    if (!game || !player || !card) return;
+
+    const hero = player.hero;
+    if (!hero || hero !== card) return;
+
+    const bus = game.bus;
+    const turnBus = game.turns?.bus;
+    if (!bus?.on || !turnBus?.on) return;
+
+    const thresholdRaw = effect?.threshold ?? effect?.amount ?? effect?.every ?? effect?.requiresSpent;
+    const parsedThreshold = Number(thresholdRaw);
+    const threshold = Number.isFinite(parsedThreshold) ? Math.max(0, parsedThreshold) : 3;
+
+    const heroData = hero.data || (hero.data = {});
+    const state = heroData.chooseBothOnManaSpentState ||= { threshold, spentThisTurn: 0 };
+    state.threshold = threshold;
+    state.spentThisTurn = 0;
+
+    const keyBase = `chooseBothOnManaSpent:${hero.id || hero.name || 'hero'}`;
+    const registeredKey = `${keyBase}:registered`;
+    if (heroData[registeredKey]) return;
+    heroData[registeredKey] = true;
+
+    const track = (off) => this._trackCleanup(off);
+
+    track(turnBus.on('turn:start', ({ player: turnPlayer }) => {
+      if (turnPlayer !== player) return;
+      state.spentThisTurn = 0;
+    }));
+
+    track(bus.on('resources:spent', ({ player: evtPlayer, amount }) => {
+      if (evtPlayer !== player) return;
+      const parsed = Number(amount);
+      if (!Number.isFinite(parsed) || parsed <= 0) return;
+      state.spentThisTurn += parsed;
+    }));
+
+    track(bus.on('resources:refunded', ({ player: evtPlayer, amount }) => {
+      if (evtPlayer !== player) return;
+      const parsed = Number(amount);
+      if (!Number.isFinite(parsed) || parsed <= 0) return;
+      state.spentThisTurn -= parsed;
+      if (state.spentThisTurn < 0) state.spentThisTurn = 0;
+    }));
   }
 
   firstKeywordCostReduction(effect, context) {
@@ -2481,9 +2532,41 @@ export class EffectSystem {
     console.log(`Applied ${amount} overload to ${player.name}.`);
   }
 
+  _shouldResolveAllChooseOneOptions(options, context) {
+    if (!Array.isArray(options) || options.length < 2) return false;
+    const { player, card } = context || {};
+    const hero = player?.hero;
+    if (!hero) return false;
+
+    const heroData = hero.data || {};
+    const state = heroData.chooseBothOnManaSpentState;
+    if (!state) return false;
+
+    const spent = Number(state.spentThisTurn);
+    const threshold = Number(state.threshold);
+    if (!Number.isFinite(spent) || !Number.isFinite(threshold)) return false;
+    if (!(spent > threshold)) return false;
+
+    const isHeroPower = card === hero;
+    const sourceType = card?.type;
+    const isEligibleSource = isHeroPower || sourceType === 'spell' || sourceType === 'ally';
+    if (!isEligibleSource) return false;
+
+    return true;
+  }
+
   async handleChooseOne(effect, context) {
     const { game, player } = context;
     const options = effect.options || [];
+
+    if (this._shouldResolveAllChooseOneOptions(options, context)) {
+      for (const opt of options) {
+        if (Array.isArray(opt?.effects) && opt.effects.length > 0) {
+          await this.execute(opt.effects, context);
+        }
+      }
+      return;
+    }
 
     // If it's the AI's turn, auto-pick a sensible option without prompting the player.
     const isAITurn = !!game.turns.activePlayer && game.turns.activePlayer !== game.player;

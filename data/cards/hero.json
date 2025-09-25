@@ -203,6 +203,12 @@
         ]
       }
     ],
+    "passive": [
+      {
+        "type": "chooseBothOnManaSpent",
+        "threshold": 3
+      }
+    ],
     "keywords": [
       "Your Abilities with Choose One gain both if you spent 3+ mana this turn."
     ],
