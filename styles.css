@@ -213,8 +213,8 @@ main {
   left: 0;
   right: 0;
   bottom: 0;
-  height: 410px;
-  padding-top: 310px;
+  height: 540px;
+  padding-top: 440px;
   overflow: hidden;
   --hand-overlap: 100px;
   z-index: 450;
@@ -386,7 +386,7 @@ main {
   .p-hand .card-tooltip:hover,
   .p-hand .card-tooltip:focus-within,
   .p-hand .card-tooltip[data-touch-preview='1'] {
-    transform: translateY(-30%) scale(1.25);
+    transform: translateY(-30%) scale(1.5);
   }
 }
 
