@@ -1,6 +1,7 @@
 import { freezeTarget } from './keywords.js';
 import { isDebugLogging } from '../utils/logger.js';
 import { cardsMatch, getCardInstanceId, matchesCardIdentifier } from '../utils/card.js';
+import { appendLogEntry } from '../utils/combatLog.js';
 
 function getStat(card, key, def = 0) {
   if (key === 'attack' && typeof card?.totalAttack === 'function') return card.totalAttack();
@@ -47,10 +48,11 @@ function safeZoneTransfer(fromZone, toZone, card) {
 }
 
 export class CombatSystem {
-  constructor(bus = null) {
+  constructor(bus = null, turns = null) {
     this._attacks = new Map(); // attackerKey -> { attacker, blockers: Card[] }
     this._defenderHero = null;
     this.bus = bus;
+    this._turns = turns;
   }
 
   declareAttacker(attacker, defender = null) {
@@ -167,7 +169,9 @@ export class CombatSystem {
             eq.durability -= 1;
             // Log equipment taking a hit
             const owner = attacker?.owner;
-            if (owner?.log) owner.log.push(`${eq.name} took a hit (-1 durability).`);
+            if (owner?.log) {
+              appendLogEntry(owner, `${eq.name} took a hit (-1 durability).`, { turn: this._turns?.turn ?? null });
+            }
           }
         }
         // Move broken equipment to graveyard and remove from hero
@@ -176,7 +180,9 @@ export class CombatSystem {
         if (owner && broken.length > 0) {
           for (const b of broken) {
             // Log breaking
-            if (owner?.log) owner.log.push(`${b.name} broke and was destroyed.`);
+            if (owner?.log) {
+              appendLogEntry(owner, `${b.name} broke and was destroyed.`, { turn: this._turns?.turn ?? null });
+            }
             const moved = safeZoneTransfer(owner?.battlefield, owner?.graveyard, b);
             if (!moved && owner?.graveyard?.add) {
               owner.graveyard.add(b);
@@ -203,7 +209,9 @@ export class CombatSystem {
             if (eq) {
               eq.durability -= 1;
               const owner = this._defenderHero?.owner;
-              if (owner?.log) owner.log.push(`${eq.name} reflected damage (-1 durability).`);
+              if (owner?.log) {
+                appendLogEntry(owner, `${eq.name} reflected damage (-1 durability).`, { turn: this._turns?.turn ?? null });
+              }
             }
           }
         }
@@ -212,7 +220,9 @@ export class CombatSystem {
         const broken = eqList.filter(e => (e?.durability ?? 1) <= 0);
         if (owner && broken.length > 0) {
           for (const b of broken) {
-            if (owner?.log) owner.log.push(`${b.name} broke and was destroyed.`);
+            if (owner?.log) {
+              appendLogEntry(owner, `${b.name} broke and was destroyed.`, { turn: this._turns?.turn ?? null });
+            }
             const moved = safeZoneTransfer(owner?.battlefield, owner?.graveyard, b);
             if (!moved && owner?.graveyard?.add) {
               owner.graveyard.add(b);

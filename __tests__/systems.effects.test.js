@@ -112,8 +112,8 @@ describe('EffectSystem', () => {
     await game.effects.dealDamage({ target: 'selfHero', amount: 1 }, { game, player, card: null });
     await new Promise(r => setTimeout(r, 0));
 
-    expect(player.log).toContain('Secret triggered: Explosive Trap');
-    expect(opponent.log).toContain('Enemy secret triggered: Explosive Trap');
+    expect(player.log).toContain('1: Secret triggered: Explosive Trap');
+    expect(opponent.log).toContain('1: Enemy secret triggered: Explosive Trap');
 
     expect(player.hero.data.health).toBe(7);
     expect(opponent.hero.data.health).toBe(8);

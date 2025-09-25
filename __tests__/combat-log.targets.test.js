@@ -81,7 +81,7 @@ test('logs targeted actions when playing a spell', async () => {
   expect(ok).toBe(true);
 
   const lastLog = g.player.log[g.player.log.length - 1];
-  expect(lastLog).toBe(`Played ${spell.name} targeting ${target.name}`);
+  expect(lastLog).toBe(`5: Played ${spell.name} targeting ${target.name}`);
 });
 
 test('auto-selected destroy effects still log their target', async () => {
@@ -118,7 +118,7 @@ test('auto-selected destroy effects still log their target', async () => {
   formatSpy.mockRestore();
 
   const lastLog = g.player.log[g.player.log.length - 1];
-  expect(lastLog).toBe(`Played ${spell.name} targeting ${enemy.name}`);
+  expect(lastLog).toBe(`5: Played ${spell.name} targeting ${enemy.name}`);
 });
 
 test('AI auto-selected destroy effects log their target', async () => {
@@ -155,7 +155,7 @@ test('AI auto-selected destroy effects log their target', async () => {
   formatSpy.mockRestore();
 
   const lastLog = g.opponent.log[g.opponent.log.length - 1];
-  expect(lastLog).toBe(`Played ${spell.name} targeting ${target.name}`);
+  expect(lastLog).toBe(`5: Played ${spell.name} targeting ${target.name}`);
 });
 
 test('auto-target logging falls back when target capture is unavailable', async () => {
@@ -191,7 +191,7 @@ test('auto-target logging falls back when target capture is unavailable', async 
   g.recordActionTarget = originalRecord;
 
   const lastLog = g.player.log[g.player.log.length - 1];
-  expect(lastLog).toBe(`Played ${spell.name} targeting ${enemy.name}`);
+  expect(lastLog).toBe(`5: Played ${spell.name} targeting ${enemy.name}`);
 });
 
 test('AI secrets are obscured in combat log entries', async () => {
@@ -213,5 +213,5 @@ test('AI secrets are obscured in combat log entries', async () => {
   expect(ok).toBe(true);
 
   const lastLog = g.opponent.log[g.opponent.log.length - 1];
-  expect(lastLog).toBe('Played a secret');
+  expect(lastLog).toBe('5: Played a secret');
 });

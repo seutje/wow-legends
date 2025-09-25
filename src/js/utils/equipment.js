@@ -1,4 +1,5 @@
 import { cardsMatch, matchesCardIdentifier } from './card.js';
+import { appendLogEntry } from './combatLog.js';
 
 function removeFromZone(zone, card) {
   if (!zone || !card) return null;
@@ -34,7 +35,7 @@ function ensureHeroData(hero) {
   return hero.data;
 }
 
-export function destroyEquipment(owner, equipment, { replacement = null } = {}) {
+export function destroyEquipment(owner, equipment, { replacement = null, turn = null } = {}) {
   if (!owner?.hero || !equipment) return null;
   const { hero } = owner;
   if (Array.isArray(hero.equipment)) {
@@ -54,16 +55,16 @@ export function destroyEquipment(owner, equipment, { replacement = null } = {}) 
   if (Array.isArray(owner.log) && equipment?.name) {
     const replacementName = replacement?.name;
     if (replacementName) {
-      owner.log.push(`${equipment.name} was destroyed when ${replacementName} was equipped.`);
+      appendLogEntry(owner, `${equipment.name} was destroyed when ${replacementName} was equipped.`, { turn });
     } else {
-      owner.log.push(`${equipment.name} was destroyed.`);
+      appendLogEntry(owner, `${equipment.name} was destroyed.`, { turn });
     }
   }
 
   return card;
 }
 
-export function replaceEquipment(owner, newEquipment) {
+export function replaceEquipment(owner, newEquipment, { turn = null } = {}) {
   if (!owner?.hero) return newEquipment;
   const { hero } = owner;
   const current = Array.isArray(hero.equipment) ? hero.equipment : [];
@@ -72,7 +73,7 @@ export function replaceEquipment(owner, newEquipment) {
   if (current.length) {
     for (const eq of current) {
       if (!newEquipment || !cardsMatch(eq, newEquipment)) {
-        destroyEquipment(owner, eq, { replacement: newEquipment });
+        destroyEquipment(owner, eq, { replacement: newEquipment, turn });
       }
     }
   }

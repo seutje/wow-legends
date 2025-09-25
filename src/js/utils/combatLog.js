@@ -1,5 +1,16 @@
 const SECRET_FALLBACK = 'Secret';
 
+export function appendLogEntry(owner, message, { turn = null } = {}) {
+  if (!owner || !Array.isArray(owner.log)) return;
+  if (message == null) return;
+  const resolvedTurn = Number.isFinite(turn)
+    ? Math.max(1, Math.trunc(turn))
+    : (Number.isFinite(owner?.logTurn) ? Math.max(1, Math.trunc(owner.logTurn)) : null);
+  const text = typeof message === 'string' ? message : String(message);
+  const entry = resolvedTurn != null ? `${resolvedTurn}: ${text}` : text;
+  owner.log.push(entry);
+}
+
 function formatSecretName(card, token) {
   if (card?.name) return card.name;
   const type = token?.type || token?.effect?.type;
@@ -19,10 +30,10 @@ function formatSecretName(card, token) {
 export function logSecretTriggered(game, owner, { card = null, token = null } = {}) {
   if (!game || !owner) return;
   const secretName = formatSecretName(card, token);
-  if (Array.isArray(owner.log)) owner.log.push(`Secret triggered: ${secretName}`);
+  appendLogEntry(owner, `Secret triggered: ${secretName}`, { turn: game?.turns?.turn });
   const opponent = owner === game.player ? game.opponent : game.player;
   if (opponent && Array.isArray(opponent.log)) {
-    opponent.log.push(`Enemy secret triggered: ${secretName}`);
+    appendLogEntry(opponent, `Enemy secret triggered: ${secretName}`, { turn: game?.turns?.turn });
   }
 }
 

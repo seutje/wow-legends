@@ -12,7 +12,7 @@ import { renderBoard } from './ui/board.js';
 import QuestSystem from './systems/quests.js';
 import { EventBus } from './utils/events.js';
 import { selectTargets } from './systems/targeting.js';
-import { logSecretTriggered } from './utils/combatLog.js';
+import { logSecretTriggered, appendLogEntry } from './utils/combatLog.js';
 import { fillDeckRandomly } from './utils/deckbuilder.js';
 import { getCardInstanceId, matchesCardIdentifier } from './utils/card.js';
 import { chooseStartingPlayerKey } from './utils/turnOrder.js';
@@ -113,7 +113,7 @@ export default class Game {
     // Create the event bus before systems that depend on it
     this.bus = new EventBus();
     this.resources = new ResourceSystem(this.turns, this.bus);
-    this.combat = new CombatSystem(this.bus);
+    this.combat = new CombatSystem(this.bus, this.turns);
     this.effects = new EffectSystem(this);
     const rawSeed = opts?.seed;
     if (rawSeed != null) {
@@ -133,6 +133,8 @@ export default class Game {
     this.quests = new QuestSystem(this);
 
       this.turns.bus.on('turn:start', ({ player }) => {
+        if (this.player) this.player.logTurn = this.turns.turn;
+        if (this.opponent) this.opponent.logTurn = this.turns.turn;
         if (player) {
           player.cardsPlayedThisTurn = 0;
           player.armorGainedThisTurn = 0;
@@ -180,6 +182,8 @@ export default class Game {
     // Players
     this.player = new Player({ name: 'You' });
     this.opponent = new Player({ name: 'AI' });
+    this.player.logTurn = this.turns.turn;
+    this.opponent.logTurn = this.turns.turn;
 
     this._defaultDifficulty = this._isBrowserEnv ? 'nightmare' : 'easy';
     this.state = { frame: 0, startedAt: 0, difficulty: this._defaultDifficulty, debug: false, matchOver: false, winner: null };
@@ -195,6 +199,13 @@ export default class Game {
 
   setUIRerender(fn) {
     this._uiRerender = fn;
+  }
+
+  _pushLog(owner, message, { turn } = {}) {
+    const resolvedTurn = Number.isFinite(turn)
+      ? turn
+      : (typeof this.turns?.turn === 'number' ? this.turns.turn : null);
+    appendLogEntry(owner, message, { turn: resolvedTurn });
   }
 
   _playerRole(player) {
@@ -797,7 +808,7 @@ export default class Game {
         logTargets = Array.from(loggedTargets);
       }
       const msg = this._formatLogWithTargets('Used hero power', logTargets, { preposition: 'on' });
-      player.log.push(msg);
+      this._pushLog(player, msg);
     }
     return true;
   }
@@ -1084,7 +1095,7 @@ export default class Game {
       // Move spell straight to graveyard without resolving effects
       player.hand.moveTo(player.graveyard, card);
       this.bus.emit('cardPlayed', { player, card });
-      player.log.push(`Played ${card.name} (countered)`);
+      this._pushLog(player, `Played ${card.name} (countered)`);
       player.cardsPlayedThisTurn += 1;
       return true;
     }
@@ -1254,9 +1265,9 @@ export default class Game {
           : false;
         if (eq && typeof eq.durability === 'number') {
           eq.durability -= 1;
-          if (player?.log) player.log.push(`${eq.name} empowered a spell (-1 durability).`);
+          if (player?.log) this._pushLog(player, `${eq.name} empowered a spell (-1 durability).`);
           if (eq.durability <= 0) {
-            if (player?.log) player.log.push(`${eq.name} broke and was destroyed.`);
+            if (player?.log) this._pushLog(player, `${eq.name} broke and was destroyed.`);
             let moved = false;
             if (player?.battlefield && player?.graveyard) {
               const res = player.battlefield.moveTo(player.graveyard, eq);
@@ -1280,7 +1291,7 @@ export default class Game {
 
     if (card.type === 'equipment') {
       player.hand.moveTo(player.battlefield, card);
-      player.equip(card);
+      player.equip(card, { turn: this.turns.turn });
     } else if (card.type === 'ally') {
       if (!movedAllyBeforeEffects) {
         player.hand.moveTo(player.battlefield, card);
@@ -1316,7 +1327,7 @@ export default class Game {
     } else {
       logMessage = this._formatLogWithTargets(`Played ${card.name}`, targetsForLog);
     }
-    player.log.push(logMessage);
+    this._pushLog(player, logMessage);
     player.cardsPlayedThisTurn += 1;
 
     return true;
@@ -1335,7 +1346,7 @@ export default class Game {
         await this.effects.execute(card.deathrattle, { game: this, player, card });
       }
       if (player?.log) {
-        player.log.push(`${card.name} was destroyed to make room for ${sourceName}.`);
+        this._pushLog(player, `${card.name} was destroyed to make room for ${sourceName}.`);
       }
       try { this.bus.emit('allyDefeated', { player, card }); } catch {}
     }
@@ -1611,7 +1622,7 @@ export default class Game {
     await this.cleanupDeaths(player, defender);
     await this.cleanupDeaths(defender, player);
     this.checkForGameOver();
-    player.log.push(`Attacked ${actualTarget.name} with ${card.name}`);
+    this._pushLog(player, `Attacked ${actualTarget.name} with ${card.name}`);
     // Mark attack usage
     card.data.attacked = true;
     card.data.attacksUsed = (card.data.attacksUsed || 0) + 1;
@@ -1673,7 +1684,7 @@ export default class Game {
         card.keywords = card.keywords.filter((k) => k !== 'Stealth');
       }
       if (block) this.combat.assignBlocker(getCardInstanceId(card), block);
-      actor.log.push(`Attacked ${target.name} with ${card.name}`);
+      this._pushLog(actor, `Attacked ${target.name} with ${card.name}`);
     }
 
     this.combat.setDefenderHero(defender.hero);
@@ -1978,6 +1989,8 @@ export default class Game {
     this.resources = new ResourceSystem(this.turns, this.bus);
     this.player = new Player({ name: 'You' });
     this.opponent = new Player({ name: 'AI' });
+    this.player.logTurn = this.turns.turn;
+    this.opponent.logTurn = this.turns.turn;
     this._pendingTurnIncrement = false;
     this._skipNextTurnAdvance = false;
     await this.setupMatch(playerDeck);

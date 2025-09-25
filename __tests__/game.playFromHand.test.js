@@ -39,8 +39,8 @@ test('counter secret writes combat log entries when triggered', async () => {
   const played = await g.playFromHand(g.player, spell.id);
 
   expect(played).toBe(true);
-  expect(g.opponent.log).toContain('Secret triggered: Counter Shot');
-  expect(g.player.log).toContain('Enemy secret triggered: Counter Shot');
+  expect(g.opponent.log).toContain('1: Secret triggered: Counter Shot');
+  expect(g.player.log).toContain('1: Enemy secret triggered: Counter Shot');
 });
 
 test('countering a secret removes secret badges from both heroes', async () => {

@@ -1603,7 +1603,7 @@ export class MCTS_AI {
       if (played.type === 'ally' || played.type === 'equipment' || played.type === 'quest') {
         p.battlefield.cards.push(played);
         if (played.type === 'equipment') {
-          replaceEquipment(p, played);
+          replaceEquipment(p, played, { turn: this.resources?.turns?.turn ?? null });
         }
         if (played.type === 'ally') {
           removeOverflowAllies(p);
@@ -2516,7 +2516,9 @@ export class MCTS_AI {
           }
           if (action.card.type === 'ally' || action.card.type === 'equipment' || action.card.type === 'quest') {
             player.hand.moveTo(player.battlefield, action.card);
-            if (action.card.type === 'equipment') player.equip(action.card);
+            if (action.card.type === 'equipment') {
+              player.equip(action.card, { turn: this.resources?.turns?.turn ?? null });
+            }
             if (action.card.type === 'ally' && !action.card.keywords?.includes('Rush')) {
               action.card.data = action.card.data || {};
               action.card.data.attacked = true;

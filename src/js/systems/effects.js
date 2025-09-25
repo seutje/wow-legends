@@ -2638,7 +2638,7 @@ export class EffectSystem {
     const { item } = effect;
     const { player, game } = context;
     const eq = new Equipment(item);
-    player.equip(eq);
+    player.equip(eq, { turn: game?.turns?.turn ?? null });
     if (eq.armor) {
       player.armorGainedThisTurn = (player.armorGainedThisTurn || 0) + eq.armor;
       game.bus.emit('armorGained', { player, amount: eq.armor, source: eq });

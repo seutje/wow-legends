@@ -8,6 +8,7 @@ import MLP from './nn.js';
 import { actionSignature } from './ai-signatures.js';
 import { encodeMinion, getLatentSize, loadAutoencoder } from './autoencoder.js';
 import { getCardInstanceId, matchesCardIdentifier } from '../utils/card.js';
+import { appendLogEntry } from '../utils/combatLog.js';
 
 export const HERO_ID_VOCAB = Object.freeze([
   'hero-anduin-wrynn-high-king-priest',
@@ -655,7 +656,9 @@ export class NeuralAI {
       data.attacksUsed = (data.attacksUsed || 0) + 1;
       if (attacker?.keywords?.includes?.('Stealth')) attacker.keywords = attacker.keywords.filter(k => k !== 'Stealth');
       if (block) this.combat.assignBlocker(getCardInstanceId(attacker), block);
-      player.log.push(`Attacked ${target.name} with ${attacker.name}`);
+      appendLogEntry(player, `Attacked ${target.name} with ${attacker.name}`, {
+        turn: this.game?.turns?.turn ?? this.resources?.turns?.turn ?? null,
+      });
 
       this.combat.setDefenderHero(opponent.hero);
       const events = this.combat.resolve();

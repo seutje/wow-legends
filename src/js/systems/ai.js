@@ -4,6 +4,7 @@ import { selectTargets } from './targeting.js';
 import Card from '../entities/card.js';
 import { cardsMatch, getCardInstanceId, matchesCardIdentifier } from '../utils/card.js';
 import { replaceEquipment } from '../utils/equipment.js';
+import { appendLogEntry } from '../utils/combatLog.js';
 import { removeOverflowAllies } from '../utils/allies.js';
 
 export class BasicAI {
@@ -263,7 +264,7 @@ export class BasicAI {
       if (played.type === 'ally' || played.type === 'equipment' || played.type === 'quest') {
         p.battlefield.cards.push(played);
         if (played.type === 'equipment') {
-          replaceEquipment(p, played);
+          replaceEquipment(p, played, { turn: this.resources?.turns?.turn ?? null });
         }
         if (played.type === 'ally') {
           removeOverflowAllies(p);
@@ -371,7 +372,9 @@ export class BasicAI {
       if (best.card.effects) this._applySimpleEffects(best.card.effects, player, opponent, pool);
       if (best.card.type === 'ally' || best.card.type === 'equipment' || best.card.type === 'quest') {
         player.hand.moveTo(player.battlefield, best.card);
-        if (best.card.type === 'equipment') player.equip(best.card);
+        if (best.card.type === 'equipment') {
+          player.equip(best.card, { turn: this.resources?.turns?.turn ?? null });
+        }
         if (best.card.type === 'ally') {
           best.card.data = best.card.data || {};
           best.card.data.enteredTurn = this.resources?.turns?.turn ?? 0;
@@ -391,7 +394,9 @@ export class BasicAI {
       this.resources.pay(player, 2);
       player.hero.powerUsed = true;
       if (player.hero.active) this._applySimpleEffects(player.hero.active, player, opponent, pool);
-      if (player?.log) player.log.push('Used hero power');
+      if (player?.log) {
+        appendLogEntry(player, 'Used hero power', { turn: this.resources?.turns?.turn ?? null });
+      }
     }
 
     if (this._shouldAbortTurn(player, opponent)) return true;
