@@ -69,7 +69,7 @@ describe('UI Play', () => {
     expect(container.querySelector('.p-hero .hero-mana').textContent).toBe('6/4 Mana');
   });
 
-  test('new game button appears before deck builder and calls handler', async () => {
+  test('new game button appears before deck builder and seeds when requested', async () => {
     const container = document.createElement('div');
     const playerHero = new Hero({ name: 'Player Hero', data: { health: 25, armor: 5 } });
     const enemyHero = new Hero({ name: 'Enemy Hero', data: { health: 20, armor: 3 } });
@@ -79,21 +79,58 @@ describe('UI Play', () => {
       opponent: { hero: enemyHero, battlefield: { cards: [] }, hand: { cards: [], size: () => 0 }, log: [] },
       resources: { pool: () => 0, available: () => 0 },
       draw: jest.fn(), attack: jest.fn(), endTurn: jest.fn(), playFromHand: () => true,
+      rng: { seed: jest.fn() },
       state: {},
     };
 
     const onNewGame = jest.fn().mockResolvedValue();
     renderPlay(container, game, { onUpdate: jest.fn(), onNewGame });
     const controls = document.querySelector('header .controls');
+    const seedInput = controls.querySelector('.input-seed');
     const buttons = Array.from(controls.querySelectorAll('button'));
     expect(buttons[0].textContent).toContain('New Game');
     expect(buttons[1].textContent).toContain('Deck Builder');
     const difficultySelect = controls.querySelector('select.select-difficulty');
     expect(difficultySelect.value).toBe('nightmare');
 
+    seedInput.value = '  -42abc ';
     buttons[0].dispatchEvent(new Event('click'));
     await Promise.resolve();
-    expect(onNewGame).toHaveBeenCalled();
+    expect(game.rng.seed).toHaveBeenCalledWith(42);
+    expect(onNewGame).toHaveBeenCalledWith(42);
+  });
+
+  test('restart button reuses sanitized seed value', async () => {
+    const container = document.createElement('div');
+    document.body.append(container);
+
+    const playerHero = new Hero({ name: 'Player Hero', data: { health: 0, armor: 0 } });
+    const enemyHero = new Hero({ name: 'Enemy Hero', data: { health: 10, armor: 0 } });
+
+    const game = {
+      player: { hero: playerHero, battlefield: { cards: [] }, hand: { cards: [], size: () => 0 }, log: [] },
+      opponent: { hero: enemyHero, battlefield: { cards: [] }, hand: { cards: [], size: () => 0 }, log: [] },
+      resources: { pool: () => 0, available: () => 0 },
+      draw: jest.fn(), attack: jest.fn(), endTurn: jest.fn(), playFromHand: () => true,
+      rng: { seed: jest.fn() },
+      allCards: [],
+      reset: jest.fn().mockResolvedValue(),
+      state: {},
+    };
+
+    const onUpdate = jest.fn();
+    renderPlay(container, game, { onUpdate });
+    const controls = document.querySelector('header .controls');
+    const seedInput = controls.querySelector('.input-seed');
+    seedInput.value = 'seed9001';
+
+    const restartBtn = container.querySelector('.game-over button');
+    restartBtn.dispatchEvent(new Event('click'));
+    await Promise.resolve();
+
+    expect(game.rng.seed).toHaveBeenCalledWith(9001);
+    expect(game.reset).toHaveBeenCalledWith(null);
+    expect(onUpdate).toHaveBeenCalled();
   });
 
   test('deck builder button toggles label and triggers handler', () => {
