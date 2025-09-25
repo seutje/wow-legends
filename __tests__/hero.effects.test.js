@@ -153,5 +153,52 @@ describe('hero effects', () => {
     expect(g.resources.pool(g.player)).toBe(2);
     expect(g.canPlay(g.player, comboSpellB)).toBe(true);
   });
+
+  test('Sylvanas passive reduces the cost of all secrets in hand', async () => {
+    const g = new Game();
+    g.player.hero = new Hero({
+      passive: [
+        { type: 'keywordCostReduction', keyword: 'Secret', amount: 1, minimum: 0 },
+      ],
+    });
+
+    const secretA = new Card({
+      id: 'test-secret-a',
+      type: 'spell',
+      cost: 3,
+      keywords: ['Secret'],
+      effects: [],
+    });
+
+    const secretB = new Card({
+      id: 'test-secret-b',
+      type: 'spell',
+      cost: 2,
+      keywords: ['Secret'],
+      effects: [],
+    });
+
+    const nonSecret = new Card({
+      id: 'test-non-secret',
+      type: 'spell',
+      cost: 4,
+      keywords: [],
+      effects: [],
+    });
+
+    g.player.hand.add(secretA);
+    g.player.hand.add(nonSecret);
+
+    g.turns.setActivePlayer(g.player);
+    g.turns.turn = 2;
+    g.turns.bus.emit('turn:start', { player: g.player });
+    await Promise.resolve();
+
+    expect(secretA.cost).toBe(2);
+    expect(nonSecret.cost).toBe(4);
+
+    g.player.hand.add(secretB);
+    expect(secretB.cost).toBe(1);
+  });
 });
 
