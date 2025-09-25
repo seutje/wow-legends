@@ -20,8 +20,10 @@ export function deriveDeckFromGame(game) {
       if (data) cards.push(data);
     }
   }
-  return { hero, cards };
+  const deck = { hero, cards };
+  const opponentHeroId = game?.state?.lastOpponentHeroId;
+  if (opponentHeroId) deck.opponentHeroId = opponentHeroId;
+  return deck;
 }
 
 export default deriveDeckFromGame;
-

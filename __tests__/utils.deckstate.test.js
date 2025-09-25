@@ -29,4 +29,26 @@ describe('deriveDeckFromGame', () => {
     expect(deck.cards[0].id).toBe('c-0');
     expect(deck.cards.some(c => c.id === 'token-x')).toBe(false);
   });
+
+  test('includes opponent hero selection when present', () => {
+    const hero = { id: 'hero-1', type: 'hero', name: 'H' };
+    const opponentHeroId = 'hero-opponent';
+    const allCards = [hero];
+    for (let i = 0; i < 60; i++) allCards.push({ id: `card-${i}`, type: 'ally', name: `Card ${i}` });
+    const cards = allCards.slice(1, 61).map((c) => ({ id: c.id, type: c.type }));
+    const game = {
+      allCards,
+      state: { lastOpponentHeroId: opponentHeroId },
+      player: {
+        hero: { id: hero.id },
+        library: { cards },
+        hand: { cards: [] },
+        battlefield: { cards: [] },
+        graveyard: { cards: [] },
+        removed: { cards: [] },
+      },
+    };
+    const deck = deriveDeckFromGame(game);
+    expect(deck.opponentHeroId).toBe(opponentHeroId);
+  });
 });

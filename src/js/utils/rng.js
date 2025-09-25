@@ -5,10 +5,19 @@
 
 export class RNG {
   constructor(seed = Date.now() >>> 0) {
-    this._state = seed >>> 0;
+    const normalized = seed >>> 0;
+    this._state = normalized;
+    this._seed = normalized;
   }
 
-  seed(n) { this._state = (n >>> 0); return this; }
+  seed(n) {
+    const normalized = n >>> 0;
+    this._state = normalized;
+    this._seed = normalized;
+    return this;
+  }
+
+  getSeed() { return this._seed; }
 
   // Returns float in [0, 1)
   random() {
@@ -49,4 +58,3 @@ export const random = () => defaultRng.random();
 export const randomInt = (min, max) => defaultRng.randomInt(min, max);
 export const pick = (arr) => defaultRng.pick(arr);
 export const shuffle = (arr) => defaultRng.shuffle(arr);
-

@@ -104,26 +104,6 @@ function buildCardEl(card, { owner } = {}) {
   return wrap;
 }
 
-function sanitizeSeedValue(raw) {
-  if (typeof raw !== 'string') return null;
-  const match = raw.trim().match(/-?\d+/);
-  if (!match) return null;
-  const parsed = Number.parseInt(match[0], 10);
-  if (!Number.isFinite(parsed)) return null;
-  const normalized = Math.abs(parsed);
-  if (!Number.isFinite(normalized)) return null;
-  return normalized >>> 0;
-}
-
-function sanitizeSeedFromInput(inputEl) {
-  if (!inputEl) return null;
-  const sanitized = sanitizeSeedValue(inputEl.value);
-  if (sanitized != null) {
-    inputEl.value = String(sanitized);
-  }
-  return sanitized;
-}
-
 const TOUCH_DOUBLE_TAP_MS = 350;
 const TOUCH_PREVIEW_TIMEOUT_MS = 4500;
 let touchPreviewCardEl = null;
@@ -829,8 +809,6 @@ export function renderPlay(container, game, {
   }
 
   let controls = headerEl.querySelector('.controls');
-  let seedInputEl = headerEl.querySelector('.input-seed');
-  const readSeed = () => sanitizeSeedFromInput(seedInputEl);
   let board = container.querySelector('.board');
   let pHandSection = container.querySelector('.p-hand');
 
@@ -872,28 +850,12 @@ export function renderPlay(container, game, {
       }
     };
 
-    const seedInputId = 'seed-input';
-    seedInputEl = el('input', {
-      id: seedInputId,
-      class: 'input-seed',
-      type: 'text',
-      inputmode: 'numeric',
-      autocomplete: 'off',
-      placeholder: 'Seed',
-      size: 8
-    });
-
     controls = el('div', { class: 'controls' },
-      el('label', { class: 'lbl-seed', for: seedInputId }, 'Seed:', seedInputEl),
       el('button', { class: 'btn-new-game', onclick: async (ev) => {
         const btn = ev?.currentTarget;
         if (btn) btn.disabled = true;
         try {
-          const seed = readSeed();
-          if (seed != null && typeof game?.rng?.seed === 'function') {
-            game.rng.seed(seed);
-          }
-          if (onNewGame) await onNewGame(seed);
+          if (onNewGame) await onNewGame();
         } finally {
           if (btn) btn.disabled = false;
           onUpdate?.();
@@ -935,8 +897,6 @@ export function renderPlay(container, game, {
       fullscreenBtn
     );
     headerEl.append(controls);
-  } else if (!seedInputEl && controls) {
-    seedInputEl = controls.querySelector('.input-seed');
   }
 
   if (initialBoardMount) {
@@ -1115,17 +1075,17 @@ export function renderPlay(container, game, {
         el('div', {},
           el('p', {}, msg),
           el('button', { onclick: async () => {
-            // Prefer saved deck on restart; fall back to random
+            // Prefer saved deck on restart; fall back to current selection
             let deck = null;
             try {
               const settings = loadSettings();
               if (settings?.lastDeck) deck = rehydrateDeck(settings.lastDeck, game.allCards);
             } catch {}
-            const seed = readSeed();
-            if (seed != null && typeof game?.rng?.seed === 'function') {
-              game.rng.seed(seed);
+            if (onNewGame) {
+              await onNewGame(deck ? { deckOverride: deck } : undefined);
+            } else {
+              await game.reset(deck || null);
             }
-            await game.reset(deck || null);
             onUpdate?.();
           } }, 'Restart')
         )

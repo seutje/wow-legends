@@ -135,11 +135,22 @@ setStatus('Initialized');
 const board = document.createElement('div');
 root.appendChild(board);
 
-async function startNewGame(seed) {
-  if (seed != null && typeof game?.rng?.seed === 'function') {
+function generateRandomSeed() {
+  if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
+    const buffer = new Uint32Array(1);
+    crypto.getRandomValues(buffer);
+    return buffer[0] >>> 0;
+  }
+  const rand = typeof Math.random === 'function' ? Math.random() : 0;
+  return Math.floor(rand * 0x100000000) >>> 0;
+}
+
+async function startNewGame({ deckOverride = null } = {}) {
+  const seed = generateRandomSeed();
+  if (typeof game?.rng?.seed === 'function') {
     game.rng.seed(seed);
   }
-  const deck = deriveDeckFromGame(game);
+  const deck = deckOverride || deriveDeckFromGame(game);
   clearSavedGameState();
   const hasDeck = deck?.hero && Array.isArray(deck.cards) && deck.cards.length === 60;
   await game.reset(hasDeck ? deck : null);

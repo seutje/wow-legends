@@ -186,7 +186,15 @@ export default class Game {
     this.opponent.logTurn = this.turns.turn;
 
     this._defaultDifficulty = this._isBrowserEnv ? 'insane' : 'easy';
-    this.state = { frame: 0, startedAt: 0, difficulty: this._defaultDifficulty, debug: false, matchOver: false, winner: null };
+    this.state = {
+      frame: 0,
+      startedAt: 0,
+      difficulty: this._defaultDifficulty,
+      debug: false,
+      matchOver: false,
+      winner: null,
+      lastOpponentHeroId: null,
+    };
     this._nnModelPromise = null;
     this._aiDeckTemplates = null;
     this._playerDeckTemplates = null;
@@ -388,16 +396,27 @@ export default class Game {
     this._pendingTurnIncrement = false;
 
     let forcedOpponentHero = null;
+    let desiredOpponentHeroId = null;
     if (playerDeck && playerDeck.opponentHeroId != null) {
-      const desiredId = String(playerDeck.opponentHeroId);
-      if (desiredId) {
-        const candidate = cardById.get(desiredId);
+      desiredOpponentHeroId = String(playerDeck.opponentHeroId);
+      if (desiredOpponentHeroId) {
+        const candidate = cardById.get(desiredOpponentHeroId);
         if (candidate?.type === 'hero') forcedOpponentHero = candidate;
       }
     } else if (playerDeck && playerDeck.opponentHero && playerDeck.opponentHero.type === 'hero') {
       forcedOpponentHero = playerDeck.opponentHero;
+      desiredOpponentHeroId = forcedOpponentHero?.id ? String(forcedOpponentHero.id) : null;
     }
     const opponentHeroForced = !!forcedOpponentHero;
+    if (this.state) {
+      if (opponentHeroForced) {
+        this.state.lastOpponentHeroId = forcedOpponentHero?.id ? String(forcedOpponentHero.id) : desiredOpponentHeroId;
+      } else if (desiredOpponentHeroId) {
+        this.state.lastOpponentHeroId = desiredOpponentHeroId;
+      } else {
+        this.state.lastOpponentHeroId = null;
+      }
+    }
 
     const rng = this.rng;
     const createRandomDeckState = (excludeHeroId = null) => {
@@ -568,7 +587,31 @@ export default class Game {
       this.opponent.library.add(new Card(cardData));
     }
 
-    this.player.library.shuffle(rng);
+    const baseSeed = (typeof rng?.getSeed === 'function') ? rng.getSeed() : null;
+    const useSeededShuffle = Number.isFinite(baseSeed);
+    if (useSeededShuffle) {
+      const canonicalOrder = this.player.library.cards
+        .map((card, index) => ({ card, index }))
+        .sort((a, b) => {
+          const idA = typeof a.card?.id === 'string' ? a.card.id : '';
+          const idB = typeof b.card?.id === 'string' ? b.card.id : '';
+          if (idA === idB) return a.index - b.index;
+          return idA.localeCompare(idB, undefined, { numeric: true });
+        })
+        .map((entry) => entry.card);
+      this.player.library.cards.splice(0, this.player.library.cards.length, ...canonicalOrder);
+      const seededRng = new RNG(baseSeed);
+      this.player.library.shuffle(seededRng);
+      if (rng && typeof rng.randomInt === 'function') {
+        const playerCardCount = this.player.library.cards.length;
+        for (let i = playerCardCount - 1; i > 0; i--) {
+          rng.randomInt(0, i + 1);
+        }
+      }
+    } else {
+      this.player.library.shuffle(rng);
+    }
+
     this.opponent.library.shuffle(rng);
 
     const startingKey = chooseStartingPlayerKey(this.rng);
