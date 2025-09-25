@@ -35,10 +35,10 @@ header strong {
 
 main {
   flex: 1;
-  padding: clamp(16px, 3vw, 32px);
+  padding: clamp(16px, 3vw, 20px);
   display: grid;
   grid-template-columns: 1fr;
-  gap: clamp(16px, 3vw, 32px);
+  gap: clamp(16px, 3vw, 20px);
   align-content: start;
 }
 
