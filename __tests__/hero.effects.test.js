@@ -200,5 +200,39 @@ describe('hero effects', () => {
     g.player.hand.add(secretB);
     expect(secretB.cost).toBe(1);
   });
+
+  test('Garrosh passive grants hero +1 attack after gaining armor', async () => {
+    const g = new Game();
+    g.player.hero = new Hero({
+      name: 'Garrosh',
+      passive: [
+        { type: 'heroAttackOnArmorGain', amount: 1 },
+      ],
+      data: { attack: 0, health: 30, armor: 0 },
+    });
+
+    g.turns.setActivePlayer(g.player);
+    g.turns.bus.emit('turn:start', { player: g.player });
+    await Promise.resolve();
+
+    expect(g.player.hero.data.attack).toBe(0);
+
+    await g.effects.execute(
+      [{ type: 'buff', target: 'hero', property: 'armor', amount: 2 }],
+      { game: g, player: g.player, card: g.player.hero }
+    );
+
+    expect(g.player.hero.data.attack).toBe(1);
+
+    await g.effects.execute(
+      [{ type: 'buff', target: 'hero', property: 'armor', amount: 3 }],
+      { game: g, player: g.player, card: g.player.hero }
+    );
+
+    expect(g.player.hero.data.attack).toBe(2);
+
+    g.turns.bus.emit('phase:end', { phase: 'End' });
+    expect(g.player.hero.data.attack).toBe(0);
+  });
 });
 

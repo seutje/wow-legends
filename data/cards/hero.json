@@ -327,6 +327,12 @@
     "id": "hero-garrosh-hellscream-warmonger",
     "name": "Garrosh Hellscream, Warmonger",
     "type": "hero",
+    "passive": [
+      {
+        "type": "heroAttackOnArmorGain",
+        "amount": 1
+      }
+    ],
     "effects": [
       {
         "type": "buff",
