@@ -161,23 +161,22 @@ function isTouchPointer(ev) {
 }
 
 function attachCardInteractions(node, card, clickCard) {
-  if (!node || typeof clickCard !== 'function') return;
+  if (!node) return;
   let state = cardInteractionState.get(node);
   if (state) {
     state.card = card;
-    state.clickCard = clickCard;
+    state.clickCard = (typeof clickCard === 'function') ? clickCard : null;
     return;
   }
   state = {
     card,
-    clickCard,
+    clickCard: (typeof clickCard === 'function') ? clickCard : null,
     lastTap: 0,
   };
   const getNow = () => (typeof performance !== 'undefined' && typeof performance.now === 'function'
     ? performance.now()
     : Date.now());
   const handlePointerUp = async (ev) => {
-    if (!state.clickCard) return;
     if (isTouchPointer(ev)) {
       ev.preventDefault();
       ev.stopPropagation();
@@ -185,18 +184,19 @@ function attachCardInteractions(node, card, clickCard) {
       const isPreviewed = touchPreviewCardEl === node;
       const isFriendlyFieldAlly = state.card?.type === 'ally' && !!node.closest('.p-field');
       const isPlayerHandCard = !!node.closest('.p-hand');
+      const canActivate = typeof state.clickCard === 'function';
       state.lastTap = now;
       if (isPreviewed) {
         clearTouchPreview(node);
         state.lastTap = 0;
-        if (isFriendlyFieldAlly || isPlayerHandCard) await state.clickCard(state.card);
+        if (canActivate && (isFriendlyFieldAlly || isPlayerHandCard)) await state.clickCard(state.card);
         return;
       }
       setTouchPreview(node);
       return;
     }
     clearTouchPreview();
-    await state.clickCard(state.card);
+    if (typeof state.clickCard === 'function') await state.clickCard(state.card);
   };
   const handlePointerCancel = () => {
     state.lastTap = 0;
@@ -487,7 +487,7 @@ function zoneCards(title, cards, { clickCard, owner } = {}) {
     if (instanceId != null) cardEl.dataset.cardId = String(instanceId);
     if (c.id != null) cardEl.dataset.templateId = String(c.id);
     cardEl.dataset.key = key;
-    if (clickCard) attachCardInteractions(cardEl, c, clickCard);
+    attachCardInteractions(cardEl, c, clickCard);
     wrap.append(cardEl);
   }
   const sectionChildren = [];
@@ -922,6 +922,7 @@ export function renderPlay(container, game, {
       buildCardEl(e.hero),
       buildAiHandIndicator(e.hand)
     );
+    attachCardInteractions(aiHero.querySelector('.card-tooltip'), e.hero);
     const aiLog = logPane('Enemy Log', e.log); aiLog.classList.add('ai-log');
     const aiHand = buildAiHandZone(e.hand, { owner: e, debugOn: debugEnabled });
     const aiField = zoneCards(null, e.battlefield.cards, { owner: e }); aiField.classList.add('ai-field');
@@ -933,11 +934,10 @@ export function renderPlay(container, game, {
       el('div', { class: 'hero-mana' }, `${game.resources.pool(p)}/${game.resources.available(p)} Mana`),
       buildCardEl(p.hero)
     );
-    const heroEl = pHero.querySelector('.card-tooltip');
-    if (heroEl && !heroEl.dataset.clickAttached) {
-      heroEl.addEventListener('click', async () => { await game.attack(game.player, game.player.hero); onUpdate?.(); });
-      heroEl.dataset.clickAttached = '1';
-    }
+    attachCardInteractions(pHero.querySelector('.card-tooltip'), p.hero, async () => {
+      await game.attack(game.player, game.player.hero);
+      onUpdate?.();
+    });
     const pLog = logPane('Player Log', p.log); pLog.classList.add('p-log');
     const pField = zoneCards(null, p.battlefield.cards, { owner: p, clickCard: async (c)=>{ await game.attack(game.player, c); onUpdate?.(); } }); pField.classList.add('p-field');
     const pHand = zoneCards(null, p.hand.cards, { owner: p, clickCard: async (c)=>{ if (!await game.playFromHand(game.player, c)) { /* ignore */ } onUpdate?.(); } }); pHand.classList.add('p-hand');
@@ -1005,8 +1005,15 @@ export function renderPlay(container, game, {
   playerManaEl?.replaceChildren(`${game.resources.pool(p)}/${game.resources.available(p)} Mana`);
 
   // Update hero cards
-  updateCardEl(board.querySelector('.ai-hero .card-tooltip'), e.hero);
-  updateCardEl(board.querySelector('.p-hero .card-tooltip'), p.hero);
+  const aiHeroCard = board.querySelector('.ai-hero .card-tooltip');
+  updateCardEl(aiHeroCard, e.hero);
+  attachCardInteractions(aiHeroCard, e.hero);
+  const playerHeroCard = board.querySelector('.p-hero .card-tooltip');
+  updateCardEl(playerHeroCard, p.hero);
+  attachCardInteractions(playerHeroCard, p.hero, async () => {
+    await game.attack(game.player, game.player.hero);
+    onUpdate?.();
+  });
   const aiHandCountEl = board.querySelector('.ai-hero .ai-hand-count');
   aiHandCountEl?.replaceChildren(`${handSize(e.hand)} cards`);
 

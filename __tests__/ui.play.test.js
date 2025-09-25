@@ -515,6 +515,109 @@ describe('UI Play', () => {
     nowSpy.mockRestore();
   });
 
+  test('tapping an enemy ally previews it without triggering attacks', async () => {
+    if (typeof PointerEvent === 'undefined') {
+      global.PointerEvent = class extends Event {
+        constructor(type, params = {}) {
+          super(type, params);
+          this.pointerType = params.pointerType || '';
+        }
+      };
+    }
+
+    let nowValue = 0;
+    const nowSpy = jest.spyOn(performance, 'now').mockImplementation(() => nowValue);
+
+    const container = document.createElement('div');
+    const playerHero = new Hero({ name: 'Player', data: { health: 30 } });
+    const enemyHero = new Hero({ name: 'Enemy', data: { health: 30 } });
+    const enemyAlly = {
+      id: 'enemy-touch-test',
+      instanceId: 'enemy-touch-test#1',
+      name: 'Enemy Touch Tester',
+      text: 'Tap to preview!',
+      type: 'ally',
+      data: { attack: 4, health: 5 }
+    };
+    const attack = jest.fn().mockResolvedValue();
+    const game = {
+      player: { hero: playerHero, battlefield: { cards: [] }, hand: { cards: [], size: () => 0 }, log: [] },
+      opponent: { hero: enemyHero, battlefield: { cards: [enemyAlly] }, hand: { cards: [], size: () => 0 }, log: [] },
+      resources: { pool: () => 0, available: () => 0 },
+      draw: jest.fn(), attack, endTurn: jest.fn(), playFromHand: () => true,
+    };
+
+    renderPlay(container, game, { onUpdate: jest.fn() });
+
+    const enemyCardEl = container.querySelector('.ai-field .card-tooltip');
+    expect(enemyCardEl).toBeTruthy();
+
+    enemyCardEl.dispatchEvent(new PointerEvent('pointerup', { pointerType: 'touch', bubbles: true, cancelable: true }));
+    expect(enemyCardEl.dataset.touchPreview).toBe('1');
+
+    nowValue = 800;
+    enemyCardEl.dispatchEvent(new PointerEvent('pointerup', { pointerType: 'touch', bubbles: true, cancelable: true }));
+    await Promise.resolve();
+
+    expect(enemyCardEl.dataset.touchPreview).toBeUndefined();
+    expect(attack).not.toHaveBeenCalled();
+
+    nowSpy.mockRestore();
+  });
+
+  test('heroes support touch previews and clicks still trigger attacks', async () => {
+    if (typeof PointerEvent === 'undefined') {
+      global.PointerEvent = class extends Event {
+        constructor(type, params = {}) {
+          super(type, params);
+          this.pointerType = params.pointerType || '';
+        }
+      };
+    }
+
+    let nowValue = 0;
+    const nowSpy = jest.spyOn(performance, 'now').mockImplementation(() => nowValue);
+
+    const container = document.createElement('div');
+    const playerHero = new Hero({ name: 'Player', data: { health: 30 } });
+    const enemyHero = new Hero({ name: 'Enemy', data: { health: 30 } });
+    const attack = jest.fn().mockResolvedValue();
+    const game = {
+      player: { hero: playerHero, battlefield: { cards: [] }, hand: { cards: [], size: () => 0 }, log: [] },
+      opponent: { hero: enemyHero, battlefield: { cards: [] }, hand: { cards: [], size: () => 0 }, log: [] },
+      resources: { pool: () => 0, available: () => 0 },
+      draw: jest.fn(), attack, endTurn: jest.fn(), playFromHand: () => true,
+    };
+
+    renderPlay(container, game, { onUpdate: jest.fn() });
+
+    const enemyHeroEl = container.querySelector('.ai-hero .card-tooltip');
+    const playerHeroEl = container.querySelector('.p-hero .card-tooltip');
+    expect(enemyHeroEl).toBeTruthy();
+    expect(playerHeroEl).toBeTruthy();
+
+    enemyHeroEl.dispatchEvent(new PointerEvent('pointerup', { pointerType: 'touch', bubbles: true, cancelable: true }));
+    expect(enemyHeroEl.dataset.touchPreview).toBe('1');
+    nowValue = 600;
+    enemyHeroEl.dispatchEvent(new PointerEvent('pointerup', { pointerType: 'touch', bubbles: true, cancelable: true }));
+    expect(enemyHeroEl.dataset.touchPreview).toBeUndefined();
+    expect(attack).not.toHaveBeenCalled();
+
+    playerHeroEl.dispatchEvent(new PointerEvent('pointerup', { pointerType: 'touch', bubbles: true, cancelable: true }));
+    expect(playerHeroEl.dataset.touchPreview).toBe('1');
+    nowValue = 1000;
+    playerHeroEl.dispatchEvent(new PointerEvent('pointerup', { pointerType: 'touch', bubbles: true, cancelable: true }));
+    await Promise.resolve();
+    expect(playerHeroEl.dataset.touchPreview).toBeUndefined();
+    expect(attack).not.toHaveBeenCalled();
+
+    playerHeroEl.dispatchEvent(new PointerEvent('pointerup', { pointerType: 'mouse', bubbles: true, cancelable: true }));
+    await Promise.resolve();
+    expect(attack).toHaveBeenCalledWith(game.player, game.player.hero);
+
+    nowSpy.mockRestore();
+  });
+
   test('single tap previews a hand card and second tap plays it', async () => {
     if (typeof PointerEvent === 'undefined') {
       global.PointerEvent = class extends Event {
