@@ -348,7 +348,7 @@ main {
   }
 }
 
-@media (hover: none) and (pointer: coarse) {
+@media (hover: none) {
   body {
     overflow-x: hidden;
   }
