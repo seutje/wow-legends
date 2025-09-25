@@ -45,6 +45,14 @@
         "amount": 1
       }
     ],
+    "passive": [
+      {
+        "type": "keywordCostReduction",
+        "keyword": "Totem",
+        "amount": 1,
+        "minimum": 0
+      }
+    ],
     "keywords": [
       "Totems cost (1) less."
     ],
