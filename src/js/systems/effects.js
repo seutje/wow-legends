@@ -922,17 +922,16 @@ export class EffectSystem {
 
     const commitPending = async (fallbackAmount = null) => {
       const queue = heroData[queueKey];
-      let amount = null;
+      let amount = 0;
       while (queue.length > 0) {
         const candidate = queue.shift();
         const parsed = Number(candidate);
         if (Number.isFinite(parsed) && parsed > 0) {
-          amount = parsed;
-          break;
+          amount += parsed;
         }
       }
 
-      if ((!Number.isFinite(amount) || amount <= 0) && Number.isFinite(fallbackAmount) && fallbackAmount > 0) {
+      if (amount <= 0 && Number.isFinite(fallbackAmount) && fallbackAmount > 0) {
         amount = fallbackAmount;
       }
 
