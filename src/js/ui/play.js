@@ -17,7 +17,7 @@ function el(tag, attrs = {}, ...children) {
 
 // Build a static card element that uses the same visual as tooltips
 function buildCardEl(card, { owner } = {}) {
-  const tooltipCard = card.summonedBy || card;
+  const tooltipCard = card.tokenSource || card.summonedBy || card;
   const wrap = el('div', { class: 'card-tooltip' });
   // Track card type for removal animations, etc.
   wrap.dataset.type = card.type;
@@ -521,7 +521,7 @@ function logPane(title, entries = []) {
 
 function updateCardEl(cardEl, card, { owner } = {}) {
   if (!cardEl) return;
-  const tooltipCard = card.summonedBy || card;
+  const tooltipCard = card.tokenSource || card.summonedBy || card;
   const instanceId = card.instanceId || card.id;
   if (instanceId != null) cardEl.dataset.cardId = String(instanceId);
   if (card.id != null) cardEl.dataset.templateId = String(card.id);

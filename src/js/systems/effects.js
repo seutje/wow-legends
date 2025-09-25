@@ -37,6 +37,12 @@ function deriveSummonedCardId(unit, sourceCard) {
   return null;
 }
 
+function normalizeCardText(value) {
+  if (typeof value === 'string') return value;
+  if (value == null) return '';
+  return String(value);
+}
+
 export class EffectSystem {
   constructor(game) {
     this.game = game;
@@ -496,10 +502,13 @@ export class EffectSystem {
         type: 'ally', // Summoned units are typically allies
         data: { attack: unit.attack, health: unit.health },
         keywords: Array.isArray(unit.keywords) ? unit.keywords.slice() : unit.keywords,
-        summonedBy: card
+        summonedBy: card,
+        text: normalizeCardText(unit.text),
+        tokenSource: unit.tokenSource || null,
       };
       const canonicalId = deriveSummonedCardId(unit, card);
       if (canonicalId) cardProps.id = canonicalId;
+      if (Number.isFinite(unit.cost)) cardProps.cost = unit.cost;
 
       const newUnit = new Card(cardProps);
       if (newUnit.keywords?.includes('Divine Shield')) {
@@ -844,12 +853,16 @@ export class EffectSystem {
         if (sourceCard) {
           const atk = Number(sourceCard?.data?.attack);
           const hp = Number(sourceCard?.data?.health);
+          const cost = Number(sourceCard?.cost);
           template = {
             id: sourceCard.id,
             name: sourceCard.name,
             attack: Number.isFinite(atk) ? atk : 0,
             health: Number.isFinite(hp) ? hp : 0,
             keywords: ensureKeywords(sourceCard.keywords),
+            text: normalizeCardText(sourceCard.text),
+            cost: Number.isFinite(cost) ? cost : null,
+            tokenSource: sourceCard,
           };
         }
       }
@@ -857,12 +870,16 @@ export class EffectSystem {
       if (!template && effect?.unit && typeof effect.unit === 'object') {
         const atk = Number(effect.unit.attack ?? effect.unit.data?.attack);
         const hp = Number(effect.unit.health ?? effect.unit.data?.health);
+        const cost = Number(effect.unit.cost ?? effect.unit.data?.cost);
         template = {
           id: typeof effect.unit.id === 'string' ? effect.unit.id : null,
           name: effect.unit.name ?? null,
           attack: Number.isFinite(atk) ? atk : 0,
           health: Number.isFinite(hp) ? hp : 0,
           keywords: ensureKeywords(effect.unit.keywords),
+          text: normalizeCardText(effect.unit.text),
+          cost: Number.isFinite(cost) ? cost : null,
+          tokenSource: effect.unit.tokenSource || null,
         };
       }
 
