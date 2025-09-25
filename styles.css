@@ -608,6 +608,8 @@ ul.zone-list li {
   aspect-ratio: 1024 / 1536;
   text-align: left;
   touch-action: manipulation;
+  border-radius: 25px;
+  overflow: hidden;
 }
 
 .card-tooltip img.card-frame,
