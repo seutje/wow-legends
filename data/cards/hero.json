@@ -220,6 +220,14 @@
     "id": "hero-rexxar-beastmaster",
     "name": "Rexxar, Beastmaster",
     "type": "hero",
+    "passive": [
+      {
+        "type": "keywordCostReduction",
+        "keyword": "Beast",
+        "amount": 1,
+        "minimum": 1
+      }
+    ],
     "effects": [
       {
         "type": "damage",
