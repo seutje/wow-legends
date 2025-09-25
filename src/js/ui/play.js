@@ -785,7 +785,6 @@ function renderSecretBadges(cardEl, card) {
   }
 }
 
-import { setDebugLogging } from '../utils/logger.js';
 import { loadSettings, rehydrateDeck } from '../utils/settings.js';
 
 import { saveDifficulty } from '../utils/settings.js';
@@ -834,14 +833,6 @@ export function renderPlay(container, game, {
       }
     }, ...diffOptions.map(opt => el('option', { value: opt, selected: currentDifficulty === opt }, opt.charAt(0).toUpperCase() + opt.slice(1))));
     diffSelect.value = currentDifficulty;
-
-    const debugChk = el('input', { type: 'checkbox', class: 'chk-debug', onchange: (e) => {
-      const on = !!e.target.checked;
-      if (game.state) game.state.debug = on;
-      setDebugLogging(on);
-      onUpdate?.();
-    } });
-    debugChk.checked = !!(game.state?.debug);
 
     let fullscreenBtn;
     fullscreenBtn = el('button', {
@@ -903,8 +894,7 @@ export function renderPlay(container, game, {
         }
       } }, 'Autoplay'),
       el('label', { class: 'lbl-difficulty' }, 'Difficulty: ', diffSelect),
-      fullscreenBtn,
-      el('label', { class: 'lbl-debug' }, debugChk, ' Debug logs')
+      fullscreenBtn
     );
     headerEl.append(controls);
   }
@@ -1044,15 +1034,6 @@ export function renderPlay(container, game, {
   const combatLog = container.querySelector('.combat-log');
   syncLogPane(combatLog?.querySelector('.ai-log'), e.log);
   syncLogPane(combatLog?.querySelector('.p-log'), p.log);
-
-  // Keep debug checkbox in sync
-  const debugEl = controls.querySelector('input.chk-debug');
-  if (debugEl) {
-    const on = !!(game.state?.debug);
-    if (debugEl.checked !== on) debugEl.checked = on;
-    // Ensure console state matches checkbox
-    if (typeof window !== 'undefined') setDebugLogging(on);
-  }
 
   // AI Thinking overlay with progress bar
   const thinking = !!(game.state?.aiThinking);
