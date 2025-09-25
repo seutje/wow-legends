@@ -335,9 +335,7 @@ main {
     top: clamp(16px, 10vh, 80px);
     bottom: clamp(16px, 14vh, 96px);
   }
-}
 
-@media (max-width: 640px) {
   .combat-log {
     --toggle-width: 40px;
     width: min(360px, 92vw);
