@@ -29,7 +29,7 @@ function setup() {
   sidebar.append(deckBtn, useDeckBtn, deckRoot);
   main.append(root, sidebar);
   document.body.append(main);
-  const deckState = { hero: null, cards: [] };
+  const deckState = { hero: null, cards: [], selectedOpponentHeroId: null };
   const toggleGameVisible = show => {
     board.style.display = show ? 'block' : 'none';
     controls.style.display = show ? 'block' : 'none';
@@ -39,8 +39,18 @@ function setup() {
   function updateUseDeckBtn() {
     useDeckBtn.disabled = !(deckState.hero && deckState.cards.length === 60);
   }
-  const rerenderDeck = () => {
-    renderDeckBuilder(deckRoot, { state: deckState, allCards: game.allCards, onChange: rerenderDeck });
+  let rerenderDeck = () => {};
+  const onSelectOpponent = (heroId) => {
+    deckState.selectedOpponentHeroId = heroId;
+    rerenderDeck();
+  };
+  rerenderDeck = () => {
+    renderDeckBuilder(deckRoot, {
+      state: deckState,
+      allCards: game.allCards,
+      onChange: rerenderDeck,
+      onSelectOpponent,
+    });
     updateUseDeckBtn();
   };
   deckBtn.addEventListener('click', () => {
@@ -53,7 +63,9 @@ function setup() {
     if (useDeckBtn.disabled) return;
     deckRoot.style.display = 'none';
     toggleGameVisible(true);
-    await game.reset({ hero: deckState.hero, cards: deckState.cards });
+    const payload = { hero: deckState.hero, cards: deckState.cards };
+    if (deckState.selectedOpponentHeroId) payload.opponentHeroId = deckState.selectedOpponentHeroId;
+    await game.reset(payload);
   };
   useDeckBtn.addEventListener('click', useDeckHandler);
   return { game, board, controls, deckRoot, deckBtn, useDeckBtn, deckState, useDeckHandler, main, root };
@@ -77,4 +89,19 @@ test('use deck button enables after building deck and starts game', async () => 
   expect(root.style.display).toBe('block');
   expect(main.style.gridTemplateColumns).toBe('3fr 1fr');
   expect(game.reset).toHaveBeenCalledWith({ hero: deckState.hero, cards: deckState.cards });
+});
+
+test('use deck button passes opponent selection to game reset', async () => {
+  const { game, deckRoot, deckBtn, useDeckHandler, deckState } = setup();
+  deckBtn.dispatchEvent(new window.Event('click'));
+  const tips = deckRoot.querySelectorAll('.card-tooltip');
+  tips[0].dispatchEvent(new window.Event('click'));
+  for (let i = 0; i < 60; i++) {
+    tips[1].dispatchEvent(new window.Event('click'));
+  }
+  const opponentSelect = deckRoot.querySelector('select[data-role="opponent-deck-select"]');
+  opponentSelect.value = 'h1';
+  opponentSelect.dispatchEvent(new window.Event('change'));
+  await useDeckHandler();
+  expect(game.reset).toHaveBeenCalledWith({ hero: deckState.hero, cards: deckState.cards, opponentHeroId: 'h1' });
 });

@@ -1,7 +1,14 @@
 import { cardTooltip } from './cardTooltip.js';
 import { filterCards } from '../utils/fuzzy.js';
 
-export function renderDeckBuilder(container, { state, allCards, onChange, prebuiltDecks = [], onSelectPrebuilt = null }) {
+export function renderDeckBuilder(container, {
+  state,
+  allCards,
+  onChange,
+  prebuiltDecks = [],
+  onSelectPrebuilt = null,
+  onSelectOpponent = null,
+}) {
   const summarizeDeck = () => {
     const heroName = state.hero ? state.hero.name : 'None';
     const base = `Hero: ${heroName} | Cards: ${state.cards.length}/60`;
@@ -21,11 +28,23 @@ export function renderDeckBuilder(container, { state, allCards, onChange, prebui
   };
   // If already initialized, only update the dynamic parts (hero/count and deck list)
   if (container.__deckBuilder) {
-    const { countEl, listEl, prebuiltSelectEl, updatePrebuiltOptions } = container.__deckBuilder;
+    const {
+      countEl,
+      listEl,
+      prebuiltSelectEl,
+      updatePrebuiltOptions,
+      opponentSelectEl,
+      updateOpponentOptions,
+    } = container.__deckBuilder;
     if (typeof updatePrebuiltOptions === 'function') updatePrebuiltOptions(prebuiltDecks);
     if (prebuiltSelectEl) {
       const desired = state.selectedPrebuiltDeck || '';
       if (prebuiltSelectEl.value !== desired) prebuiltSelectEl.value = desired;
+    }
+    if (typeof updateOpponentOptions === 'function') updateOpponentOptions(allCards);
+    if (opponentSelectEl) {
+      const desiredOpponent = state.selectedOpponentHeroId || '';
+      if (opponentSelectEl.value !== desiredOpponent) opponentSelectEl.value = desiredOpponent;
     }
     countEl.textContent = summarizeDeck();
     // Rebuild list contents (cheap) without touching the card pool DOM
@@ -57,6 +76,7 @@ export function renderDeckBuilder(container, { state, allCards, onChange, prebui
   const prebuiltLabel = document.createElement('label');
   prebuiltLabel.textContent = 'Prefab deck: ';
   const prebuiltSelect = document.createElement('select');
+  prebuiltSelect.dataset.role = 'prebuilt-deck-select';
   const updatePrebuiltOptions = (decks = []) => {
     const safeDecks = Array.isArray(decks) ? decks : [];
     const descriptor = safeDecks.map((deck) => [deck?.name ? String(deck.name) : '', deck?.hero?.name ? String(deck.hero.name) : '']);
@@ -95,6 +115,50 @@ export function renderDeckBuilder(container, { state, allCards, onChange, prebui
 
   updatePrebuiltOptions(prebuiltDecks);
   prebuiltSelect.value = state.selectedPrebuiltDeck || '';
+
+  const opponentWrap = document.createElement('div');
+  const opponentLabel = document.createElement('label');
+  opponentLabel.textContent = 'Opponent deck: ';
+  const opponentSelect = document.createElement('select');
+  opponentSelect.dataset.role = 'opponent-deck-select';
+  const updateOpponentOptions = (cards = []) => {
+    const heroes = Array.isArray(cards) ? cards.filter((card) => card?.type === 'hero') : [];
+    const sortedHeroes = heroes.slice().sort((a, b) => {
+      const aLabel = a?.name ? String(a.name) : String(a?.id ?? '');
+      const bLabel = b?.name ? String(b.name) : String(b?.id ?? '');
+      return aLabel.localeCompare(bLabel, undefined, { sensitivity: 'base', numeric: true });
+    });
+    const descriptor = sortedHeroes.map((hero) => [hero?.id ? String(hero.id) : '', hero?.name ? String(hero.name) : '']);
+    const key = JSON.stringify(descriptor);
+    if (opponentSelect.__optionsKey === key) return;
+    opponentSelect.innerHTML = '';
+    const randomOption = document.createElement('option');
+    randomOption.value = '';
+    randomOption.textContent = 'Random';
+    opponentSelect.appendChild(randomOption);
+    for (const hero of sortedHeroes) {
+      const id = hero?.id ? String(hero.id) : '';
+      if (!id) continue;
+      const option = document.createElement('option');
+      option.value = id;
+      option.textContent = hero?.name ? String(hero.name) : id;
+      opponentSelect.appendChild(option);
+    }
+    opponentSelect.__optionsKey = key;
+  };
+  opponentLabel.appendChild(opponentSelect);
+  opponentWrap.appendChild(opponentLabel);
+  container.appendChild(opponentWrap);
+
+  updateOpponentOptions(allCards);
+  opponentSelect.value = state.selectedOpponentHeroId || '';
+
+  opponentSelect.addEventListener('change', (e) => {
+    const value = e.target.value || '';
+    const normalized = value || null;
+    if ((state.selectedOpponentHeroId || null) === normalized) return;
+    onSelectOpponent?.(normalized);
+  });
 
   const count = document.createElement('div');
   count.textContent = summarizeDeck();
@@ -172,5 +236,7 @@ export function renderDeckBuilder(container, { state, allCards, onChange, prebui
     searchEl: search,
     prebuiltSelectEl: prebuiltSelect,
     updatePrebuiltOptions,
+    opponentSelectEl: opponentSelect,
+    updateOpponentOptions,
   };
 }
