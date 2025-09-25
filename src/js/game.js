@@ -1964,20 +1964,17 @@ export default class Game {
       if (custom) return custom;
     }
     const { default: MCTS_AI } = await import('./systems/ai-mcts.js');
+    const HARD_AI_DEFAULTS = { iterations: 10000, rolloutDepth: 20 };
     const config = {
       resourceSystem: this.resources,
       combatSystem: this.combat,
       game: this,
     };
-    if (diff === 'hard') Object.assign(config, { iterations: 10000, rolloutDepth: 20 });
+    if (diff === 'hard' || diff === 'insane') Object.assign(config, HARD_AI_DEFAULTS);
     if (diff === 'insane') {
       const { NeuralPolicyValueModel } = await import('./systems/ai-nn.js');
       const model = await this._ensureNNModelLoading();
-      Object.assign(config, {
-        iterations: 10000,
-        rolloutDepth: 20,
-        policyValueModel: new NeuralPolicyValueModel({ model }),
-      });
+      config.policyValueModel = new NeuralPolicyValueModel({ model });
     }
     return new MCTS_AI(config);
   }
