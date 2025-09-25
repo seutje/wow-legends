@@ -1,10 +1,11 @@
 import { invariant } from '../utils/assert.js';
 
 export class ResourceSystem {
-  constructor(turns) {
+  constructor(turns, bus = null) {
     this.turns = turns;
     this._pool = new WeakMap(); // player -> number
     this._overloadNext = new WeakMap(); // player -> number
+    this._bus = bus || null;
   }
 
   startTurn(player) {
@@ -30,6 +31,11 @@ export class ResourceSystem {
     const p = this.pool(player);
     if (p < cost) return false;
     this._pool.set(player, p - cost);
+    if (this._bus && cost > 0) {
+      try {
+        this._bus.emit('resources:spent', { player, amount: cost, resource: 'mana' });
+      } catch {}
+    }
     return true;
   }
 
@@ -45,6 +51,11 @@ export class ResourceSystem {
   refund(player, amount) {
     const p = this.pool(player);
     this._pool.set(player, p + amount);
+    if (this._bus && amount > 0) {
+      try {
+        this._bus.emit('resources:refunded', { player, amount, resource: 'mana' });
+      } catch {}
+    }
   }
 
   pendingOverload(player) {

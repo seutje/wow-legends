@@ -99,9 +99,9 @@ export default class Game {
 
     // Systems
     this.turns = new TurnSystem();
-    this.resources = new ResourceSystem(this.turns);
     // Create the event bus before systems that depend on it
     this.bus = new EventBus();
+    this.resources = new ResourceSystem(this.turns, this.bus);
     this.combat = new CombatSystem(this.bus);
     this.effects = new EffectSystem(this);
     const rawSeed = opts?.seed;
@@ -754,6 +754,7 @@ export default class Game {
       throw err;
     }
     hero.powerUsed = true;
+    try { this.bus.emit('heroPowerUsed', { player, hero, cost }); } catch {}
     if (Array.isArray(player?.log)) {
       if ((!Array.isArray(logTargets) || logTargets.length === 0) && loggedTargets.size > 0) {
         logTargets = Array.from(loggedTargets);
@@ -1786,7 +1787,7 @@ export default class Game {
       this.combat.clear();
       this.combat.setDefenderHero(null);
     }
-    this.resources = new ResourceSystem(this.turns);
+    this.resources = new ResourceSystem(this.turns, this.bus);
     this.player = new Player({ name: 'You' });
     this.opponent = new Player({ name: 'AI' });
     this._pendingTurnIncrement = false;
