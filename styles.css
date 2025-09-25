@@ -147,7 +147,18 @@ main {
   transform-origin: center center;
 }
 
-.p-field .card-tooltip[data-touch-preview='1'] {
+.ai-field .card-tooltip,
+.slot.ai-hero .card-tooltip,
+.slot.p-hero .card-tooltip {
+  transition: transform 0.3s ease, filter 0.3s ease, z-index 0.3s ease;
+  will-change: transform;
+  transform-origin: center center;
+}
+
+.ai-field .card-tooltip[data-touch-preview='1'],
+.p-field .card-tooltip[data-touch-preview='1'],
+.slot.ai-hero .card-tooltip[data-touch-preview='1'],
+.slot.p-hero .card-tooltip[data-touch-preview='1'] {
   transform: translate3d(var(--touch-translate-x, 0), var(--touch-translate-y, 0), 0) scale(1.5);
   z-index: 1500;
   filter: drop-shadow(0 30px 60px rgba(0, 0, 0, 0.75));
