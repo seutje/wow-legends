@@ -243,6 +243,9 @@ export class EffectSystem {
         case 'keywordCostReduction':
           this.keywordCostReduction(effect, context);
           break;
+        case 'firstKeywordCostReduction':
+          this.firstKeywordCostReduction(effect, context);
+          break;
         case 'chooseOne':
           await this.handleChooseOne(effect, context);
           break;
@@ -792,6 +795,35 @@ export class EffectSystem {
     track(game.turns.bus.on('turn:start', ({ player: turnPlayer }) => {
       if (turnPlayer === player) update();
     }));
+  }
+
+  firstKeywordCostReduction(effect, context) {
+    const { player, game } = context || {};
+    const hero = player?.hero;
+    if (!hero) return;
+
+    const keywordRaw = effect?.keyword;
+    if (typeof keywordRaw !== 'string') return;
+
+    const normalizedKeyword = keywordRaw.trim().toLowerCase();
+    if (!normalizedKeyword) return;
+
+    const amountRaw = Number(effect?.amount ?? 0);
+    const minimumRaw = Number(effect?.minimum ?? 0);
+    const amount = Number.isFinite(amountRaw) && amountRaw > 0 ? amountRaw : 0;
+    const minimum = Number.isFinite(minimumRaw) && minimumRaw > 0 ? minimumRaw : 0;
+
+    const heroData = hero.data || (hero.data = {});
+    const state = heroData.firstKeywordCostReduction ||= {};
+    const entry = state[normalizedKeyword] ||= {};
+
+    entry.amount = amount;
+    entry.minimum = minimum;
+    entry.turnPrepared = game?.turns?.turn ?? null;
+    entry.ready = true;
+    entry.usedTurn = null;
+    entry.lastCardInstanceId = null;
+    entry.lastReduction = 0;
   }
 
   keywordCostReduction(effect, context) {
