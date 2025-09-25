@@ -330,7 +330,7 @@ main {
   max-height: 44%;
 }
 
-@media (max-width: 900px) {
+@media (pointer: coarse) {
   .combat-log {
     top: clamp(16px, 10vh, 80px);
     bottom: clamp(16px, 14vh, 96px);
