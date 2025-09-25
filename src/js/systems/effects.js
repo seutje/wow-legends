@@ -207,6 +207,9 @@ export class EffectSystem {
         case 'spellDamageNextSpell':
           this.spellDamageNextSpell(effect, context);
           break;
+        case 'spellDamageWhileControl':
+          this.spellDamageWhileControl(effect, context);
+          break;
         case 'damageArmor':
           await this.dealDamage({ target: effect.target, amount: context.player.hero.data.armor }, context);
           break;
@@ -700,6 +703,92 @@ export class EffectSystem {
     }));
 
     // Ensure existing allies are buffed once equipped (cardPlayed event will trigger post-equip).
+  }
+
+  spellDamageWhileControl(effect, context) {
+    const { game, player, card } = context;
+    if (!game || !player || !player.hero) return;
+
+    const hero = player.hero;
+    const heroData = hero.data || (hero.data = {});
+    const baseAmount = Number.isFinite(effect?.amount) ? effect.amount : 0;
+    if (baseAmount === 0) return;
+
+    const idList = [];
+    if (Array.isArray(effect?.cardIds)) idList.push(...effect.cardIds);
+    if (Array.isArray(effect?.cards)) idList.push(...effect.cards);
+    if (Array.isArray(effect?.identifiers)) idList.push(...effect.identifiers);
+
+    const nameList = Array.isArray(effect?.names) ? effect.names : [];
+    const nameSet = new Set(
+      nameList
+        .filter((n) => typeof n === 'string' && n.trim().length)
+        .map((n) => n.trim().toLowerCase())
+    );
+
+    if (idList.length === 0 && nameSet.size === 0) return;
+
+    const keyBase = `spellDamageWhileControl:${card?.id || card?.name || 'unknown'}`;
+    const valueKey = `${keyBase}:value`;
+    const registeredKey = `${keyBase}:registered`;
+
+    const matchesTarget = (unit) => {
+      if (!unit || unit.type !== 'ally') return false;
+      for (const identifier of idList) {
+        if (matchesCardIdentifier(unit, identifier)) return true;
+      }
+      if (nameSet.size > 0 && typeof unit?.name === 'string') {
+        const normalized = unit.name.trim().toLowerCase();
+        if (nameSet.has(normalized)) return true;
+      }
+      return false;
+    };
+
+    const applyAmount = (active) => {
+      const next = active ? baseAmount : 0;
+      const prev = typeof heroData[valueKey] === 'number' ? heroData[valueKey] : 0;
+      if (prev === next) return;
+      const current = typeof heroData.spellDamage === 'number' ? heroData.spellDamage : 0;
+      let updated = current + (next - prev);
+      if (!Number.isFinite(updated)) updated = 0;
+      if (updated < 0) updated = 0;
+      heroData.spellDamage = updated;
+      if (next === 0) delete heroData[valueKey];
+      else heroData[valueKey] = next;
+    };
+
+    const update = () => {
+      const allies = Array.isArray(player?.battlefield?.cards) ? player.battlefield.cards : [];
+      const active = allies.some(matchesTarget);
+      applyAmount(active);
+    };
+
+    update();
+
+    if (heroData[registeredKey]) return;
+    heroData[registeredKey] = true;
+
+    const track = (off) => this._trackCleanup(off);
+
+    track(game.bus.on('cardPlayed', ({ player: evtPlayer }) => {
+      if (evtPlayer === player) update();
+    }));
+
+    track(game.bus.on('unitSummoned', ({ player: evtPlayer }) => {
+      if (evtPlayer === player) update();
+    }));
+
+    track(game.bus.on('allyDefeated', ({ card: dead }) => {
+      if (matchesTarget(dead)) update();
+    }));
+
+    track(game.bus.on('cardReturned', ({ card: returned }) => {
+      if (matchesTarget(returned)) update();
+    }));
+
+    track(game.turns.bus.on('turn:start', ({ player: turnPlayer }) => {
+      if (turnPlayer === player) update();
+    }));
   }
 
   async healCharacter(effect, context) {
