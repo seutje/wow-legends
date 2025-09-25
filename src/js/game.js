@@ -97,6 +97,7 @@ export default class Game {
     this._lastTs = 0;
     // Sentinel for UI prompt cancellation
     this.CANCEL = Symbol('CANCEL');
+    this._firstHealCostReductionTokenSeq = 0;
 
     // Systems
     this.turns = new TurnSystem();
@@ -882,7 +883,8 @@ export default class Game {
     const reduction = Math.min(amount, normalizedBaseCost);
     if (reduction <= 0) return { cost: normalizedBaseCost };
 
-    const token = Symbol('firstHealCostReduction');
+    this._firstHealCostReductionTokenSeq += 1;
+    const token = this._firstHealCostReductionTokenSeq;
 
     const consume = () => {
       if (state.ready === false) return () => {};
