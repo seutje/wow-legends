@@ -135,7 +135,10 @@ setStatus('Initialized');
 const board = document.createElement('div');
 root.appendChild(board);
 
-async function startNewGame() {
+async function startNewGame(seed) {
+  if (seed != null && typeof game?.rng?.seed === 'function') {
+    game.rng.seed(seed);
+  }
   const deck = deriveDeckFromGame(game);
   clearSavedGameState();
   const hasDeck = deck?.hero && Array.isArray(deck.cards) && deck.cards.length === 60;
