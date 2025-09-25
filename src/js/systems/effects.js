@@ -1664,7 +1664,6 @@ export class EffectSystem {
       }
       state.initialized = false;
       state.drawnThisTurn = false;
-      state.cleanup = null;
     };
 
     const offDeath = this._trackCleanup(game.bus.on('allyDefeated', ({ card: dead }) => {
@@ -1676,8 +1675,6 @@ export class EffectSystem {
       if (returned === card) remove();
     }));
     if (offReturn) cleanupFns.push(offReturn);
-
-    state.cleanup = remove;
   }
 
   healAtEndOfTurn(effect, context) {
