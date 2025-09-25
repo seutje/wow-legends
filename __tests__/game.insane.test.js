@@ -17,9 +17,9 @@ afterEach(() => {
   setActiveModel(null);
 });
 
-test('creating MCTS for hybrid difficulty injects neural policy model', async () => {
+test('creating MCTS for insane difficulty injects neural policy model', async () => {
   const game = new Game(null);
-  const ai = await game._createMctsAI('hybrid');
+  const ai = await game._createMctsAI('insane');
 
   expect(ai).toBeInstanceOf(MCTS_AI);
   expect(ai.iterations).toBe(10000);
@@ -30,7 +30,7 @@ test('creating MCTS for hybrid difficulty injects neural policy model', async ()
   expect(activeModel).toBe(ai.policyValueModel.model);
 });
 
-test('hybrid MCTS falls back to a playable action when policy suggests ending', async () => {
+test('insane MCTS falls back to a playable action when policy suggests ending', async () => {
   const turns = new TurnSystem();
   const resources = new ResourceSystem(turns);
   const combat = new CombatSystem();
@@ -67,4 +67,3 @@ test('hybrid MCTS falls back to a playable action when policy suggests ending', 
 
   searchSpy.mockRestore();
 });
-

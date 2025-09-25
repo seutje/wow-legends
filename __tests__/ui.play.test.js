@@ -89,7 +89,7 @@ describe('UI Play', () => {
     expect(buttons[0].textContent).toContain('New Game');
     expect(buttons[1].textContent).toContain('Deck Builder');
     const difficultySelect = controls.querySelector('select.select-difficulty');
-    expect(difficultySelect.value).toBe('nightmare');
+    expect(difficultySelect.value).toBe('insane');
 
     buttons[0].dispatchEvent(new Event('click'));
     await Promise.resolve();
@@ -369,7 +369,7 @@ describe('UI Play', () => {
     expect(reset.mock.calls[0][0] == null).toBe(true);
   });
 
-  test('changing difficulty to hybrid preloads neural model and persists setting', () => {
+  test('changing difficulty to insane preloads neural model and persists setting', () => {
     localStorage.removeItem('wow-legends:settings');
     saveDifficulty('easy');
 
@@ -391,15 +391,15 @@ describe('UI Play', () => {
     const select = document.querySelector('header select.select-difficulty');
     expect(select).toBeTruthy();
     const options = Array.from(select.options).map(opt => opt.value);
-    expect(options).toContain('hybrid');
+    expect(options).toContain('insane');
 
-    select.value = 'hybrid';
+    select.value = 'insane';
     select.dispatchEvent(new Event('change', { bubbles: true }));
 
-    expect(game.state.difficulty).toBe('hybrid');
+    expect(game.state.difficulty).toBe('insane');
     expect(preload).toHaveBeenCalledTimes(1);
     const settings = loadSettings();
-    expect(settings.difficulty).toBe('hybrid');
+    expect(settings.difficulty).toBe('insane');
 
     saveDifficulty('easy');
     localStorage.removeItem('wow-legends:settings');

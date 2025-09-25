@@ -1,4 +1,5 @@
 import SaveSystem from '../systems/save.js';
+import { normalizeDifficulty } from './difficulty.js';
 
 const SETTINGS_KEY = 'settings';
 let _saveInstance = null;
@@ -14,10 +15,23 @@ export function loadSettings() {
   if (!raw) return {};
   try {
     const parsed = JSON.parse(raw);
-    const s = parsed?.settings || {};
+    const settings = parsed?.settings || {};
     const out = {};
-    if (typeof s.difficulty === 'string') out.difficulty = s.difficulty;
-    if (s.lastDeck && typeof s.lastDeck === 'object') out.lastDeck = s.lastDeck;
+    let migrated = false;
+    if (typeof settings.difficulty === 'string') {
+      const normalized = normalizeDifficulty(settings.difficulty);
+      out.difficulty = normalized;
+      if (normalized !== settings.difficulty) {
+        parsed.settings = { ...settings, difficulty: normalized };
+        migrated = true;
+      }
+    }
+    if (settings.lastDeck && typeof settings.lastDeck === 'object') {
+      out.lastDeck = settings.lastDeck;
+    }
+    if (migrated) {
+      save.storage.setItem(save.key(SETTINGS_KEY), JSON.stringify(parsed));
+    }
     return out;
   } catch {
     return {};
@@ -27,7 +41,8 @@ export function loadSettings() {
 export function saveDifficulty(difficulty) {
   const save = getSave();
   const cur = loadSettings();
-  const next = { settings: { ...cur, difficulty } };
+  const normalized = normalizeDifficulty(difficulty);
+  const next = { settings: { ...cur, difficulty: normalized } };
   save.storage.setItem(save.key(SETTINGS_KEY), JSON.stringify(next));
 }
 

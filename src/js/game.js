@@ -162,7 +162,7 @@ export default class Game {
         const opponentIsAI = typeof this.aiPlayers?.has === 'function' && this.aiPlayers.has('opponent');
         const aiHandlesDraw = opponentIsAI
           && player === this.opponent
-          && (difficulty === 'medium' || difficulty === 'hard' || difficulty === 'nightmare' || difficulty === 'hybrid');
+          && (difficulty === 'medium' || difficulty === 'hard' || difficulty === 'nightmare' || difficulty === 'insane');
         if (player && !aiHandlesDraw) this.draw(player, 1);
       });
 
@@ -185,7 +185,7 @@ export default class Game {
     this.player.logTurn = this.turns.turn;
     this.opponent.logTurn = this.turns.turn;
 
-    this._defaultDifficulty = this._isBrowserEnv ? 'nightmare' : 'easy';
+    this._defaultDifficulty = this._isBrowserEnv ? 'insane' : 'easy';
     this.state = { frame: 0, startedAt: 0, difficulty: this._defaultDifficulty, debug: false, matchOver: false, winner: null };
     this._nnModelPromise = null;
     this._aiDeckTemplates = null;
@@ -578,7 +578,7 @@ export default class Game {
       await this._executeOpponentTurn({ skipSetup: true, preserveTurn: true });
     }
 
-    if (this.state?.difficulty === 'hybrid' || this.state?.difficulty === 'nightmare') {
+    if (this.state?.difficulty === 'insane' || this.state?.difficulty === 'nightmare') {
       this._ensureNNModelLoading();
     }
   }
@@ -1709,7 +1709,7 @@ export default class Game {
       trackPending = false,
     } = options;
 
-    if (difficulty === 'nightmare' || difficulty === 'hybrid') {
+    if (difficulty === 'nightmare' || difficulty === 'insane') {
       try { this._ensureNNModelLoading(); } catch {}
     }
 
@@ -1728,7 +1728,7 @@ export default class Game {
         await loadModelFromDiskOrFetch();
         const ai = new NeuralAI({ game: this, resourceSystem: this.resources, combatSystem: this.combat });
         await ai.takeTurn(actor, defender, { skipStart });
-      } else if (difficulty === 'medium' || difficulty === 'hard' || difficulty === 'hybrid') {
+      } else if (difficulty === 'medium' || difficulty === 'hard' || difficulty === 'insane') {
         if (trackPending && this.state) {
           this.state.aiPending = { type: 'mcts', stage: 'queued' };
           pendingSet = true;
@@ -1842,7 +1842,7 @@ export default class Game {
     const pending = this.state?.aiPending;
     if (!pending || pending.type !== 'mcts') return false;
     const diff = this.state?.difficulty || this._defaultDifficulty;
-    if (!(diff === 'medium' || diff === 'hard' || diff === 'hybrid')) {
+    if (!(diff === 'medium' || diff === 'hard' || diff === 'insane')) {
       if (this.state) {
         this.state.aiPending = null;
         this.state.aiThinking = false;
@@ -1914,7 +1914,7 @@ export default class Game {
       game: this,
     };
     if (diff === 'hard') Object.assign(config, { iterations: 10000, rolloutDepth: 20 });
-    if (diff === 'hybrid') {
+    if (diff === 'insane') {
       const { NeuralPolicyValueModel } = await import('./systems/ai-nn.js');
       const model = await this._ensureNNModelLoading();
       Object.assign(config, {

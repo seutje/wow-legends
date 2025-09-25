@@ -34,6 +34,19 @@ describe('savegame utilities', () => {
     expect(clone.state.aiPending).toEqual({ type: 'mcts', stage: 'running' });
   });
 
+  test('restores legacy hybrid difficulty as insane', async () => {
+    const game = new Game(null);
+    await game.init();
+    const snapshot = captureGameState(game);
+    snapshot.state.difficulty = 'hybrid';
+
+    const clone = new Game(null);
+    await clone.init();
+    const ok = restoreCapturedState(clone, snapshot);
+    expect(ok).toBe(true);
+    expect(clone.state.difficulty).toBe('insane');
+  });
+
   test('secrets persist across save and restore', async () => {
     const game = new Game(null);
     await game.init();

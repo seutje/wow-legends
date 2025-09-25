@@ -798,7 +798,7 @@ export function renderPlay(container, game, {
 } = {}) {
   const p = game.player; const e = game.opponent;
   const debugEnabled = !!(game.state?.debug);
-  const defaultDifficulty = game?._defaultDifficulty || 'nightmare';
+  const defaultDifficulty = game?._defaultDifficulty || 'insane';
 
   ensureAttackAnimationSubscription(game);
 
@@ -818,14 +818,14 @@ export function renderPlay(container, game, {
   const initialBoardMount = !board;
 
   if (initialControlsMount) {
-    const diffOptions = ['easy', 'medium', 'hard', 'nightmare', 'hybrid'];
+    const diffOptions = ['easy', 'medium', 'hard', 'nightmare', 'insane'];
     const currentDifficulty = game.state?.difficulty || defaultDifficulty;
     const diffSelect = el('select', {
       class: 'select-difficulty',
       onchange: (e) => {
         const v = e.target.value;
         if (game.state) game.state.difficulty = v;
-        if (v === 'nightmare' || v === 'hybrid') {
+        if (v === 'nightmare' || v === 'insane') {
           game.preloadNeuralModel?.();
         }
         try { saveDifficulty(v); } catch {}

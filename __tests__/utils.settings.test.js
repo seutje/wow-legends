@@ -1,6 +1,16 @@
+/** @jest-environment jsdom */
+
 import { loadSettings, saveDifficulty, saveLastDeck, rehydrateDeck } from '../src/js/utils/settings.js';
 
+const SETTINGS_KEY = 'wow-legends:settings';
+
 describe('Settings persistence', () => {
+  beforeEach(() => {
+    if (typeof localStorage !== 'undefined' && typeof localStorage.clear === 'function') {
+      localStorage.clear();
+    }
+  });
+
   test('saves and loads difficulty', () => {
     // Start clean
     const before = loadSettings();
@@ -27,5 +37,15 @@ describe('Settings persistence', () => {
     expect(deck.cards).toHaveLength(60);
     expect(deck.cards[0].id).toBe(cards[0].id);
   });
-});
 
+  test('migrates legacy hybrid difficulty to insane', () => {
+    if (typeof localStorage === 'undefined') return;
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify({ settings: { difficulty: 'hybrid' } }));
+
+    const settings = loadSettings();
+    expect(settings.difficulty).toBe('insane');
+
+    const stored = JSON.parse(localStorage.getItem(SETTINGS_KEY));
+    expect(stored.settings.difficulty).toBe('insane');
+  });
+});

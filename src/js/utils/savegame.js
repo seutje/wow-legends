@@ -3,6 +3,7 @@ import Card from '../entities/card.js';
 import Hero from '../entities/hero.js';
 import Player from '../entities/player.js';
 import Equipment from '../entities/equipment.js';
+import { normalizeDifficulty } from './difficulty.js';
 
 const GAME_STATE_KEY = 'game-state';
 const VERSION = 1;
@@ -376,9 +377,10 @@ function restorePersistentEffects(game) {
 
 export function captureGameState(game) {
   if (!game?.player || !game?.opponent || !game?.turns || !game?.resources) return null;
-  const defaultDifficulty = game?._defaultDifficulty || 'nightmare';
+  const defaultDifficulty = game?._defaultDifficulty || 'insane';
+  const stateDifficulty = normalizeDifficulty(game.state?.difficulty ?? defaultDifficulty);
   const state = {
-    difficulty: game.state?.difficulty ?? defaultDifficulty,
+    difficulty: stateDifficulty,
     debug: !!game.state?.debug,
     aiThinking: !!game.state?.aiThinking,
     aiProgress: game.state?.aiProgress ?? 0,
@@ -418,6 +420,10 @@ export function restoreCapturedState(game, snapshot) {
 
   if (!game.state) game.state = {};
   Object.assign(game.state, snapshot.state || {});
+  if (typeof game.state.difficulty === 'string') {
+    const normalized = normalizeDifficulty(game.state.difficulty);
+    if (normalized !== game.state.difficulty) game.state.difficulty = normalized;
+  }
 
   if (snapshot.rng != null && typeof game.rng?.seed === 'function') {
     game.rng.seed(snapshot.rng);

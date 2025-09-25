@@ -103,7 +103,7 @@ try {
   const settings = loadSettings();
   if (settings?.difficulty) {
     game.state.difficulty = settings.difficulty;
-    if (settings.difficulty === 'nightmare' || settings.difficulty === 'hybrid') {
+    if (settings.difficulty === 'nightmare' || settings.difficulty === 'insane') {
       game.preloadNeuralModel?.();
     }
   }

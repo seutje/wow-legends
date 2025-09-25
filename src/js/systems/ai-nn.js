@@ -1,4 +1,4 @@
-// Neural network driven AI for "nightmare" difficulty and hybrid policy guidance.
+// Neural network driven AI for "nightmare" difficulty and insane difficulty policy guidance.
 // Uses a small MLP to score Q(s,a) and pick the best action.
 // Training uses population-based mutation in tools/train.mjs and stores model at data/models/best.json
 
