@@ -240,6 +240,9 @@ export class EffectSystem {
         case 'grantKeyword':
           await this.grantKeyword(effect, context);
           break;
+        case 'keywordCostReduction':
+          this.keywordCostReduction(effect, context);
+          break;
         case 'chooseOne':
           await this.handleChooseOne(effect, context);
           break;
@@ -789,6 +792,97 @@ export class EffectSystem {
     track(game.turns.bus.on('turn:start', ({ player: turnPlayer }) => {
       if (turnPlayer === player) update();
     }));
+  }
+
+  keywordCostReduction(effect, context) {
+    const { player } = context;
+    if (!player || !player.hand) return;
+
+    const keywordRaw = effect?.keyword ?? effect?.tribe ?? null;
+    if (!keywordRaw) return;
+
+    const normalizedKeyword = String(keywordRaw).trim().toLowerCase();
+    if (!normalizedKeyword) return;
+
+    const amount = Number(effect?.amount ?? 0);
+    if (!Number.isFinite(amount) || amount <= 0) return;
+
+    const minimum = Number(effect?.minimum ?? 0);
+    const minimumCost = Number.isFinite(minimum) ? Math.max(0, minimum) : 0;
+
+    const hero = player.hero;
+    if (!hero) return;
+
+    const heroData = hero.data || (hero.data = {});
+    const state = heroData.keywordCostReductionState ||= {};
+    const keyBase = `keywordCostReduction:${hero.id || hero.name || 'hero'}:${normalizedKeyword}`;
+    const modKey = `${keyBase}:${amount}:${minimumCost}`;
+
+    const hasKeyword = (cardEntity) => {
+      if (!cardEntity) return false;
+      const list = cardEntity.keywords;
+      if (!Array.isArray(list)) return false;
+      return list.some((kw) => typeof kw === 'string' && kw.toLowerCase() === normalizedKeyword);
+    };
+
+    const applyToCard = (cardEntity) => {
+      if (!cardEntity) return;
+      if (!cardEntity.data) cardEntity.data = {};
+      const mods = cardEntity.data.keywordCostReductions ||= {};
+      const previous = typeof mods[modKey] === 'number' ? mods[modKey] : 0;
+      if (previous > 0) {
+        const priorCost = Number(cardEntity.cost ?? 0);
+        const restored = Number.isFinite(priorCost) ? priorCost + previous : previous;
+        cardEntity.cost = restored;
+        delete mods[modKey];
+      }
+      if (!hasKeyword(cardEntity)) return;
+      let currentCost = Number(cardEntity.cost ?? 0);
+      if (!Number.isFinite(currentCost)) currentCost = 0;
+      if (currentCost <= minimumCost) return;
+      let reduction = amount;
+      if (currentCost - reduction < minimumCost) {
+        reduction = currentCost - minimumCost;
+      }
+      if (reduction <= 0) return;
+      cardEntity.cost = currentCost - reduction;
+      mods[modKey] = reduction;
+    };
+
+    const applyToHand = () => {
+      const cards = Array.isArray(player.hand?.cards) ? player.hand.cards : [];
+      for (const handCard of cards) {
+        applyToCard(handCard);
+      }
+    };
+
+    applyToHand();
+
+    const hand = player.hand;
+    if (!hand.__postAddHooked) {
+      const originalAdd = hand.add.bind(hand);
+      hand.__postAddHooks = new Set();
+      hand.add = function wrappedAdd(cardEntity) {
+        const added = originalAdd(cardEntity);
+        if (added && hand.__postAddHooks?.size) {
+          for (const hook of hand.__postAddHooks) {
+            try { hook(added); } catch {}
+          }
+        }
+        return added;
+      };
+      hand.__postAddHooked = true;
+    }
+
+    const hooks = hand.__postAddHooks;
+    if (!hooks) return;
+
+    const hookKey = `${modKey}:hook`;
+    if (state[hookKey]) return;
+
+    const hookFn = (cardEntity) => applyToCard(cardEntity);
+    hooks.add(hookFn);
+    state[hookKey] = hookFn;
   }
 
   async healCharacter(effect, context) {
