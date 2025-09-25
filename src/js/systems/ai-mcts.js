@@ -1109,8 +1109,10 @@ export class MCTS_AI {
       }
     }
 
-    if (!bestTarget && heroEligible && hero) return hero;
-    if (!bestTarget) return defenders[0] || null;
+    if (!bestTarget) {
+      if (heroEligible && hero) return hero;
+      return defenders.find(target => !matchesCardIdentifier(target, hero)) || null;
+    }
     return bestTarget;
   }
 
