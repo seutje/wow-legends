@@ -9,6 +9,7 @@ import Player from '../entities/player.js';
 import Hero from '../entities/hero.js';
 import { cardsMatch, getCardInstanceId, matchesCardIdentifier } from '../utils/card.js';
 import { replaceEquipment } from '../utils/equipment.js';
+import { removeOverflowAllies } from '../utils/allies.js';
 
 // Simple Monte Carlo Tree Search AI
 // - Explores sequences of actions (play card / use hero power / end)
@@ -1467,6 +1468,7 @@ export class MCTS_AI {
             const turnValue = state?.turn ?? (this.resources?.turns?.turn ?? 0);
             summoned.data.enteredTurn = turnValue;
             player.battlefield.cards.push(summoned);
+            removeOverflowAllies(player);
             // Track entry this turn to enforce sickness in combat filter
               if (this._currentState) {
                 const summonedKey = getCardInstanceId(summoned);
@@ -1603,16 +1605,16 @@ export class MCTS_AI {
         if (played.type === 'equipment') {
           replaceEquipment(p, played);
         }
-        if (played.type === 'ally' && !(played.keywords?.includes('Rush') || played.keywords?.includes('Charge'))) {
+        if (played.type === 'ally') {
+          removeOverflowAllies(p);
           played.data = played.data || {};
-          played.data.attacked = true;
-        }
-          if (played.type === 'ally') {
-            played.data = played.data || {};
-            played.data.enteredTurn = s.turn;
-            const playedKey = getCardInstanceId(played);
-            if (playedKey) s.enteredThisTurn.add(playedKey);
+          if (!(played.keywords?.includes('Rush') || played.keywords?.includes('Charge'))) {
+            played.data.attacked = true;
           }
+          played.data.enteredTurn = s.turn;
+          const playedKey = getCardInstanceId(played);
+          if (playedKey) s.enteredThisTurn.add(playedKey);
+        }
       } else {
         p.graveyard.cards.push(played);
       }
