@@ -134,17 +134,20 @@ function setTouchPreview(el) {
   }
   touchPreviewCardEl = el;
   el.dataset.touchPreview = '1';
-  if (typeof window !== 'undefined' && el.dataset?.type === 'ally' && el.closest('.p-field')) {
-    const rect = el.getBoundingClientRect();
-    const centerX = window.innerWidth / 2;
-    const centerY = window.innerHeight / 2;
-    const elCenterX = rect.left + rect.width / 2;
-    const elCenterY = rect.top + rect.height / 2;
-    const offsetX = Number.isFinite(elCenterX) ? (centerX - elCenterX) : 0;
-    const offsetY = Number.isFinite(elCenterY) ? (centerY - elCenterY) : 0;
-    if (el.style) {
-      el.style.setProperty('--touch-translate-x', `${offsetX}px`);
-      el.style.setProperty('--touch-translate-y', `${offsetY}px`);
+  if (typeof window !== 'undefined') {
+    const boardCardRoot = el.closest('.p-field, .ai-field, .slot.ai-hero, .slot.p-hero');
+    if (boardCardRoot) {
+      const rect = el.getBoundingClientRect();
+      const centerX = window.innerWidth / 2;
+      const centerY = window.innerHeight / 2;
+      const elCenterX = rect.left + rect.width / 2;
+      const elCenterY = rect.top + rect.height / 2;
+      const offsetX = Number.isFinite(elCenterX) ? (centerX - elCenterX) : 0;
+      const offsetY = Number.isFinite(elCenterY) ? (centerY - elCenterY) : 0;
+      if (el.style) {
+        el.style.setProperty('--touch-translate-x', `${offsetX}px`);
+        el.style.setProperty('--touch-translate-y', `${offsetY}px`);
+      }
     }
   }
   if (touchPreviewTimer) clearTimeout(touchPreviewTimer);
