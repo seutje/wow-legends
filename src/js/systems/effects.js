@@ -247,6 +247,9 @@ export class EffectSystem {
         case 'healAtEndOfTurn':
           this.healAtEndOfTurn(effect, context);
           break;
+        case 'gainArmorAtEndOfTurn':
+          this.gainArmorAtEndOfTurn(effect, context);
+          break;
         case 'playRandomConsumableFromLibrary':
           await this.playRandomConsumableFromLibrary(effect, context);
           break;
@@ -1767,6 +1770,37 @@ export class EffectSystem {
     const offReturn = this._trackCleanup(game.bus.on('cardReturned', ({ card: returned }) => {
       if (returned === card) remove();
     }));
+  }
+
+  gainArmorAtEndOfTurn(effect, context) {
+    const { game, player, card } = context || {};
+    if (!game || !player || !card) return;
+
+    const hero = player.hero;
+    if (!hero || hero !== card) return;
+
+    const amountRaw = Number(effect?.amount ?? 0);
+    const amount = Number.isFinite(amountRaw) ? Math.max(0, Math.floor(amountRaw)) : 0;
+    if (amount <= 0) return;
+
+    const heroData = hero.data || (hero.data = {});
+    const keyBase = `gainArmorAtEndOfTurn:${hero.id || hero.name || 'hero'}`;
+    const registeredKey = `${keyBase}:registered`;
+    if (heroData[registeredKey]) return;
+    heroData[registeredKey] = true;
+
+    const handler = async ({ player: turnPlayer }) => {
+      if (turnPlayer === player) return;
+      await this.applyBuff(
+        { type: 'buff', target: 'hero', property: 'armor', amount },
+        context
+      );
+    };
+
+    this._trackCleanup(game.turns.bus.on('turn:start', handler));
+    this._trackCleanup(() => {
+      delete heroData[registeredKey];
+    });
   }
 
   buffAtEndOfTurn(effect, context) {
