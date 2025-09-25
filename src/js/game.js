@@ -787,8 +787,85 @@ export default class Game {
     this.state.frame++;
   }
 
+  _evaluateFirstKeywordCostReduction(player, card) {
+    const baseCost = Number(card?.cost ?? 0);
+    const normalizedBaseCost = Number.isFinite(baseCost) ? baseCost : 0;
+
+    const hero = player?.hero;
+    const data = hero?.data;
+    if (!hero || !data || !card) {
+      return { cost: normalizedBaseCost };
+    }
+
+    const reductionState = data.firstKeywordCostReduction;
+    if (!reductionState || typeof reductionState !== 'object') {
+      return { cost: normalizedBaseCost };
+    }
+
+    const keywords = Array.isArray(card.keywords)
+      ? card.keywords
+        .map((kw) => (typeof kw === 'string' ? kw.trim().toLowerCase() : ''))
+        .filter(Boolean)
+      : [];
+
+    if (!keywords.length) {
+      return { cost: normalizedBaseCost };
+    }
+
+    const currentTurn = this.turns?.turn ?? null;
+
+    for (const keyword of keywords) {
+      const entry = reductionState[keyword];
+      if (!entry) continue;
+
+      const preparedTurn = entry.turnPrepared ?? null;
+      if (preparedTurn != null && currentTurn != null && preparedTurn !== currentTurn) continue;
+
+      const ready = entry.ready !== false;
+      if (!ready) continue;
+
+      const amountRaw = Number(entry.amount ?? 0);
+      const minimumRaw = Number(entry.minimum ?? 0);
+      const amount = Number.isFinite(amountRaw) && amountRaw > 0 ? amountRaw : 0;
+      const minimum = Number.isFinite(minimumRaw) && minimumRaw > 0 ? minimumRaw : 0;
+
+      const allowableReduction = Math.max(0, normalizedBaseCost - minimum);
+      const reduction = Math.min(amount, allowableReduction);
+
+      const consume = () => {
+        if (entry.ready === false) return () => {};
+        entry.ready = false;
+        entry.usedTurn = currentTurn;
+        const cardInstanceId = card?.instanceId ?? null;
+        entry.lastCardInstanceId = cardInstanceId;
+        entry.lastReduction = reduction;
+        return () => {
+          if (
+            entry.usedTurn === currentTurn
+            && entry.lastCardInstanceId === cardInstanceId
+          ) {
+            entry.ready = true;
+            entry.usedTurn = null;
+            entry.lastCardInstanceId = null;
+            entry.lastReduction = 0;
+          }
+        };
+      };
+
+      return {
+        cost: normalizedBaseCost - reduction,
+        reduction,
+        consume,
+      };
+    }
+
+    return { cost: normalizedBaseCost };
+  }
+
   canPlay(player, card) {
-    return this.resources.canPay(player, card.cost || 0);
+    const evalResult = this._evaluateFirstKeywordCostReduction(player, card);
+    const cost = typeof evalResult?.cost === 'number' ? evalResult.cost : (card?.cost || 0);
+    return this.resources.canPay(player, cost);
   }
 
   
@@ -803,8 +880,13 @@ export default class Game {
       card = player.hand.cards.find((c) => matchesCardIdentifier(c, cardRef)) || null;
     }
     if (!card) return false;
-    const cost = card.cost || 0;
-    if (!this.resources.pay(player, cost)) return false;
+    let revertFirstKeywordCostReduction = null;
+    const reductionEval = this._evaluateFirstKeywordCostReduction(player, card);
+    const costToPay = typeof reductionEval?.cost === 'number' ? reductionEval.cost : (card.cost || 0);
+    if (!this.resources.pay(player, costToPay)) return false;
+    if (typeof reductionEval?.consume === 'function') {
+      revertFirstKeywordCostReduction = reductionEval.consume() || null;
+    }
     await this.throttleAIAction(player);
     // Check opponent secrets that may counter spells before any effects resolve
     const defender = (player === this.player) ? this.opponent : this.player;
@@ -972,9 +1054,13 @@ export default class Game {
     } catch (err) {
       if (err === this.CANCEL) {
         restoreAllyPlacement();
+        if (typeof revertFirstKeywordCostReduction === 'function') {
+          try { revertFirstKeywordCostReduction(); } catch {}
+          revertFirstKeywordCostReduction = null;
+        }
         // Refund cost and revert temporary spell damage bonus consumption
-        if (typeof this.resources.refund === 'function') this.resources.refund(player, cost);
-        else this.resources.restore(player, cost);
+        if (typeof this.resources.refund === 'function') this.resources.refund(player, costToPay);
+        else this.resources.restore(player, costToPay);
         if (tempSpellDamage) {
           player.hero.data.spellDamage -= tempSpellDamage;
           if (bonus) bonus.used = false;
@@ -983,9 +1069,14 @@ export default class Game {
         return false;
       }
       restoreAllyPlacement();
+      if (typeof revertFirstKeywordCostReduction === 'function') {
+        try { revertFirstKeywordCostReduction(); } catch {}
+        revertFirstKeywordCostReduction = null;
+      }
       finishTargetCapture({ discard: true });
       throw err;
     } finally {
+      revertFirstKeywordCostReduction = null;
       if (isBattlecryAlly) this._pendingBattlecryCard = previousPendingBattlecryCard;
     }
 
