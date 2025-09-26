@@ -3,13 +3,13 @@ import { getCardInstanceId } from '../utils/card.js';
 export const TURN_WEIGHT = 0.1;
 export const AI_HEALTH_WEIGHT = 5;
 export const PLAYER_HEALTH_WEIGHT = -5;
-export const AI_HAND_WEIGHT = 0.6;
+export const AI_HAND_WEIGHT = 0.2;
 export const PLAYER_HAND_WEIGHT = -AI_HAND_WEIGHT;
-export const AI_BOARD_ALLY_WEIGHT = 3;
+export const AI_BOARD_ALLY_WEIGHT = 5;
 export const PLAYER_BOARD_ALLY_WEIGHT = -AI_BOARD_ALLY_WEIGHT;
-export const AI_BOARD_ATTACK_WEIGHT = 1;
+export const AI_BOARD_ATTACK_WEIGHT = 1.5;
 export const PLAYER_BOARD_ATTACK_WEIGHT = -AI_BOARD_ATTACK_WEIGHT;
-export const AI_BOARD_HEALTH_WEIGHT = 0.5;
+export const AI_BOARD_HEALTH_WEIGHT = 1;
 export const PLAYER_BOARD_HEALTH_WEIGHT = -AI_BOARD_HEALTH_WEIGHT;
 export const AI_EQUIPMENT_WEIGHT = 2;
 export const PLAYER_EQUIPMENT_WEIGHT = -2;
@@ -17,7 +17,7 @@ export const AI_GRAVEYARD_WEIGHT = 0.5;
 export const PLAYER_GRAVEYARD_WEIGHT = -0.5;
 // Spending resources alone shouldn't improve the score but the penalty
 // should not outweigh meaningful board advances.
-export const RESOURCE_WEIGHT = 0.2;
+export const RESOURCE_WEIGHT = 0.05;
 export const TAUNT_WEIGHT = 2;
 export const FREEZE_WEIGHT = -2;
 // Overload is generally bad for the AI (less resources next turn).
