@@ -147,7 +147,7 @@ header .controls select:focus-visible {
   grid-template-areas:
     'ai-hero ai-field'
     'p-hero p-field';
-  gap: clamp(16px, 3vw, 32px);
+  gap: 10px;
   align-items: start;
 }
 
@@ -160,7 +160,7 @@ header .controls select:focus-visible {
 
 .board .zone {
   background: none;
-  padding: 16px;
+  padding: 0;
   border: none;
   border-radius: 0;
 }
