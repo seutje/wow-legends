@@ -13,6 +13,84 @@ export class BasicAI {
     this.combat = combatSystem;
   }
 
+  _cloneEffect(effect) {
+    if (!effect || typeof effect !== 'object') return effect;
+    const cloned = {};
+    for (const [key, value] of Object.entries(effect)) {
+      if (value instanceof Map) {
+        cloned[key] = new Map(value);
+      } else if (value instanceof Set) {
+        cloned[key] = new Set(value);
+      } else if (Array.isArray(value)) {
+        cloned[key] = value.map(entry => (typeof entry === 'object' ? this._cloneEffect(entry) : entry));
+      } else if (value && typeof value === 'object') {
+        cloned[key] = this._cloneEffect(value);
+      } else {
+        cloned[key] = value;
+      }
+    }
+    return cloned;
+  }
+
+  _cloneCard(card) {
+    if (!card) return null;
+    const {
+      id,
+      instanceId,
+      name,
+      type,
+      cost,
+      keywords,
+      data,
+      effects,
+      active,
+      equipment,
+      powerUsed,
+    } = card;
+
+    const cloned = { id, instanceId, name, type, cost, powerUsed };
+    if (Array.isArray(keywords)) cloned.keywords = [...keywords];
+    if (effects) cloned.effects = effects.map(e => this._cloneEffect(e));
+    if (active) cloned.active = active.map(e => this._cloneEffect(e));
+    if (data && typeof data === 'object') {
+      cloned.data = this._cloneEffect(data);
+    } else if (data != null) {
+      cloned.data = data;
+    }
+    if (Array.isArray(equipment)) {
+      cloned.equipment = equipment.map(eq => this._cloneCard(eq)).filter(Boolean);
+    }
+    return cloned;
+  }
+
+  _cloneZone(zone) {
+    const cards = Array.isArray(zone?.cards) ? zone.cards.map(c => this._cloneCard(c)) : [];
+    const cloned = { cards };
+    if (typeof zone?.limit === 'number') cloned.limit = zone.limit;
+    return cloned;
+  }
+
+  _clonePlayerState(player) {
+    if (!player) return null;
+    const cloned = {
+      hero: this._cloneCard(player.hero),
+      hand: this._cloneZone(player.hand),
+      battlefield: this._cloneZone(player.battlefield),
+      graveyard: this._cloneZone(player.graveyard),
+      library: this._cloneZone(player.library),
+      cardsPlayedThisTurn: player.cardsPlayedThisTurn || 0,
+    };
+    if (cloned.hero) cloned.hero.owner = cloned;
+    return cloned;
+  }
+
+  _cloneGameState(player, opponent) {
+    return {
+      player: this._clonePlayerState(player),
+      opponent: this._clonePlayerState(opponent),
+    };
+  }
+
   _effectsAreUseless(effects = [], player) {
     if (!effects.length) return false;
     let useful = false;
@@ -43,6 +121,17 @@ export class BasicAI {
       if (useful) break;
     }
     return !useful;
+  }
+
+  _shouldPlayCard(card, player) {
+    if (!card) return false;
+    const allies = player?.battlefield?.cards?.filter?.(c => c.type === 'ally') || [];
+    const allyLimit = typeof player?.battlefield?.limit === 'number' ? player.battlefield.limit : 5;
+    if (card.type === 'ally' && allies.length >= allyLimit) {
+      return false;
+    }
+    if (this._effectsAreUseless(card.effects, player)) return false;
+    return true;
   }
 
   _applySimpleEffects(effects = [], player, opponent, pool) {
@@ -248,8 +337,7 @@ export class BasicAI {
   }
 
   _simulateAction(player, opponent, { card = null, usePower = false } = {}, pool = 0) {
-    const p = structuredClone(player);
-    const o = structuredClone(opponent);
+    const { player: p, opponent: o } = this._cloneGameState(player, opponent);
     let res = pool;
     let overloadNext = 0;
 
@@ -260,7 +348,7 @@ export class BasicAI {
         if (playedId) return getCardInstanceId(c) !== playedId;
         return !cardsMatch(c, card);
       });
-      const played = structuredClone(card);
+      const played = this._cloneCard(card);
       if (played.type === 'ally' || played.type === 'equipment' || played.type === 'quest') {
         p.battlefield.cards.push(played);
         if (played.type === 'equipment') {
@@ -355,7 +443,7 @@ export class BasicAI {
 
     for (const c of player.hand.cards) {
       if (!this.resources.canPay(player, c.cost || 0)) continue;
-      if (this._effectsAreUseless(c.effects, player)) continue;
+      if (!this._shouldPlayCard(c, player)) continue;
       actions.push({ card: c, usePower: false });
       if (canPower && pool - (c.cost || 0) >= 2) actions.push({ card: c, usePower: true });
     }
