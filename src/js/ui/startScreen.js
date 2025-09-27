@@ -140,9 +140,7 @@ function renderHeroGrid({
         dataset: { selected: heroId && heroId === selectedId ? '1' : '0' },
         aria: ariaAttrs,
       },
-      el('span', { class: 'start-screen__hero-card' }, tooltipCard),
-      el('span', { class: 'start-screen__hero-name' }, heroName),
-      hero?.text ? el('span', { class: 'start-screen__hero-text' }, hero.text) : null);
+      el('span', { class: 'start-screen__hero-card' }, tooltipCard));
       children.push(btn);
     }
   } else if (loading) {
