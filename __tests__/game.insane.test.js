@@ -22,8 +22,8 @@ test('creating MCTS for insane difficulty injects neural policy model', async ()
   const ai = await game._createMctsAI('insane');
 
   expect(ai).toBeInstanceOf(MCTS_AI);
-  expect(ai.iterations).toBe(10000);
-  expect(ai.rolloutDepth).toBe(20);
+  expect(ai.iterations).toBe(1000);
+  expect(ai.rolloutDepth).toBe(10);
   expect(ai.policyValueModel).toBeInstanceOf(NeuralPolicyValueModel);
 
   const activeModel = getActiveModel();
