@@ -58,6 +58,88 @@ export class MCTS_AI {
     this._lastTree = null;
   }
 
+  _cloneWithoutFunctions(value, seen = new WeakMap()) {
+    if (value == null) return value;
+    if (typeof value === 'function') return undefined;
+    if (typeof value !== 'object') return value;
+    if (seen.has(value)) return seen.get(value);
+
+    if (value instanceof Date) return new Date(value.getTime());
+    if (value instanceof RegExp) return new RegExp(value.source, value.flags);
+    if (value instanceof Map) {
+      const clone = new Map();
+      seen.set(value, clone);
+      for (const [key, val] of value.entries()) {
+        if (typeof key === 'function' || typeof val === 'function') continue;
+        const clonedKey = this._cloneWithoutFunctions(key, seen);
+        const clonedVal = this._cloneWithoutFunctions(val, seen);
+        if (clonedKey !== undefined && clonedVal !== undefined) clone.set(clonedKey, clonedVal);
+      }
+      return clone;
+    }
+    if (value instanceof Set) {
+      const clone = new Set();
+      seen.set(value, clone);
+      for (const item of value.values()) {
+        if (typeof item === 'function') continue;
+        const cloned = this._cloneWithoutFunctions(item, seen);
+        if (cloned !== undefined) clone.add(cloned);
+      }
+      return clone;
+    }
+    if (ArrayBuffer.isView(value)) {
+      if (typeof value.slice === 'function') return value.slice();
+      const buffer = value.buffer ? value.buffer.slice(0) : new ArrayBuffer(0);
+      return new value.constructor(buffer, value.byteOffset, value.length ?? undefined);
+    }
+    if (value instanceof ArrayBuffer) {
+      return value.slice(0);
+    }
+    if (Array.isArray(value)) {
+      const clone = new Array(value.length);
+      seen.set(value, clone);
+      for (let i = 0; i < value.length; i += 1) {
+        const item = value[i];
+        if (typeof item === 'function') continue;
+        clone[i] = this._cloneWithoutFunctions(item, seen);
+      }
+      return clone;
+    }
+
+    const proto = Object.getPrototypeOf(value);
+    const clone = proto ? Object.create(proto) : {};
+    seen.set(value, clone);
+    for (const key of Reflect.ownKeys(value)) {
+      const descriptor = Object.getOwnPropertyDescriptor(value, key);
+      if (!descriptor) continue;
+      if ('value' in descriptor) {
+        if (typeof descriptor.value === 'function') continue;
+        if (typeof key === 'string' && key === 'cleanupFns') continue;
+        const cloned = this._cloneWithoutFunctions(descriptor.value, seen);
+        if (cloned === undefined && descriptor.value !== undefined) continue;
+        Object.defineProperty(clone, key, { ...descriptor, value: cloned });
+      } else {
+        const getter = descriptor.get;
+        const setter = descriptor.set;
+        if (typeof getter === 'function' || typeof setter === 'function') continue;
+        Object.defineProperty(clone, key, descriptor);
+      }
+    }
+    return clone;
+  }
+
+  _safeClone(value) {
+    if (value == null) return value;
+    if (typeof structuredClone === 'function') {
+      try {
+        return structuredClone(value);
+      } catch (err) {
+        if (!err || err.name !== 'DataCloneError') throw err;
+      }
+    }
+    return this._cloneWithoutFunctions(value);
+  }
+
   _extractZoneCards(zone) {
     if (!zone) return [];
     if (Array.isArray(zone)) return zone;
@@ -1493,8 +1575,8 @@ export class MCTS_AI {
 
   _cloneState(base) {
     const s = {
-      player: structuredClone(base.player),
-      opponent: structuredClone(base.opponent),
+      player: this._safeClone(base.player),
+      opponent: this._safeClone(base.opponent),
       pool: base.pool,
       turn: base.turn,
       powerAvailable: base.powerAvailable,
@@ -1601,26 +1683,26 @@ export class MCTS_AI {
           if (playedKey) return getCardInstanceId(c) !== playedKey;
           return !cardsMatch(c, action.card);
         });
-        const played = structuredClone(action.card);
-      if (played.type === 'ally' || played.type === 'equipment' || played.type === 'quest') {
-        p.battlefield.cards.push(played);
-        if (played.type === 'equipment') {
-          replaceEquipment(p, played, { turn: this.resources?.turns?.turn ?? null });
-        }
-        if (played.type === 'ally') {
-          removeOverflowAllies(p);
-          played.data = played.data || {};
-          if (!(played.keywords?.includes('Rush') || played.keywords?.includes('Charge'))) {
-            played.data.attacked = true;
+        const played = this._safeClone(action.card);
+        if (played.type === 'ally' || played.type === 'equipment' || played.type === 'quest') {
+          p.battlefield.cards.push(played);
+          if (played.type === 'equipment') {
+            replaceEquipment(p, played, { turn: this.resources?.turns?.turn ?? null });
           }
-          played.data.enteredTurn = s.turn;
-          const playedKey = getCardInstanceId(played);
-          if (playedKey) s.enteredThisTurn.add(playedKey);
+          if (played.type === 'ally') {
+            removeOverflowAllies(p);
+            played.data = played.data || {};
+            if (!(played.keywords?.includes('Rush') || played.keywords?.includes('Charge'))) {
+              played.data.attacked = true;
+            }
+            played.data.enteredTurn = s.turn;
+            const playedKey = getCardInstanceId(played);
+            if (playedKey) s.enteredThisTurn.add(playedKey);
+          }
+        } else {
+          p.graveyard.cards.push(played);
         }
-      } else {
-        p.graveyard.cards.push(played);
-      }
-      if (played.effects?.length) {
+        if (played.effects?.length) {
         // set current state for summon tracking inside effects
         this._currentState = s;
         for (const e of played.effects) { if (e.type === 'overload') s.overloadNextPlayer += (e.amount || 1); }
