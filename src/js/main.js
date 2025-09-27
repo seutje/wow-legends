@@ -4,7 +4,7 @@ import { renderOptions } from './ui/options.js';
 import { setDebugLogging } from './utils/logger.js';
 import { fillDeckRandomly } from './utils/deckbuilder.js';
 import { renderPlay } from './ui/play.js';
-import { renderStartScreen } from './ui/startScreen.js';
+import { renderStartScreen, RANDOM_HERO_ID } from './ui/startScreen.js';
 import { loadSettings, rehydrateDeck, saveLastDeck } from './utils/settings.js';
 import { deriveDeckFromGame } from './utils/deckstate.js';
 import { saveGameState, loadSavedGameState, clearSavedGameState } from './utils/savegame.js';
@@ -147,6 +147,8 @@ const startScreenState = {
   step: 'initial',
   selectedHeroId: null,
   selectedOpponentHeroId: null,
+  selectedPlayerDeck: null,
+  selectedOpponentDeck: null,
   hasSavedGame: loadedFromSave,
   loadingDecks: false,
 };
@@ -165,8 +167,24 @@ function getDeckForHero(heroId) {
   return pool.find((deck) => deck?.hero?.id === heroId) || null;
 }
 
+function selectRandomDeck({ excludeHeroIds = [] } = {}) {
+  const pool = Array.isArray(availablePrebuiltDecks) ? availablePrebuiltDecks : [];
+  if (!pool.length) return null;
+  const exclude = new Set((excludeHeroIds || []).filter(Boolean));
+  const filtered = pool.filter((deck) => deck?.hero?.id && !exclude.has(deck.hero.id));
+  const candidates = filtered.length ? filtered : pool.filter((deck) => deck?.hero?.id);
+  if (!candidates.length) return null;
+  const index = Math.floor(Math.random() * candidates.length);
+  return candidates[index] || null;
+}
+
 function rerenderStartScreen() {
-  const playerDeck = getDeckForHero(startScreenState.selectedHeroId);
+  const hasExplicitDeck = !!startScreenState.selectedPlayerDeck;
+  const resolvedPlayerDeck = hasExplicitDeck
+    ? startScreenState.selectedPlayerDeck
+    : (startScreenState.selectedHeroId && startScreenState.selectedHeroId !== RANDOM_HERO_ID
+      ? getDeckForHero(startScreenState.selectedHeroId)
+      : null);
   renderStartScreen(startScreenRoot, {
     visible: startScreenState.visible,
     step: startScreenState.step,
@@ -180,7 +198,7 @@ function rerenderStartScreen() {
     onSelectOpponent: (hero) => { handleOpponentSelection(hero); },
     onBack: (target) => { handleStartScreenBack(target); },
     opponentContext: {
-      playerHeroName: playerDeck?.hero?.name || null,
+      playerHeroName: resolvedPlayerDeck?.hero?.name || null,
       selectedOpponentId: startScreenState.selectedOpponentHeroId,
     },
   });
@@ -192,6 +210,8 @@ function hideStartScreen() {
   startScreenState.step = 'initial';
   startScreenState.selectedHeroId = null;
   startScreenState.selectedOpponentHeroId = null;
+  startScreenState.selectedPlayerDeck = null;
+  startScreenState.selectedOpponentDeck = null;
   toggleGameVisible(true);
   rerenderStartScreen();
 }
@@ -201,6 +221,8 @@ function showInitialStartScreen() {
   startScreenState.step = 'initial';
   startScreenState.selectedHeroId = null;
   startScreenState.selectedOpponentHeroId = null;
+  startScreenState.selectedPlayerDeck = null;
+  startScreenState.selectedOpponentDeck = null;
   toggleGameVisible(false);
   rerenderStartScreen();
 }
@@ -210,6 +232,8 @@ async function openHeroSelection() {
   startScreenState.step = 'hero';
   startScreenState.selectedHeroId = null;
   startScreenState.selectedOpponentHeroId = null;
+  startScreenState.selectedPlayerDeck = null;
+  startScreenState.selectedOpponentDeck = null;
   startScreenState.loadingDecks = !Array.isArray(availablePrebuiltDecks) || availablePrebuiltDecks.length === 0;
   toggleGameVisible(false);
   rerenderStartScreen();
@@ -228,6 +252,7 @@ async function openOpponentSelection() {
   startScreenState.visible = true;
   startScreenState.step = 'opponent';
   startScreenState.selectedOpponentHeroId = null;
+  startScreenState.selectedOpponentDeck = null;
   startScreenState.loadingDecks = !Array.isArray(availablePrebuiltDecks) || availablePrebuiltDecks.length === 0;
   toggleGameVisible(false);
   rerenderStartScreen();
@@ -242,29 +267,62 @@ async function openOpponentSelection() {
 }
 
 function handleHeroSelection(hero) {
-  if (!hero || !hero.id) return;
+  if (!hero) return;
+  const isRandom = hero.id === RANDOM_HERO_ID || hero.isRandomOption;
+  if (isRandom) {
+    const randomDeck = selectRandomDeck();
+    if (!randomDeck) return;
+    startScreenState.selectedHeroId = RANDOM_HERO_ID;
+    startScreenState.selectedPlayerDeck = randomDeck;
+    startScreenState.selectedOpponentHeroId = null;
+    startScreenState.selectedOpponentDeck = null;
+    openOpponentSelection();
+    return;
+  }
+  if (!hero.id) return;
+  const deck = getDeckForHero(hero.id);
+  if (!deck) return;
   startScreenState.selectedHeroId = hero.id;
+  startScreenState.selectedPlayerDeck = deck;
+  startScreenState.selectedOpponentHeroId = null;
+  startScreenState.selectedOpponentDeck = null;
   openOpponentSelection();
 }
 
 async function handleOpponentSelection(hero) {
   if (!hero || !hero.id) return;
-  const playerDeck = getDeckForHero(startScreenState.selectedHeroId);
-  if (!playerDeck) return;
-  startScreenState.selectedOpponentHeroId = hero.id;
+  const playerDeck = startScreenState.selectedPlayerDeck
+    || (startScreenState.selectedHeroId && startScreenState.selectedHeroId !== RANDOM_HERO_ID
+      ? getDeckForHero(startScreenState.selectedHeroId)
+      : null);
+  if (!playerDeck || !playerDeck.hero) return;
+  const isRandom = hero.id === RANDOM_HERO_ID || hero.isRandomOption;
+  let opponentDeck = null;
+  if (isRandom) {
+    opponentDeck = selectRandomDeck({ excludeHeroIds: [playerDeck.hero.id] })
+      || selectRandomDeck();
+    startScreenState.selectedOpponentHeroId = RANDOM_HERO_ID;
+  } else {
+    opponentDeck = getDeckForHero(hero.id);
+    startScreenState.selectedOpponentHeroId = hero.id;
+  }
+  startScreenState.selectedOpponentDeck = opponentDeck || null;
   const deckOverride = {
     hero: playerDeck.hero,
     cards: Array.isArray(playerDeck.cards) ? playerDeck.cards.slice() : [],
   };
-  const opponentDeck = getDeckForHero(hero.id);
-  if (opponentDeck) {
-    deckOverride.opponentHeroId = opponentDeck.hero?.id || hero.id;
+  const opponentHeroId = opponentDeck?.hero?.id;
+  if (opponentDeck && opponentHeroId) {
+    deckOverride.opponentHeroId = opponentHeroId;
     deckOverride.opponentDeck = {
       hero: opponentDeck.hero,
       cards: Array.isArray(opponentDeck.cards) ? opponentDeck.cards.slice() : [],
     };
-  } else {
+  } else if (!isRandom && hero.id) {
     deckOverride.opponentHeroId = hero.id;
+  }
+  if (!deckOverride.opponentHeroId) {
+    deckOverride.opponentHeroId = opponentHeroId || playerDeck.hero.id;
   }
   try {
     await startNewGame({ deckOverride });

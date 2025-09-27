@@ -1,5 +1,17 @@
 import { cardTooltip } from './cardTooltip.js';
 
+export const RANDOM_HERO_ID = '__random__hero__';
+
+function createRandomHeroOption() {
+  return {
+    id: RANDOM_HERO_ID,
+    name: 'Random Hero',
+    type: 'hero',
+    text: 'Let fate decide your next champion.',
+    isRandomOption: true,
+  };
+}
+
 const noop = () => {};
 
 const schedule = (() => {
@@ -122,6 +134,7 @@ function renderHeroGrid({
       const heroId = hero?.id;
       const heroName = hero?.name || 'Unknown Hero';
       const baseCard = (hero && typeof hero === 'object') ? hero : {};
+      const isRandom = hero?.isRandomOption || heroId === RANDOM_HERO_ID;
       const tooltipCard = cardTooltip({
         ...baseCard,
         type: baseCard.type || 'hero',
@@ -129,6 +142,20 @@ function renderHeroGrid({
         name: heroName,
         text: baseCard.text || '',
       });
+      if (isRandom) {
+        tooltipCard.classList.add('card-tooltip--random');
+        tooltipCard.dataset.randomCard = '1';
+        const artImg = tooltipCard.querySelector('.card-art');
+        const fallbackArt = el('div', {
+          class: 'card-art card-art--random',
+          'aria-hidden': 'true',
+        }, '?');
+        if (artImg) {
+          artImg.replaceWith(fallbackArt);
+        } else {
+          tooltipCard.prepend(fallbackArt);
+        }
+      }
       tooltipCard.dataset.startScreenCard = '1';
       const ariaAttrs = { label: heroName };
       if (selectedId != null) {
@@ -240,9 +267,11 @@ export function renderStartScreen(container, {
   }
 
   const heroes = uniqueHeroesFromDecks(decks);
+  const includeRandomOption = Array.isArray(heroes) && heroes.length > 0;
+  const heroOptions = includeRandomOption ? [createRandomHeroOption(), ...heroes] : heroes;
   if (step === 'hero') {
     const panel = renderHeroGrid({
-      heroes,
+      heroes: heroOptions,
       loading: loadingDecks,
       onSelect: (hero) => onSelectHero?.(hero),
       heading: 'Choose your hero',
@@ -262,7 +291,7 @@ export function renderStartScreen(container, {
       subtitle = `Choose who will oppose ${opponentContext.playerHeroName}.`;
     }
     const panel = renderHeroGrid({
-      heroes,
+      heroes: heroOptions,
       loading: loadingDecks,
       selectedId: opponentContext?.selectedOpponentId || null,
       onSelect: (hero) => onSelectOpponent?.(hero),
