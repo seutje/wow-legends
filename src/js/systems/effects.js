@@ -134,6 +134,196 @@ export class EffectSystem {
     return wrapped;
   }
 
+  _formatDurationSuffix(duration) {
+    if (!duration) return '';
+    if (duration === 'thisTurn') return ' (this turn)';
+    if (duration === 'untilYourNextTurn') return ' (until your next turn)';
+    return '';
+  }
+
+  _formatStatAdjustment(property, amount, duration) {
+    if (!Number.isFinite(amount) || amount === 0) return null;
+    const labels = {
+      attack: 'Attack',
+      health: 'Health',
+      armor: 'Armor',
+      spellDamage: 'Spell Damage',
+    };
+    const label = labels[property] || property;
+    const sign = amount > 0 ? '+' : '-';
+    const suffix = this._formatDurationSuffix(duration);
+    return `${sign}${Math.abs(amount)} ${label}${suffix}`;
+  }
+
+  _describeBuffEffects(effects) {
+    if (!Array.isArray(effects)) return null;
+    const adjustments = [];
+    for (const eff of effects) {
+      const text = this._formatStatAdjustment(eff?.property, Number(eff?.amount ?? 0), eff?.duration);
+      if (text) adjustments.push(text);
+    }
+    if (!adjustments.length) return null;
+    if (adjustments.length === 1) return `Apply ${adjustments[0]}`;
+    return `Apply ${adjustments.join(', ')}`;
+  }
+
+  _describeBuffEffect(effect) {
+    return this._describeBuffEffects([effect]);
+  }
+
+  _describeKeywordGrant(keyword, duration) {
+    if (!keyword) return null;
+    const suffix = this._formatDurationSuffix(duration);
+    return `Grant ${keyword}${suffix}`;
+  }
+
+  _describeKeywordList(keywords, duration) {
+    if (!Array.isArray(keywords) || !keywords.length) return [];
+    return keywords
+      .map((kw) => this._describeKeywordGrant(kw, duration))
+      .filter(Boolean);
+  }
+
+  _computeDamageAmount(effect, context) {
+    if (!effect) return 0;
+    const { amount = 0, comboAmount, beastBonus, usesSpellDamage, target } = effect;
+    const { player, comboActive, card, spellPowerApplies } = context || {};
+    let dmgAmount = Number(amount) || 0;
+    if (comboActive && Number.isFinite(comboAmount)) {
+      dmgAmount = comboAmount;
+    }
+    if (Number.isFinite(beastBonus) && beastBonus !== 0) {
+      const beasts = Array.isArray(player?.battlefield?.cards) ? player.battlefield.cards : [];
+      const hasBeast = beasts.some((c) => c?.keywords?.includes?.('Beast'));
+      if (hasBeast) {
+        dmgAmount += beastBonus;
+      }
+    }
+    const effectTargetsSelfHero = target === 'selfHero';
+    const shouldApplySpellDamage = (card?.type === 'spell')
+      || usesSpellDamage
+      || (spellPowerApplies && !effectTargetsSelfHero);
+    if (shouldApplySpellDamage && player) {
+      const bonus = getSpellDamageBonus(player);
+      dmgAmount = computeSpellDamage(dmgAmount, bonus);
+    }
+    return dmgAmount;
+  }
+
+  _describeFreeze(freeze) {
+    if (!freeze) return null;
+    if (Number.isFinite(freeze)) {
+      if (freeze === 1) return 'Freeze';
+      return `Freeze (${freeze} turns)`;
+    }
+    return 'Freeze';
+  }
+
+  _describeDamagePrompt(effect, context) {
+    if (!effect) return null;
+    const amount = this._computeDamageAmount(effect, context);
+    const parts = [];
+    if (Number.isFinite(amount) && amount !== 0) {
+      parts.push(`Deal ${amount} damage`);
+    } else {
+      parts.push('Deal damage');
+    }
+    const freezeText = this._describeFreeze(effect.freeze);
+    if (freezeText) parts.push(freezeText);
+    if (effect.friendlyDamageBuff?.attack) {
+      const buffAmount = Number(effect.friendlyDamageBuff.attack);
+      if (Number.isFinite(buffAmount) && buffAmount !== 0) {
+        const buffText = this._formatStatAdjustment('attack', buffAmount, effect.friendlyDamageBuff.duration);
+        if (buffText) parts.push(`Survivors gain ${buffText}`);
+      }
+    }
+    return parts.join(' + ');
+  }
+
+  _describeHealPrompt(effect) {
+    if (!effect) return null;
+    const amount = Number(effect.amount ?? 0);
+    if (Number.isFinite(amount) && amount > 0) {
+      return `Heal ${amount} HP`;
+    }
+    return 'Heal target';
+  }
+
+  _describeDestroyPrompt(effect) {
+    if (!effect) return null;
+    let base = 'Destroy target minion';
+    switch (effect.target) {
+      case 'ally':
+      case 'friendlyAlly':
+      case 'friendlyMinion':
+        base = 'Destroy friendly minion';
+        break;
+      case 'anyAlly':
+      case 'anyMinion':
+        base = 'Destroy a minion';
+        break;
+      default:
+        base = 'Destroy enemy minion';
+        break;
+    }
+    if (effect.condition?.type === 'attackLessThan') {
+      const amount = Number(effect.condition.amount ?? 0);
+      if (Number.isFinite(amount)) {
+        base += ` (attack ≤ ${amount})`;
+      }
+    }
+    return base;
+  }
+
+  _describeReturnPrompt(effect) {
+    if (!effect) return null;
+    let base = 'Return enemy ally to hand';
+    switch (effect.target) {
+      case 'ally':
+        base = 'Return friendly ally to hand';
+        break;
+      case 'anyAlly':
+        base = 'Return an ally to hand';
+        break;
+      default:
+        base = 'Return enemy ally to hand';
+        break;
+    }
+    const increase = Number(effect.costIncrease ?? 0);
+    if (Number.isFinite(increase) && increase > 0) {
+      base += ` (+${increase} cost)`;
+    }
+    return base;
+  }
+
+  _describeBuffBeastPrompt(effect) {
+    if (!effect) return null;
+    const parts = [];
+    const attackText = this._formatStatAdjustment('attack', Number(effect.attack ?? 0), effect.duration);
+    if (attackText) parts.push(attackText);
+    const healthText = this._formatStatAdjustment('health', Number(effect.health ?? 0), effect.duration);
+    if (healthText) parts.push(healthText);
+    const keywordTexts = this._describeKeywordList(effect.keywords, effect.duration);
+    parts.push(...keywordTexts);
+    if (!parts.length) return 'Buff Beast';
+    return `Buff Beast: ${parts.join(', ')}`;
+  }
+
+  _describeGrantKeywordPrompt(effect) {
+    if (!effect) return null;
+    const keywordText = this._describeKeywordGrant(effect.keyword, effect.duration);
+    if (!keywordText) return null;
+    switch (effect.target) {
+      case 'enemyCharacter':
+        return `Afflict enemy with ${keywordText.slice('Grant '.length)}`;
+      case 'character':
+      case 'hero':
+      case 'allies':
+      default:
+        return keywordText;
+    }
+  }
+
   reset() {
     const pending = Array.from(this.cleanupFns);
     this.cleanupFns.clear();
@@ -178,10 +368,13 @@ export class EffectSystem {
           ]);
           candidates = [...candidates, ...enemy];
         }
-        const chosen = await game.promptTarget(candidates, {
+        const promptOptions = {
           preferredSide: isDebuff ? 'enemy' : 'friendly',
           actingPlayer: player,
-        });
+        };
+        const promptTitle = this._describeBuffEffects(grouped);
+        if (promptTitle) promptOptions.title = promptTitle;
+        const chosen = await game.promptTarget(candidates, promptOptions);
         if (chosen === game.CANCEL) throw game.CANCEL;
         if (chosen) {
           for (const g of grouped) {
@@ -329,29 +522,11 @@ export class EffectSystem {
   }
 
   async dealDamage(effect, context) {
-    const { target, amount, freeze, beastBonus, comboAmount, usesSpellDamage, friendlyDamageBuff } = effect;
-    const { game, player, card, comboActive, spellPowerApplies } = context;
+    const { target, freeze, friendlyDamageBuff } = effect;
+    const { game, player, card } = context;
     const opponent = player === game.player ? game.opponent : game.player;
-      let dmgAmount = amount;
-      if (comboActive && typeof comboAmount === 'number') {
-        dmgAmount = comboAmount;
-      }
-      if (beastBonus) {
-        const hasBeast = player.battlefield.cards.some(c => c.keywords?.includes('Beast'));
-        if (hasBeast) dmgAmount += beastBonus;
-      }
-      // Apply spell damage bonuses when appropriate:
-      // - For spells
-      // - For explicit non-spell effects that opt-in via `usesSpellDamage`
-      const effectTargetsSelfHero = target === 'selfHero';
-      const shouldApplySpellDamage = card?.type === 'spell'
-        || usesSpellDamage
-        || (spellPowerApplies && !effectTargetsSelfHero);
-      if (shouldApplySpellDamage) {
-        const bonus = getSpellDamageBonus(player);
-        dmgAmount = computeSpellDamage(dmgAmount, bonus);
-      }
-
+    const dmgAmount = this._computeDamageAmount(effect, context);
+    const promptTitle = this._describeDamagePrompt(effect, context);
     let actualTargets = [];
 
     switch (target) {
@@ -365,10 +540,12 @@ export class EffectSystem {
           ...player.battlefield.cards.filter(c => c.type !== 'quest')
         ].filter((target) => isTargetable(target, { requester: player }));
         const candidates = [...enemy, ...friendly];
-        const chosen = await game.promptTarget(candidates, {
+        const promptOptions = {
           preferredSide: 'enemy',
           actingPlayer: player,
-        });
+        };
+        if (promptTitle) promptOptions.title = promptTitle;
+        const chosen = await game.promptTarget(candidates, promptOptions);
         if (chosen === game.CANCEL) throw game.CANCEL;
         if (chosen) actualTargets.push(chosen);
         break;
@@ -383,10 +560,12 @@ export class EffectSystem {
           ...opponent.battlefield.cards.filter(c => c.type !== 'quest'),
         ]);
         const candidates = [...friendly, ...enemy];
-        const chosen = await game.promptTarget(candidates, {
+        const promptOptions = {
           preferredSide: 'enemy',
           actingPlayer: player,
-        });
+        };
+        if (promptTitle) promptOptions.title = promptTitle;
+        const chosen = await game.promptTarget(candidates, promptOptions);
         if (chosen === game.CANCEL) throw game.CANCEL;
         if (chosen) actualTargets.push(chosen);
         break;
@@ -403,13 +582,15 @@ export class EffectSystem {
         const candidates = [...enemy, ...friendly];
         const chosen = new Set();
         for (let i = 0; i < 3; i++) {
+          const pickOptions = {
+            allowNoMore: chosen.size > 0,
+            preferredSide: 'enemy',
+            actingPlayer: player,
+          };
+          if (promptTitle) pickOptions.title = promptTitle;
           const pick = await game.promptTarget(
             candidates.filter(c => !chosen.has(c)),
-            {
-              allowNoMore: chosen.size > 0,
-              preferredSide: 'enemy',
-              actingPlayer: player,
-            }
+            pickOptions
           );
           if (pick === game.CANCEL) throw game.CANCEL;
           if (!pick) break;
@@ -448,10 +629,12 @@ export class EffectSystem {
           .filter(c => c.type !== 'quest')
           .filter((target) => isTargetable(target, { requester: player }));
         const candidates = [...enemy, ...friendly];
-        const chosen = await game.promptTarget(candidates, {
+        const promptOptions = {
           preferredSide: 'enemy',
           actingPlayer: player,
-        });
+        };
+        if (promptTitle) promptOptions.title = promptTitle;
+        const chosen = await game.promptTarget(candidates, promptOptions);
         if (chosen === game.CANCEL) throw game.CANCEL;
         if (chosen) actualTargets.push(chosen);
         break;
@@ -461,10 +644,12 @@ export class EffectSystem {
           opponent.hero,
           ...opponent.battlefield.cards.filter(c => !c.keywords?.includes('Taunt') && c.type !== 'quest'),
         ].filter(isTargetable);
-        const chosen = await game.promptTarget(candidates, {
+        const promptOptions = {
           preferredSide: 'enemy',
           actingPlayer: player,
-        });
+        };
+        if (promptTitle) promptOptions.title = promptTitle;
+        const chosen = await game.promptTarget(candidates, promptOptions);
         if (chosen === game.CANCEL) throw game.CANCEL;
         if (chosen) actualTargets.push(chosen);
         break;
@@ -1410,6 +1595,7 @@ export class EffectSystem {
     const { target, amount } = effect;
     const { game, player, card } = context;
     const opponent = player === game.player ? game.opponent : game.player;
+    const promptTitle = this._describeHealPrompt(effect);
 
     let actualTargets = [];
 
@@ -1431,10 +1617,12 @@ export class EffectSystem {
           ...opponent.battlefield.cards.filter(c => c.type !== 'quest')
         ]);
         const candidates = [...friendly, ...enemy];
-        const chosen = await game.promptTarget(candidates, {
+        const promptOptions = {
           preferredSide: 'friendly',
           actingPlayer: player,
-        });
+        };
+        if (promptTitle) promptOptions.title = promptTitle;
+        const chosen = await game.promptTarget(candidates, promptOptions);
         if (chosen === game.CANCEL) throw game.CANCEL;
         if (chosen) actualTargets.push(chosen);
         break;
@@ -2125,10 +2313,13 @@ export class EffectSystem {
     }
 
     let chosen;
+    const promptTitle = this._describeDestroyPrompt(effect);
     if (candidates.length === 1) {
       chosen = candidates[0];
     } else {
-      chosen = await game.promptTarget(candidates, { actingPlayer: player });
+      const promptOptions = { actingPlayer: player };
+      if (promptTitle) promptOptions.title = promptTitle;
+      chosen = await game.promptTarget(candidates, promptOptions);
       if (chosen === game.CANCEL) throw game.CANCEL;
       if (!chosen) return;
     }
@@ -2183,10 +2374,13 @@ export class EffectSystem {
 
     // Let the acting side pick a target (AI auto-picks via promptTarget)
     const preferFriendly = target === 'ally' || target === 'anyAlly';
-    const chosen = await game.promptTarget(candidates, {
+    const promptOptions = {
       preferredSide: preferFriendly ? 'friendly' : 'enemy',
       actingPlayer: player,
-    });
+    };
+    const promptTitle = this._describeReturnPrompt(effect);
+    if (promptTitle) promptOptions.title = promptTitle;
+    const chosen = await game.promptTarget(candidates, promptOptions);
     if (chosen === game.CANCEL) throw game.CANCEL;
     if (!chosen) return;
 
@@ -2216,10 +2410,13 @@ export class EffectSystem {
 
     if (!beasts.length) return;
 
-    const chosen = await game.promptTarget(beasts, {
+    const promptOptions = {
       preferredSide: 'friendly',
       actingPlayer: player,
-    });
+    };
+    const promptTitle = this._describeBuffBeastPrompt(effect);
+    if (promptTitle) promptOptions.title = promptTitle;
+    const chosen = await game.promptTarget(beasts, promptOptions);
     if (chosen === game.CANCEL) throw game.CANCEL;
     if (!chosen) return;
 
@@ -2427,6 +2624,7 @@ export class EffectSystem {
     const allowHeroTargets = effect.allowHero !== false;
     const { player, game } = context;
     const opponent = player === game.player ? game.opponent : game.player;
+    const promptTitle = this._describeBuffEffect(effect);
 
     let actualTargets = [];
 
@@ -2459,10 +2657,12 @@ export class EffectSystem {
             ]);
             candidates = [...candidates, ...enemy];
           }
-          const chosen = await game.promptTarget(candidates, {
+          const promptOptions = {
             preferredSide: isDebuff ? 'enemy' : 'friendly',
             actingPlayer: player,
-          });
+          };
+          if (promptTitle) promptOptions.title = promptTitle;
+          const chosen = await game.promptTarget(candidates, promptOptions);
           if (chosen) actualTargets.push(chosen);
         }
         break;
@@ -2616,6 +2816,7 @@ export class EffectSystem {
     const { player, game } = context;
     const opponent = player === game.player ? game.opponent : game.player;
     const isTemporary = duration === 'thisTurn' || duration === 'untilYourNextTurn';
+    const promptTitle = this._describeGrantKeywordPrompt(effect);
 
     let actualTargets = [];
 
@@ -2642,10 +2843,12 @@ export class EffectSystem {
             ...player.battlefield.cards.filter(c => c.type !== 'quest')
           ].filter((entity) => isTargetable(entity, { requester: player }));
 
-          const chosen = await game.promptTarget(friendly, {
+          const promptOptions = {
             preferredSide: 'friendly',
             actingPlayer: player,
-          });
+          };
+          if (promptTitle) promptOptions.title = promptTitle;
+          const chosen = await game.promptTarget(friendly, promptOptions);
           if (chosen === game.CANCEL) throw game.CANCEL;
           if (chosen) actualTargets.push(chosen);
         }
@@ -2656,10 +2859,12 @@ export class EffectSystem {
           opponent.hero,
           ...opponent.battlefield.cards.filter(c => c.type !== 'quest')
         ]).filter(isTargetable);
-        const chosen = await game.promptTarget(candidates, {
+        const promptOptions = {
           preferredSide: 'enemy',
           actingPlayer: player,
-        });
+        };
+        if (promptTitle) promptOptions.title = promptTitle;
+        const chosen = await game.promptTarget(candidates, promptOptions);
         if (chosen === game.CANCEL) throw game.CANCEL;
         if (chosen) actualTargets.push(chosen);
         break;

@@ -40,6 +40,8 @@ describe('Sunder Armor targeting', () => {
     const candidates = game.promptTarget.mock.calls[0][0];
     const names = candidates.map(c => c.name);
     expect(names).toContain('Enemy Hero');
+    const options = game.promptTarget.mock.calls[0][1] || {};
+    expect(options.title).toBe('Apply -2 Armor');
   });
 });
 

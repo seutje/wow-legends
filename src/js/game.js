@@ -1476,7 +1476,10 @@ export default class Game {
     try { this._uiRerender?.(); } catch {}
   }
 
-  async promptTarget(candidates, { allowNoMore = false, preferredSide = 'enemy', actingPlayer = null } = {}) {
+  async promptTarget(
+    candidates,
+    { allowNoMore = false, preferredSide = 'enemy', actingPlayer = null, title = null } = {}
+  ) {
     candidates = candidates?.filter(c => c.type !== 'quest');
     const pendingBattlecryCard = this._pendingBattlecryCard;
     if (pendingBattlecryCard) {
@@ -1558,7 +1561,11 @@ export default class Game {
       let resolved = false;
       let showTimer = null;
 
+      const content = document.createElement('div');
+      content.className = 'target-prompt__content';
+
       const list = document.createElement('ul');
+      list.className = 'target-prompt__targets';
 
       const enemy = this.opponent;
 
@@ -1581,7 +1588,16 @@ export default class Game {
         list.appendChild(li);
       });
 
-      overlay.appendChild(list);
+      if (title) {
+        const heading = document.createElement('h2');
+        heading.textContent = title;
+        content.appendChild(heading);
+      }
+
+      content.appendChild(list);
+
+      const buttons = document.createElement('div');
+      buttons.className = 'target-prompt__buttons';
 
       if (allowNoMore) {
         const done = document.createElement('button');
@@ -1589,7 +1605,7 @@ export default class Game {
         done.addEventListener('click', () => {
           finish(null);
         });
-        overlay.appendChild(done);
+        buttons.appendChild(done);
       }
 
       // Always provide a cancel option to close without choosing
@@ -1598,7 +1614,10 @@ export default class Game {
       cancel.addEventListener('click', () => {
         finish(this.CANCEL);
       });
-      overlay.appendChild(cancel);
+      buttons.appendChild(cancel);
+
+      content.appendChild(buttons);
+      overlay.appendChild(content);
 
       const showOverlay = () => {
         if (resolved || overlay.parentNode) return;
