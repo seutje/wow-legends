@@ -757,8 +757,8 @@ ul.zone-list li {
 
 .card-tooltip .stat.cost,
 .card-tooltip .stat.armor {
-  top: 8.5%;
-  right: 7%;
+  top: 8%;
+  right: 6.5%;
   background: #1e90ff;
 }
 
