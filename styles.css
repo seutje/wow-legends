@@ -21,7 +21,7 @@ header {
   flex-wrap: wrap;
   align-items: center;
   gap: 16px;
-  padding: 16px clamp(16px, 4vw, 32px);
+  padding: 10px;
   background: linear-gradient(180deg, rgba(18, 28, 40, 0.95), rgba(12, 18, 26, 0.95));
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
   left: 0;
@@ -37,7 +37,7 @@ header strong {
 
 main {
   flex: 1;
-  padding: clamp(90px, 10vh, 160px) clamp(16px, 4vw, 32px) 0;
+  padding: clamp(80px, 5vh, 160px) clamp(16px, 4vw, 32px) 0;
   display: grid;
   grid-template-columns: 1fr;
   gap: clamp(16px, 3vw, 20px);
