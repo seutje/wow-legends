@@ -862,14 +862,14 @@ ul.zone-list li {
 .start-screen__hero {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 8px;
-  padding: 18px;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 18px 24px;
   border-radius: 14px;
   border: 1px solid rgba(84, 140, 220, 0.45);
   background: rgba(16, 28, 44, 0.85);
   color: inherit;
-  text-align: left;
+  text-align: center;
   cursor: pointer;
   transition: border-color 120ms ease, transform 120ms ease, box-shadow 120ms ease;
 }
@@ -886,15 +886,37 @@ ul.zone-list li {
   box-shadow: 0 0 0 2px rgba(160, 216, 255, 0.35), 0 18px 32px rgba(0, 0, 0, 0.4);
 }
 
+.start-screen__hero-card {
+  width: 220px;
+  height: 330px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.start-screen__hero-card > .card-tooltip {
+  width: 220px;
+  pointer-events: none;
+  transition: transform 120ms ease;
+}
+
+.start-screen__hero:hover .start-screen__hero-card > .card-tooltip,
+.start-screen__hero:focus-visible .start-screen__hero-card > .card-tooltip,
+.start-screen__hero[data-selected='1'] .start-screen__hero-card > .card-tooltip {
+  transform: translateY(-2px);
+}
+
 .start-screen__hero-name {
   font-size: 18px;
   font-weight: 600;
   color: #e6f3ff;
+  display: block;
 }
 
 .start-screen__hero-text {
   font-size: 14px;
   color: #a8bed8;
+  max-width: 26ch;
 }
 
 .start-screen__empty {

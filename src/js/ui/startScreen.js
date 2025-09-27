@@ -1,3 +1,5 @@
+import { cardTooltip } from './cardTooltip.js';
+
 const noop = () => {};
 
 const schedule = (() => {
@@ -117,12 +119,29 @@ function renderHeroGrid({
   const children = [];
   if (Array.isArray(heroes) && heroes.length) {
     for (const hero of heroes) {
+      const heroId = hero?.id;
+      const heroName = hero?.name || 'Unknown Hero';
+      const baseCard = (hero && typeof hero === 'object') ? hero : {};
+      const tooltipCard = cardTooltip({
+        ...baseCard,
+        type: baseCard.type || 'hero',
+        id: heroId || 'unknown-hero',
+        name: heroName,
+        text: baseCard.text || '',
+      });
+      tooltipCard.dataset.startScreenCard = '1';
+      const ariaAttrs = { label: heroName };
+      if (selectedId != null) {
+        ariaAttrs.pressed = heroId && heroId === selectedId ? 'true' : 'false';
+      }
       const btn = el('button', {
         class: 'start-screen__hero',
         onclick: () => onSelect(hero),
-        dataset: { selected: hero?.id && hero.id === selectedId ? '1' : '0' },
+        dataset: { selected: heroId && heroId === selectedId ? '1' : '0' },
+        aria: ariaAttrs,
       },
-      el('span', { class: 'start-screen__hero-name' }, hero?.name || 'Unknown Hero'),
+      el('span', { class: 'start-screen__hero-card' }, tooltipCard),
+      el('span', { class: 'start-screen__hero-name' }, heroName),
       hero?.text ? el('span', { class: 'start-screen__hero-text' }, hero.text) : null);
       children.push(btn);
     }
