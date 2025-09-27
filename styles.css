@@ -16,7 +16,7 @@ html, body {
 header {
   position: fixed;
   top: 0;
-  z-index: 200;
+  z-index: 1001;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -376,7 +376,7 @@ header .controls select:focus-visible {
   justify-content: flex-end;
   transform: translateX(calc(100% - var(--toggle-width)));
   transition: transform 0.3s ease;
-  z-index: 500;
+  z-index: 1002;
   pointer-events: none;
 }
 
