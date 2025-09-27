@@ -647,6 +647,13 @@ function syncCardsSection(sectionEl, cards, { clickCard, owner } = {}) {
   } else if (sectionEl.style) {
     sectionEl.style.removeProperty('--hand-overlap');
   }
+  const isRemovingNode = (node) => node?.dataset?.removing === '1';
+  const nextStableSibling = (start) => {
+    let current = start || null;
+    while (current && isRemovingNode(current)) current = current.nextSibling;
+    return current || null;
+  };
+  const firstStableChild = () => nextStableSibling(list.firstChild);
   const seen = new Set();
   // Rebuild order with minimal moves; disambiguate duplicates by occurrence index
   const counts = new Map();
@@ -668,13 +675,14 @@ function syncCardsSection(sectionEl, cards, { clickCard, owner } = {}) {
       updateCardEl(node, c, { owner });
       byKey.delete(key);
       node.dataset.key = key;
+      if (node.dataset.removing === '1') {
+        delete node.dataset.removing;
+        node.classList.remove('fade-out');
+      }
       attachCardInteractions(node, c, clickCard);
     }
-    if (lastNode) {
-      if (node.previousSibling !== lastNode) list.insertBefore(node, lastNode.nextSibling);
-    } else if (node !== list.firstChild) {
-      list.insertBefore(node, list.firstChild);
-    }
+    const referenceNode = lastNode ? nextStableSibling(lastNode.nextSibling) : firstStableChild();
+    if (referenceNode !== node) list.insertBefore(node, referenceNode);
     lastNode = node;
   }
   // Remove any remaining nodes (cards no longer present)
