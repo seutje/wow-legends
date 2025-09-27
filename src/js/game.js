@@ -1776,14 +1776,18 @@ export default class Game {
 
   async _runSimpleAITurn(actor, defender) {
     if (!actor || !defender) return;
+    const participantsActive = () => this._isParticipant(actor) && this._isParticipant(defender);
+    if (!participantsActive()) return;
     const affordable = actor.hand.cards
       .filter((c) => this.canPlay(actor, c))
       .sort((a, b) => (a.cost || 0) - (b.cost || 0));
     if (affordable[0]) {
       await this.playFromHand(actor, affordable[0]);
+      if (!participantsActive()) return;
       if (this.isGameOver()) return;
     }
 
+    if (!participantsActive()) return;
     const attackers = actor.battlefield.cards.filter((c) => {
       if (!(c.type === 'ally' || c.type === 'equipment')) return false;
       const atk = typeof c.totalAttack === 'function' ? c.totalAttack() : (c.data?.attack || 0);
@@ -1792,13 +1796,16 @@ export default class Game {
       return atk > 0 && !c?.data?.summoningSick && used < maxAttacks;
     });
     for (const card of attackers) {
+      if (!participantsActive()) return;
       if (this.isGameOver()) break;
       const hasRush = !!card?.keywords?.includes?.('Rush');
       const justEntered = !!(card?.data?.enteredTurn && card.data.enteredTurn === this.turns.turn);
+      if (!participantsActive()) return;
       const defenders = [
         defender.hero,
         ...defender.battlefield.cards.filter((c) => c.type !== 'equipment' && c.type !== 'quest')
       ];
+      if (!participantsActive()) return;
       const legal = selectTargets(defenders);
       if (hasRush && justEntered) {
         const nonHero = legal.filter((t) => !matchesCardIdentifier(t, defender.hero));
@@ -1814,6 +1821,7 @@ export default class Game {
       }
       const target = block || defender.hero;
       await this.throttleAIAction(actor);
+      if (!participantsActive()) return;
       if (this.isGameOver()) break;
       const declared = this.combat.declareAttacker(card, target);
       if (!declared) continue;
@@ -1828,6 +1836,7 @@ export default class Game {
       this._pushLog(actor, `Attacked ${target.name} with ${card.name}`);
     }
 
+    if (!participantsActive()) return;
     this.combat.setDefenderHero(defender.hero);
     const events = this.combat.resolve();
     for (const ev of events) {
@@ -1838,7 +1847,9 @@ export default class Game {
       try { this._uiRerender(); } catch {}
     }
     await this.cleanupDeaths(defender, actor);
+    if (!participantsActive()) return;
     await this.cleanupDeaths(actor, defender);
+    if (!participantsActive()) return;
     this.checkForGameOver();
   }
 
@@ -1863,28 +1874,51 @@ export default class Game {
       this.bus.emit('ai:thinking', { thinking: true });
     }
 
+    const participantsActive = () => this._isParticipant(actor) && this._isParticipant(defender);
+    const abortIfInactive = () => {
+      if (participantsActive()) return false;
+      if (pendingSet && this.state) {
+        this.state.aiPending = null;
+        pendingSet = false;
+      }
+      return true;
+    };
+
+    if (abortIfInactive()) return;
+
     try {
       if (difficulty === 'nightmare') {
+        if (abortIfInactive()) return;
         const { default: NeuralAI, loadModelFromDiskOrFetch } = await import('./systems/ai-nn.js');
+        if (abortIfInactive()) return;
         await loadModelFromDiskOrFetch();
+        if (abortIfInactive()) return;
         const ai = new NeuralAI({ game: this, resourceSystem: this.resources, combatSystem: this.combat });
+        if (abortIfInactive()) return;
         await ai.takeTurn(actor, defender, { skipStart });
+        if (abortIfInactive()) return;
       } else if (difficulty === 'medium' || difficulty === 'hard' || difficulty === 'insane') {
         if (trackPending && this.state) {
           this.state.aiPending = { type: 'mcts', stage: 'queued' };
           pendingSet = true;
         }
+        if (abortIfInactive()) return;
         const ai = await this._createMctsAI(difficulty);
+        if (abortIfInactive()) return;
         try {
           if (skipStart) await ai.takeTurn(actor, defender, { resume: true });
           else await ai.takeTurn(actor, defender);
+          if (abortIfInactive()) return;
         } finally {
           if (pendingSet && this.state) {
             this.state.aiPending = null;
           }
+          pendingSet = false;
         }
       } else {
+        if (abortIfInactive()) return;
         await this._runSimpleAITurn(actor, defender);
+        if (abortIfInactive()) return;
       }
     } finally {
       if (manageThinking) {
