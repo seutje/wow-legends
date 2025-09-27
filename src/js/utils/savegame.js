@@ -452,6 +452,23 @@ export function saveGameState(game) {
   }
 }
 
+export function hasSavedGameState() {
+  try {
+    const save = getSave();
+    const raw = save.storage.getItem(save.key(GAME_STATE_KEY));
+    if (!raw) return false;
+    try {
+      JSON.parse(raw);
+    } catch {
+      save.storage.removeItem(save.key(GAME_STATE_KEY));
+      return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function loadSavedGameState(game) {
   try {
     const save = getSave();

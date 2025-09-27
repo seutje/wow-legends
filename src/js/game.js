@@ -397,6 +397,7 @@ export default class Game {
 
     let forcedOpponentHero = null;
     let desiredOpponentHeroId = null;
+    let forcedOpponentDeck = null;
     if (playerDeck && playerDeck.opponentHeroId != null) {
       desiredOpponentHeroId = String(playerDeck.opponentHeroId);
       if (desiredOpponentHeroId) {
@@ -406,6 +407,40 @@ export default class Game {
     } else if (playerDeck && playerDeck.opponentHero && playerDeck.opponentHero.type === 'hero') {
       forcedOpponentHero = playerDeck.opponentHero;
       desiredOpponentHeroId = forcedOpponentHero?.id ? String(forcedOpponentHero.id) : null;
+    }
+    if (playerDeck && playerDeck.opponentDeck && typeof playerDeck.opponentDeck === 'object') {
+      const deck = playerDeck.opponentDeck;
+      let deckHero = null;
+      if (deck.hero && deck.hero.type === 'hero') {
+        deckHero = deck.hero;
+      } else if (deck.heroId) {
+        const candidate = cardById.get(String(deck.heroId));
+        if (candidate?.type === 'hero') deckHero = candidate;
+      }
+      if (!forcedOpponentHero && deckHero) {
+        forcedOpponentHero = deckHero;
+      }
+      if (deckHero?.id && !desiredOpponentHeroId) {
+        desiredOpponentHeroId = String(deckHero.id);
+      }
+      const rawCards = Array.isArray(deck.cards) ? deck.cards : [];
+      const convertedCards = rawCards.map((card) => {
+        if (!card) return null;
+        if (card.type && card.type !== 'hero') return card;
+        if (card.id) {
+          const lookup = cardById.get(card.id);
+          if (lookup && lookup.type !== 'hero') return lookup;
+        }
+        if (typeof card === 'string') {
+          const lookup = cardById.get(card);
+          if (lookup && lookup.type !== 'hero') return lookup;
+        }
+        return null;
+      }).filter(Boolean);
+      forcedOpponentDeck = {
+        hero: deckHero || forcedOpponentHero || null,
+        cards: convertedCards,
+      };
     }
     const opponentHeroForced = !!forcedOpponentHero;
     if (this.state) {
@@ -547,7 +582,12 @@ export default class Game {
 
     // Assign opponent hero and library
     let opponentDeckState = null;
-    if (opponentIsAI) {
+    if (forcedOpponentDeck) {
+      opponentDeckState = {
+        hero: forcedOpponentDeck.hero || null,
+        cards: Array.isArray(forcedOpponentDeck.cards) ? forcedOpponentDeck.cards.slice() : [],
+      };
+    } else if (opponentIsAI) {
       opponentDeckState = pickPrebuiltDeck(this.player.hero?.id);
     }
     if (!opponentDeckState) {

@@ -1,12 +1,13 @@
 import Game from './game.js';
 import { renderDeckBuilder } from './ui/deckbuilder.js';
+import { cardTooltip } from './ui/cardTooltip.js';
 import { renderOptions } from './ui/options.js';
 import { setDebugLogging } from './utils/logger.js';
 import { fillDeckRandomly } from './utils/deckbuilder.js';
 import { renderPlay } from './ui/play.js';
 import { loadSettings, rehydrateDeck, saveLastDeck } from './utils/settings.js';
 import { deriveDeckFromGame } from './utils/deckstate.js';
-import { saveGameState, loadSavedGameState, clearSavedGameState } from './utils/savegame.js';
+import { saveGameState, loadSavedGameState, clearSavedGameState, hasSavedGameState } from './utils/savegame.js';
 
 function qs(sel) { return document.querySelector(sel); }
 
@@ -115,11 +116,6 @@ try {
   }
 } catch {}
 
-let loadedFromSave = false;
-try {
-  loadedFromSave = loadSavedGameState(game);
-} catch {}
-
 // Expose for quick dev console hooks
 window.game = game;
 
@@ -135,6 +131,284 @@ setStatus('Initialized');
 const board = document.createElement('div');
 root.appendChild(board);
 
+const heroCards = Array.isArray(game.allCards)
+  ? game.allCards.filter((card) => card?.type === 'hero')
+  : [];
+const sortedHeroes = heroCards.slice().sort((a, b) => {
+  const aLabel = a?.name ? String(a.name) : String(a?.id ?? '');
+  const bLabel = b?.name ? String(b.name) : String(b?.id ?? '');
+  return aLabel.localeCompare(bLabel, undefined, { sensitivity: 'base', numeric: true });
+});
+
+let availablePrebuiltDecks = [];
+let prebuiltDecksPromise = null;
+
+let savedGameAvailable = hasSavedGameState();
+autoSaveEnabled = !savedGameAvailable;
+
+const resumeAiIfNeeded = () => {
+  if (game.state?.aiThinking && game.state?.aiPending?.type === 'mcts') {
+    game.resumePendingAITurn().catch(() => {});
+  }
+};
+
+let startScreenActive = false;
+let startScreenEls = null;
+
+function getStartScreenEls() {
+  if (startScreenEls || typeof document === 'undefined') return startScreenEls;
+  const parent = document.body || document.documentElement;
+  if (!parent) return null;
+  const overlay = document.createElement('div');
+  overlay.className = 'start-screen';
+  overlay.setAttribute('role', 'dialog');
+  overlay.setAttribute('aria-modal', 'true');
+  overlay.hidden = true;
+  const panel = document.createElement('div');
+  panel.className = 'start-screen__panel';
+  overlay.appendChild(panel);
+  parent.appendChild(overlay);
+  startScreenEls = { overlay, panel };
+  return startScreenEls;
+}
+
+function showStartOverlay() {
+  const els = getStartScreenEls();
+  if (!els) return null;
+  startScreenActive = true;
+  autoSaveEnabled = false;
+  toggleGameVisible(false);
+  els.overlay.hidden = false;
+  return els;
+}
+
+function hideStartScreen() {
+  if (!startScreenActive) return;
+  const els = getStartScreenEls();
+  if (!els) return;
+  startScreenActive = false;
+  els.overlay.hidden = true;
+  els.panel.innerHTML = '';
+  toggleGameVisible(true);
+}
+
+function buildDeckForHero(hero) {
+  if (!hero) return null;
+  const heroId = hero.id;
+  const prebuilt = Array.isArray(availablePrebuiltDecks)
+    ? availablePrebuiltDecks.find((deck) => deck?.hero?.id === heroId)
+    : null;
+  if (prebuilt) {
+    return {
+      hero: prebuilt.hero,
+      cards: Array.isArray(prebuilt.cards) ? prebuilt.cards.slice() : [],
+    };
+  }
+  const state = { hero, cards: [] };
+  fillDeckRandomly(state, game.allCards, game.rng);
+  return {
+    hero: state.hero,
+    cards: Array.isArray(state.cards) ? state.cards.slice() : [],
+  };
+}
+
+function renderStartHome(message = null) {
+  const els = showStartOverlay();
+  if (!els) {
+    if (savedGameAvailable) {
+      try {
+        const ok = loadSavedGameState(game);
+        if (ok) {
+          autoSaveEnabled = true;
+          rerender();
+          resumeAiIfNeeded();
+        }
+      } catch {}
+    }
+    return;
+  }
+  const { panel } = els;
+  panel.innerHTML = '';
+  const title = document.createElement('h2');
+  title.className = 'start-screen__title';
+  title.textContent = 'Start Game';
+  panel.appendChild(title);
+  if (message) {
+    const msg = document.createElement('p');
+    msg.className = 'start-screen__message';
+    msg.textContent = message;
+    panel.appendChild(msg);
+  }
+  const buttons = document.createElement('div');
+  buttons.className = 'start-screen__buttons';
+  if (savedGameAvailable) {
+    const continueBtn = document.createElement('button');
+    continueBtn.type = 'button';
+    continueBtn.className = 'start-screen__button';
+    continueBtn.textContent = 'Continue';
+    continueBtn.addEventListener('click', handleContinue);
+    buttons.appendChild(continueBtn);
+  }
+  const newGameBtn = document.createElement('button');
+  newGameBtn.type = 'button';
+  newGameBtn.className = 'start-screen__button start-screen__button--primary';
+  newGameBtn.textContent = 'New Game';
+  newGameBtn.addEventListener('click', renderHeroSelection);
+  buttons.appendChild(newGameBtn);
+  panel.appendChild(buttons);
+}
+
+function createHeroOption(hero, onSelect) {
+  const option = cardTooltip(hero);
+  option.classList.add('start-screen__hero-card');
+  option.tabIndex = 0;
+  option.setAttribute('role', 'button');
+  const label = hero?.name ? String(hero.name) : String(hero?.id ?? 'Hero');
+  option.setAttribute('aria-label', `Select ${label}`);
+  const activate = () => onSelect(hero);
+  option.addEventListener('click', activate);
+  option.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Enter' || ev.key === ' ') {
+      ev.preventDefault();
+      activate();
+    }
+  });
+  return option;
+}
+
+function renderHeroSelection() {
+  const els = showStartOverlay();
+  if (!els) return;
+  const { panel } = els;
+  panel.innerHTML = '';
+  const title = document.createElement('h2');
+  title.className = 'start-screen__title';
+  title.textContent = 'Choose your hero';
+  panel.appendChild(title);
+  const back = document.createElement('button');
+  back.type = 'button';
+  back.className = 'start-screen__back';
+  back.textContent = 'Back';
+  back.addEventListener('click', () => renderStartHome());
+  panel.appendChild(back);
+  if (!sortedHeroes.length) {
+    const msg = document.createElement('p');
+    msg.className = 'start-screen__message';
+    msg.textContent = 'No heroes are available.';
+    panel.appendChild(msg);
+    return;
+  }
+  const grid = document.createElement('div');
+  grid.className = 'start-screen__heroes';
+  for (const hero of sortedHeroes) {
+    grid.appendChild(createHeroOption(hero, renderOpponentSelection));
+  }
+  panel.appendChild(grid);
+}
+
+function renderOpponentSelection(playerHero) {
+  const els = showStartOverlay();
+  if (!els) return;
+  const { panel } = els;
+  panel.innerHTML = '';
+  const title = document.createElement('h2');
+  title.className = 'start-screen__title';
+  const playerLabel = playerHero?.name ? String(playerHero.name) : 'your hero';
+  title.textContent = `Choose an opponent for ${playerLabel}`;
+  panel.appendChild(title);
+  const back = document.createElement('button');
+  back.type = 'button';
+  back.className = 'start-screen__back';
+  back.textContent = 'Back';
+  back.addEventListener('click', renderHeroSelection);
+  panel.appendChild(back);
+  if (!sortedHeroes.length) {
+    const msg = document.createElement('p');
+    msg.className = 'start-screen__message';
+    msg.textContent = 'No heroes are available.';
+    panel.appendChild(msg);
+    return;
+  }
+  const grid = document.createElement('div');
+  grid.className = 'start-screen__heroes';
+  for (const hero of sortedHeroes) {
+    grid.appendChild(createHeroOption(hero, (opponentHero) => {
+      void beginGameWithHeroes(playerHero, opponentHero);
+    }));
+  }
+  panel.appendChild(grid);
+}
+
+async function beginGameWithHeroes(playerHero, opponentHero) {
+  const els = showStartOverlay();
+  if (!els) return;
+  const { panel } = els;
+  panel.innerHTML = '';
+  const status = document.createElement('p');
+  status.className = 'start-screen__status';
+  status.textContent = 'Preparing decks…';
+  panel.appendChild(status);
+  try {
+    await ensurePrebuiltDecksLoaded();
+    const playerDeck = buildDeckForHero(playerHero);
+    const opponentDeck = buildDeckForHero(opponentHero);
+    const deckOverride = {
+      hero: playerDeck?.hero || null,
+      cards: Array.isArray(playerDeck?.cards) ? playerDeck.cards.slice() : [],
+    };
+    if (!deckOverride.hero || deckOverride.cards.length !== 60) {
+      throw new Error('Invalid deck for hero selection');
+    }
+    if (opponentDeck?.hero) {
+      deckOverride.opponentHeroId = opponentDeck.hero.id;
+      deckOverride.opponentHero = opponentDeck.hero;
+      deckOverride.opponentDeck = {
+        hero: opponentDeck.hero,
+        cards: Array.isArray(opponentDeck.cards) ? opponentDeck.cards.slice() : [],
+      };
+    } else if (opponentHero?.id) {
+      deckOverride.opponentHeroId = opponentHero.id;
+      deckOverride.opponentHero = opponentHero;
+    }
+    autoSaveEnabled = true;
+    await startNewGame({ deckOverride });
+    try { saveLastDeck({ hero: deckOverride.hero, cards: deckOverride.cards }); } catch {}
+    savedGameAvailable = true;
+    rerender();
+    hideStartScreen();
+  } catch (err) {
+    console.error('Failed to start selected game', err);
+    savedGameAvailable = hasSavedGameState();
+    renderStartHome('Unable to start a new game. Please try again.');
+  }
+}
+
+function handleContinue() {
+  const els = showStartOverlay();
+  if (!els) return;
+  const { panel } = els;
+  panel.innerHTML = '';
+  const status = document.createElement('p');
+  status.className = 'start-screen__status';
+  status.textContent = 'Loading saved game…';
+  panel.appendChild(status);
+  try {
+    const ok = loadSavedGameState(game);
+    if (ok) {
+      autoSaveEnabled = true;
+      rerender();
+      hideStartScreen();
+      resumeAiIfNeeded();
+      savedGameAvailable = true;
+      return;
+    }
+  } catch (err) {
+    console.error('Failed to load saved game', err);
+  }
+  savedGameAvailable = hasSavedGameState();
+  renderStartHome('No saved game was found.');
+}
+
 function generateRandomSeed() {
   if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
     const buffer = new Uint32Array(1);
@@ -145,13 +419,34 @@ function generateRandomSeed() {
   return Math.floor(rand * 0x100000000) >>> 0;
 }
 
+let autoSaveEnabled = true;
+
 async function startNewGame({ deckOverride = null } = {}) {
   const seed = generateRandomSeed();
   if (typeof game?.rng?.seed === 'function') {
     game.rng.seed(seed);
   }
-  const deck = deckOverride || deriveDeckFromGame(game);
+  let deck;
+  if (deckOverride) {
+    deck = {
+      hero: deckOverride.hero || null,
+      cards: Array.isArray(deckOverride.cards) ? deckOverride.cards.slice() : [],
+    };
+    if (deckOverride.opponentHeroId != null) deck.opponentHeroId = deckOverride.opponentHeroId;
+    if (deckOverride.opponentHero) deck.opponentHero = deckOverride.opponentHero;
+    if (deckOverride.opponentDeck) {
+      deck.opponentDeck = {
+        hero: deckOverride.opponentDeck.hero || null,
+        cards: Array.isArray(deckOverride.opponentDeck.cards)
+          ? deckOverride.opponentDeck.cards.slice()
+          : [],
+      };
+    }
+  } else {
+    deck = deriveDeckFromGame(game);
+  }
   clearSavedGameState();
+  autoSaveEnabled = true;
   const hasDeck = deck?.hero && Array.isArray(deck.cards) && deck.cards.length === 60;
   await game.reset(hasDeck ? deck : null);
   saveGameState(game);
@@ -164,12 +459,16 @@ const rerender = () => {
     deckBuilderOpen,
     onNewGame: startNewGame
   });
-  saveGameState(game);
+  if (autoSaveEnabled) {
+    saveGameState(game);
+  }
 };
 
 rerender();
 
 game.setUIRerender(rerender);
+
+renderStartHome();
 
 // Helpers to smooth AI thinking progress in the browser
 const nowMs = () => {
@@ -327,8 +626,6 @@ if (!sidebar.parentElement) root.appendChild(sidebar);
 sidebar.style.display = 'none';
 
 const deckState = { hero: null, cards: [], selectedPrebuiltDeck: null, selectedOpponentHeroId: null };
-let availablePrebuiltDecks = [];
-let prebuiltDecksPromise = null;
 
 function handleSelectPrebuilt(deckName) {
   const normalized = deckName || null;
