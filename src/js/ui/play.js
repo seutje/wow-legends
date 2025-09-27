@@ -800,6 +800,13 @@ export function renderPlay(container, game, {
   const debugEnabled = !!(game.state?.debug);
   const defaultDifficulty = game?._defaultDifficulty || 'insane';
 
+  const formatManaAndDeck = (player) => {
+    const pool = game.resources.pool(player);
+    const available = game.resources.available(player);
+    const deckCount = player?.library?.cards?.length ?? 0;
+    return `${pool}/${available} Mana · Deck: ${deckCount}`;
+  };
+
   ensureAttackAnimationSubscription(game);
 
   let headerEl = document.querySelector('header');
@@ -909,7 +916,7 @@ export function renderPlay(container, game, {
       'div',
       { class: 'slot ai-hero' },
       buildCardEl(e.hero),
-      el('div', { class: 'hero-mana' }, `${game.resources.pool(e)}/${game.resources.available(e)} Mana`),
+      el('div', { class: 'hero-mana' }, formatManaAndDeck(e)),
       buildAiHandIndicator(e.hand)
     );
     attachCardInteractions(aiHero.querySelector('.card-tooltip'), e.hero);
@@ -922,7 +929,7 @@ export function renderPlay(container, game, {
       'div',
       { class: 'slot p-hero' },
       buildCardEl(p.hero),
-      el('div', { class: 'hero-mana' }, `${game.resources.pool(p)}/${game.resources.available(p)} Mana`)
+      el('div', { class: 'hero-mana' }, formatManaAndDeck(p))
     );
     attachCardInteractions(pHero.querySelector('.card-tooltip'), p.hero, async () => {
       await game.attack(game.player, game.player.hero);
@@ -990,9 +997,9 @@ export function renderPlay(container, game, {
 
   // Update mana displays
   const aiManaEl = board.querySelector('.ai-hero .hero-mana');
-  aiManaEl?.replaceChildren(`${game.resources.pool(e)}/${game.resources.available(e)} Mana`);
+  aiManaEl?.replaceChildren(formatManaAndDeck(e));
   const playerManaEl = board.querySelector('.p-hero .hero-mana');
-  playerManaEl?.replaceChildren(`${game.resources.pool(p)}/${game.resources.available(p)} Mana`);
+  playerManaEl?.replaceChildren(formatManaAndDeck(p));
 
   // Update hero cards
   const aiHeroCard = board.querySelector('.ai-hero .card-tooltip');
