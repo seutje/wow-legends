@@ -2970,16 +2970,26 @@ export class EffectSystem {
 
   heroAttackOnArmorGain(effect, context) {
     const rawAmount = Number(effect?.amount);
-    const amount = Number.isFinite(rawAmount) ? rawAmount : 1;
-    if (!amount) return;
+    const normalizedAmount = Number.isFinite(rawAmount) ? rawAmount : 1;
+    if (!normalizedAmount) return;
 
     const { game, player, card } = context || {};
     if (!game || !player?.hero || !card) return;
 
+    const hero = card;
+    if (!hero) return;
+
+    const state = hero._armorAttackOnArmorGainState ||= { initialized: false, amount: normalizedAmount };
+    state.amount = normalizedAmount;
+    if (state.initialized) {
+      return;
+    }
+    state.initialized = true;
+
     const grantAttack = () => {
-      if (player.hero !== card) return;
-      const hero = card;
-      if (!hero) return;
+      if (player.hero !== hero) return;
+      const amount = Number(state.amount);
+      if (!Number.isFinite(amount) || amount === 0) return;
       if (!hero.data) hero.data = {};
       hero.data.attack = (hero.data.attack || 0) + amount;
       const revert = () => {
@@ -2993,11 +3003,11 @@ export class EffectSystem {
 
     const handler = ({ player: armorPlayer }) => {
       if (armorPlayer !== player) return;
-      if (player.hero !== card) return;
+      if (player.hero !== hero) return;
       grantAttack();
     };
 
-    this._trackCleanup(game.bus.on('armorGained', handler));
+    state.off = this._trackCleanup(game.bus.on('armorGained', handler));
   }
 
   buffOnSurviveDamage(effect, context) {
