@@ -21,6 +21,7 @@ async function optimizePng(inPath, outPath) {
   // Lossless PNG optimization via zlib/deflate tuning.
   // compressionLevel: 0-9 (9 = max). effort: 1-10 (10 = max).
   await sharp(inPath)
+    .resize({ width: 320 })
     .png({ compressionLevel: 9, effort: 10 })
     .toFile(outPath);
 }
