@@ -1,3 +1,4 @@
+import { jest } from '@jest/globals';
 import Game from '../src/js/game.js';
 import { RNG } from '../src/js/utils/rng.js';
 
@@ -74,5 +75,22 @@ describe('starting player selection', () => {
     } finally {
       game.resources.startTurn = originalStartTurn;
     }
+  });
+
+  test('rerender triggers when player takes first turn after AI opener', async () => {
+    const game = new Game(null, { aiPlayers: ['opponent'] });
+    game.state.difficulty = 'easy';
+    const rerender = jest.fn();
+    game.setUIRerender(rerender);
+    game._takeTurnWithDifficultyAI = jest.fn().mockResolvedValue(undefined);
+    game.rng = new RNG(4);
+
+    await game.setupMatch();
+
+    expect(game.state.startingPlayer).toBe('opponent');
+    expect(game.turns.activePlayer).toBe(game.player);
+    expect(game.player.hand.cards.length).toBe(4);
+    expect(game._takeTurnWithDifficultyAI).toHaveBeenCalled();
+    expect(rerender).toHaveBeenCalled();
   });
 });

@@ -164,6 +164,9 @@ export default class Game {
           && player === this.opponent
           && (difficulty === 'medium' || difficulty === 'hard' || difficulty === 'nightmare' || difficulty === 'insane');
         if (player && !aiHandlesDraw) this.draw(player, 1);
+        if (player) {
+          try { this._uiRerender?.(); } catch {}
+        }
       });
 
       this.turns.bus.on('phase:end', ({ phase }) => {
