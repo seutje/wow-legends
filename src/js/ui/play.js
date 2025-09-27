@@ -1,5 +1,5 @@
 // No HUD title import needed
-import { matchesCardIdentifier } from '../utils/card.js';
+import { getCardInstanceId, matchesCardIdentifier } from '../utils/card.js';
 
 function el(tag, attrs = {}, ...children) {
   const e = document.createElement(tag);
@@ -89,7 +89,11 @@ function buildCardEl(card, { owner } = {}) {
     let eqAttack = card.attack;
     let eqDurability = card.durability;
     if (owner && owner.hero?.equipment) {
-      const eq = owner.hero.equipment.find((e) => matchesCardIdentifier(e, card) || (card.name && e?.name === card.name));
+      const cardIdentifier = getCardInstanceId(card);
+      const eq = owner.hero.equipment.find((e) => (
+        matchesCardIdentifier(e, card)
+        || (!cardIdentifier && !getCardInstanceId(e) && card.name && e?.name === card.name)
+      ));
       if (eq) { eqAttack = (eq.attack ?? eqAttack); eqDurability = (eq.durability ?? eqDurability); }
     }
     if (eqAttack != null) wrap.append(el('div', { class: 'stat attack' }, eqAttack));
@@ -604,7 +608,11 @@ function updateCardEl(cardEl, card, { owner } = {}) {
     let eqAttack = card.attack;
     let eqDurability = card.durability;
     if (owner && owner.hero?.equipment) {
-      const eq = owner.hero.equipment.find(e => e?.id === card.id || e?.name === card.name);
+      const cardIdentifier = getCardInstanceId(card);
+      const eq = owner.hero.equipment.find((e) => (
+        matchesCardIdentifier(e, card)
+        || (!cardIdentifier && !getCardInstanceId(e) && card.name && e?.name === card.name)
+      ));
       if (eq) { eqAttack = (eq.attack ?? eqAttack); eqDurability = (eq.durability ?? eqDurability); }
     }
     if (atkEl && eqAttack != null) atkEl.textContent = String(eqAttack);
