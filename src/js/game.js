@@ -19,6 +19,7 @@ import { chooseStartingPlayerKey } from './utils/turnOrder.js';
 import { removeOverflowAllies } from './utils/allies.js';
 
 const DEFAULT_AI_ACTION_DELAY_MS = 1000;
+const DEFAULT_AI_THINKING_SETTLE_MS = 1000;
 const PROMPT_SHOW_DELAY_MS = 250;
 
 function buildDeckFromTemplate(template, cardById) {
@@ -100,6 +101,10 @@ export default class Game {
       ? Math.max(0, opts.aiActionDelayMs)
       : DEFAULT_AI_ACTION_DELAY_MS;
     this._aiActionDelayMs = rawDelay;
+    const rawThinkingSettle = Number.isFinite(opts?.aiThinkingSettleMs)
+      ? Math.max(0, opts.aiThinkingSettleMs)
+      : DEFAULT_AI_THINKING_SETTLE_MS;
+    this._aiThinkingSettleMs = rawThinkingSettle;
     this._shouldThrottleAI = !!rootEl && this._isBrowserEnv;
     this.running = false;
     this._raf = 0;
@@ -278,21 +283,38 @@ export default class Game {
     return this.checkForGameOver();
   }
 
+  async _waitMs(ms) {
+    if (!(ms > 0)) return;
+    await new Promise((resolve) => {
+      if (typeof globalThis === 'object' && typeof globalThis.setTimeout === 'function') {
+        globalThis.setTimeout(resolve, ms);
+      } else if (typeof setTimeout === 'function') {
+        setTimeout(resolve, ms);
+      } else {
+        resolve();
+      }
+    });
+  }
+
   async throttleAIAction(player) {
     if (!this._shouldThrottleAI) return;
     const autoplayingPlayer = this.state?.aiThinking && player === this.player;
     if (!this._isAIControlled(player) && !autoplayingPlayer) return;
     const delay = this._aiActionDelayMs;
+    await this._waitMs(delay);
+  }
+
+  async _waitForAiThinkingSettle() {
+    if (!this._isBrowserEnv) return;
+    const delay = this._aiThinkingSettleMs;
     if (!(delay > 0)) return;
-    await new Promise((resolve) => {
-      if (typeof globalThis === 'object' && typeof globalThis.setTimeout === 'function') {
-        globalThis.setTimeout(resolve, delay);
-      } else if (typeof setTimeout === 'function') {
-        setTimeout(resolve, delay);
-      } else {
-        resolve();
-      }
-    });
+    await this._waitMs(delay);
+  }
+
+  async _endAIThinking() {
+    await this._waitForAiThinkingSettle();
+    if (this.state) this.state.aiThinking = false;
+    this.bus.emit('ai:thinking', { thinking: false });
   }
 
   _closeActionTargetScope({ discard = false } = {}) {
@@ -1922,8 +1944,7 @@ export default class Game {
       }
     } finally {
       if (manageThinking) {
-        if (this.state) this.state.aiThinking = false;
-        this.bus.emit('ai:thinking', { thinking: false });
+        await this._endAIThinking();
       }
     }
   }
@@ -1976,23 +1997,22 @@ export default class Game {
       });
       if (this.isGameOver()) {
         if (this.state) {
-          this.state.aiThinking = false;
           this.state.aiProgress = 1;
         }
-        this.bus.emit('ai:thinking', { thinking: false });
+        await this._endAIThinking();
         completed = true;
         return true;
       }
       await this.endTurn();
+      await this._endAIThinking();
       completed = true;
       return true;
     } finally {
       if (!completed) {
-        this.bus.emit('ai:thinking', { thinking: false });
-        if (this.state) this.state.aiThinking = false;
+        await this._endAIThinking();
       }
     }
-  }
+}
 
   async endTurn() {
     // Tick down end-of-turn freeze for the player before handing control to AI
@@ -2020,17 +2040,15 @@ export default class Game {
     if (!(diff === 'medium' || diff === 'hard' || diff === 'insane')) {
       if (this.state) {
         this.state.aiPending = null;
-        this.state.aiThinking = false;
       }
-      this.bus.emit('ai:thinking', { thinking: false });
+      await this._endAIThinking();
       return false;
     }
     if (this.turns.activePlayer !== this.opponent) {
       if (this.state) {
         this.state.aiPending = null;
-        this.state.aiThinking = false;
       }
-      this.bus.emit('ai:thinking', { thinking: false });
+      await this._endAIThinking();
       return false;
     }
     const resume = pending.stage && pending.stage !== 'queued';
@@ -2039,10 +2057,9 @@ export default class Game {
       await ai.takeTurn(this.opponent, this.player, { resume });
     } finally {
       if (this.state) {
-        this.state.aiThinking = false;
         this.state.aiPending = null;
       }
-      this.bus.emit('ai:thinking', { thinking: false });
+      await this._endAIThinking();
     }
     if (this.isGameOver()) return true;
     await this._finalizeOpponentTurn();
