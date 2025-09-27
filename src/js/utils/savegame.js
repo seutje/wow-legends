@@ -475,6 +475,16 @@ export function clearSavedGameState() {
   } catch {}
 }
 
+export function hasSavedGameState() {
+  try {
+    const save = getSave();
+    const raw = save.storage.getItem(save.key(GAME_STATE_KEY));
+    return !!raw;
+  } catch {
+    return false;
+  }
+}
+
 export function rememberSecretToken(effect, context, token) {
   if (!token) return token;
   token.effect = token.effect || cloneEffectData(effect);
