@@ -2027,7 +2027,7 @@ export default class Game {
       if (custom) return custom;
     }
     const { default: MCTS_AI } = await import('./systems/ai-mcts.js');
-    const HARD_AI_DEFAULTS = { iterations: 10000, rolloutDepth: 20 };
+    const HARD_AI_DEFAULTS = { iterations: 1000, rolloutDepth: 10 };
     const config = {
       resourceSystem: this.resources,
       combatSystem: this.combat,
