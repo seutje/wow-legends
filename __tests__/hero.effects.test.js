@@ -234,5 +234,45 @@ describe('hero effects', () => {
     g.turns.bus.emit('phase:end', { phase: 'End' });
     expect(g.player.hero.data.attack).toBe(0);
   });
+
+  test('Garrosh passive resets between turns before granting attack again', async () => {
+    const g = new Game();
+    g.player.hero = new Hero({
+      name: 'Garrosh',
+      passive: [
+        { type: 'heroAttackOnArmorGain', amount: 1 },
+      ],
+      data: { attack: 0, health: 30, armor: 0 },
+    });
+
+    g.turns.setActivePlayer(g.player);
+    g.turns.bus.emit('turn:start', { player: g.player });
+    await Promise.resolve();
+
+    await g.effects.execute(
+      [{ type: 'buff', target: 'hero', property: 'armor', amount: 2 }],
+      { game: g, player: g.player, card: g.player.hero }
+    );
+
+    expect(g.player.hero.data.attack).toBe(1);
+
+    while (g.turns.current !== 'End') {
+      g.turns.nextPhase();
+    }
+    g.turns.nextPhase();
+
+    g.turns.setActivePlayer(g.player);
+    g.turns.bus.emit('turn:start', { player: g.player });
+    await Promise.resolve();
+
+    expect(g.player.hero.data.attack).toBe(0);
+
+    await g.effects.execute(
+      [{ type: 'buff', target: 'hero', property: 'armor', amount: 2 }],
+      { game: g, player: g.player, card: g.player.hero }
+    );
+
+    expect(g.player.hero.data.attack).toBe(1);
+  });
 });
 
