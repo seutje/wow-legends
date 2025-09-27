@@ -396,8 +396,22 @@ export default class Game {
     this._pendingTurnIncrement = false;
 
     let forcedOpponentHero = null;
+    let forcedOpponentDeck = null;
     let desiredOpponentHeroId = null;
-    if (playerDeck && playerDeck.opponentHeroId != null) {
+    if (playerDeck && playerDeck.opponentDeck) {
+      const deckHero = playerDeck.opponentDeck?.hero;
+      if (deckHero && deckHero.type === 'hero') {
+        forcedOpponentHero = deckHero;
+        desiredOpponentHeroId = deckHero?.id ? String(deckHero.id) : null;
+      }
+      const deckCards = Array.isArray(playerDeck.opponentDeck?.cards)
+        ? playerDeck.opponentDeck.cards.slice()
+        : [];
+      forcedOpponentDeck = {
+        hero: (deckHero && deckHero.type === 'hero') ? deckHero : null,
+        cards: deckCards,
+      };
+    } else if (playerDeck && playerDeck.opponentHeroId != null) {
       desiredOpponentHeroId = String(playerDeck.opponentHeroId);
       if (desiredOpponentHeroId) {
         const candidate = cardById.get(desiredOpponentHeroId);
@@ -547,7 +561,14 @@ export default class Game {
 
     // Assign opponent hero and library
     let opponentDeckState = null;
-    if (opponentIsAI) {
+    if (forcedOpponentDeck) {
+      opponentDeckState = {
+        hero: forcedOpponentDeck.hero,
+        cards: Array.isArray(forcedOpponentDeck.cards)
+          ? forcedOpponentDeck.cards.slice()
+          : [],
+      };
+    } else if (opponentIsAI) {
       opponentDeckState = pickPrebuiltDeck(this.player.hero?.id);
     }
     if (!opponentDeckState) {

@@ -90,6 +90,8 @@ const game = new Game(root);
 const loadingOverlay = startLoadingOverlay('Loading game data…');
 let initSucceeded = false;
 let deckBuilderOpen = false;
+let availablePrebuiltDecks = [];
+let prebuiltDecksPromise = null;
 try {
   setStatus('Loading game data…');
   await game.init();
@@ -135,6 +137,28 @@ setStatus('Initialized');
 const board = document.createElement('div');
 root.appendChild(board);
 
+const startScreensRoot = (() => {
+  if (typeof document === 'undefined') return null;
+  const existing = document.querySelector('#start-screen-root');
+  if (existing) return existing;
+  const node = document.createElement('div');
+  node.id = 'start-screen-root';
+  node.setAttribute('aria-hidden', 'true');
+  node.style.display = 'none';
+  if (document.body) document.body.appendChild(node);
+  return node;
+})();
+
+const startFlowState = {
+  step: 'hidden',
+  showContinue: !!loadedFromSave,
+  allowCancel: !!loadedFromSave,
+  selectedPlayerHeroId: null,
+  selectedOpponentHeroId: null,
+  origin: 'initial',
+  error: null,
+};
+
 function generateRandomSeed() {
   if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
     const buffer = new Uint32Array(1);
@@ -152,8 +176,29 @@ async function startNewGame({ deckOverride = null } = {}) {
   }
   const deck = deckOverride || deriveDeckFromGame(game);
   clearSavedGameState();
-  const hasDeck = deck?.hero && Array.isArray(deck.cards) && deck.cards.length === 60;
-  await game.reset(hasDeck ? deck : null);
+  let payload = null;
+  if (deck?.hero && Array.isArray(deck.cards) && deck.cards.length === 60) {
+    payload = {
+      hero: deck.hero,
+      cards: deck.cards.slice(),
+    };
+    if (deck.opponentHeroId) payload.opponentHeroId = deck.opponentHeroId;
+    if (deck.opponentDeck) {
+      const opp = deck.opponentDeck;
+      const oppPayload = {};
+      if (opp?.hero) oppPayload.hero = opp.hero;
+      if (Array.isArray(opp?.cards)) oppPayload.cards = opp.cards.slice();
+      if (oppPayload.hero || (Array.isArray(oppPayload.cards) && oppPayload.cards.length > 0)) {
+        payload.opponentDeck = oppPayload;
+      }
+    }
+  }
+  await game.reset(payload);
+  if (payload?.hero && Array.isArray(payload.cards) && payload.cards.length === 60) {
+    try {
+      saveLastDeck({ hero: payload.hero, cards: payload.cards });
+    } catch {}
+  }
   saveGameState(game);
 }
 
@@ -162,7 +207,7 @@ const rerender = () => {
     onUpdate: rerender,
     onToggleDeckBuilder: toggleDeckBuilder,
     deckBuilderOpen,
-    onNewGame: startNewGame
+    onNewGame: (opts) => beginNewGameFlow({ ...(opts || {}), fromInGame: true })
   });
   saveGameState(game);
 };
@@ -170,6 +215,374 @@ const rerender = () => {
 rerender();
 
 game.setUIRerender(rerender);
+
+function setStartScreenStep(step, updates = {}) {
+  startFlowState.step = step;
+  if (!('error' in updates)) startFlowState.error = null;
+  Object.assign(startFlowState, updates);
+  if (startScreensRoot) {
+    renderStartScreens();
+  }
+}
+
+function computeHeroDeckMap() {
+  const map = new Map();
+  const decks = Array.isArray(availablePrebuiltDecks) ? availablePrebuiltDecks : [];
+  for (const deck of decks) {
+    const hero = deck?.hero;
+    if (!hero || hero.type !== 'hero' || !hero.id) continue;
+    const cards = Array.isArray(deck.cards) ? deck.cards.slice() : [];
+    if (cards.length !== 60) continue;
+    if (!map.has(hero.id)) {
+      map.set(hero.id, {
+        hero,
+        cards,
+        name: deck.name || hero.name || hero.id,
+      });
+    }
+  }
+  return map;
+}
+
+function formatHeroSummary(hero) {
+  if (!hero?.text) return '';
+  const normalized = hero.text.replace(/\s+/g, ' ').trim();
+  if (!normalized) return '';
+  return normalized.length > 160 ? `${normalized.slice(0, 157)}…` : normalized;
+}
+
+function createHeroOption(option, { onSelect, highlightSame } = {}) {
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'start-screen-hero';
+  if (highlightSame && option.hero?.id === highlightSame) {
+    btn.dataset.sameHero = '1';
+  }
+  btn.addEventListener('click', () => {
+    if (typeof onSelect === 'function') onSelect(option.hero?.id);
+  });
+  if (option.hero?.id) {
+    const art = new Image();
+    art.loading = 'lazy';
+    art.alt = option.hero.name;
+    art.className = 'start-screen-hero-art';
+    art.src = `src/assets/optim/${option.hero.id}-art.png`;
+    art.onerror = () => {
+      art.onerror = null;
+      art.remove();
+    };
+    btn.appendChild(art);
+  }
+  const nameEl = document.createElement('span');
+  nameEl.className = 'start-screen-hero-name';
+  nameEl.textContent = option.hero?.name || option.name || 'Unknown hero';
+  btn.appendChild(nameEl);
+
+  if (option.name && option.name !== option.hero?.name) {
+    const deckEl = document.createElement('span');
+    deckEl.className = 'start-screen-hero-deck';
+    deckEl.textContent = option.name;
+    btn.appendChild(deckEl);
+  }
+
+  const summary = formatHeroSummary(option.hero);
+  if (summary) {
+    const textEl = document.createElement('p');
+    textEl.className = 'start-screen-hero-text';
+    textEl.textContent = summary;
+    btn.appendChild(textEl);
+  }
+
+  return btn;
+}
+
+function renderStartScreens() {
+  if (!startScreensRoot) return;
+  const hidden = startFlowState.step === 'hidden';
+  startScreensRoot.setAttribute('aria-hidden', hidden ? 'true' : 'false');
+  if (hidden) {
+    startScreensRoot.innerHTML = '';
+    startScreensRoot.style.display = 'none';
+    toggleGameVisible(true);
+    return;
+  }
+  toggleGameVisible(false);
+  startScreensRoot.style.display = 'flex';
+  startScreensRoot.textContent = '';
+  const panel = document.createElement('div');
+  panel.className = 'start-screen-panel';
+
+  if (startFlowState.step === 'loading') {
+    const title = document.createElement('h2');
+    title.textContent = 'Preparing decks…';
+    const msg = document.createElement('p');
+    msg.textContent = 'Fetching prebuilt decks for each hero.';
+    panel.append(title, msg);
+  } else if (startFlowState.step === 'initial') {
+    const title = document.createElement('h2');
+    title.textContent = 'Welcome to WoW Legends';
+    const msg = document.createElement('p');
+    msg.textContent = 'Choose how you would like to begin your adventure.';
+    const actions = document.createElement('div');
+    actions.className = 'start-screen-actions';
+    if (startFlowState.showContinue) {
+      const continueBtn = document.createElement('button');
+      continueBtn.type = 'button';
+      continueBtn.textContent = 'Continue';
+      continueBtn.addEventListener('click', handleContinue);
+      actions.appendChild(continueBtn);
+    }
+    const newBtn = document.createElement('button');
+    newBtn.type = 'button';
+    newBtn.textContent = 'New Game';
+    newBtn.addEventListener('click', () => beginNewGameFlow({ fromInGame: false }));
+    actions.appendChild(newBtn);
+    panel.append(title, msg, actions);
+  } else if (startFlowState.step === 'hero') {
+    const backBtn = document.createElement('button');
+    backBtn.type = 'button';
+    backBtn.className = 'start-screen-back';
+    backBtn.textContent = startFlowState.origin === 'in-game' ? 'Cancel' : 'Back';
+    backBtn.addEventListener('click', () => {
+      if (startFlowState.origin === 'in-game') {
+        setStartScreenStep('hidden', {
+          allowCancel: true,
+          showContinue: true,
+          origin: 'in-game',
+          selectedPlayerHeroId: null,
+          selectedOpponentHeroId: null,
+        });
+      } else {
+        setStartScreenStep('initial', {
+          selectedPlayerHeroId: null,
+          selectedOpponentHeroId: null,
+        });
+      }
+    });
+    const title = document.createElement('h2');
+    title.textContent = 'Choose your hero';
+    const msg = document.createElement('p');
+    msg.textContent = 'Select a hero to lead your deck.';
+    panel.append(backBtn, title, msg);
+
+    const heroDeckMap = computeHeroDeckMap();
+    const heroOptions = Array.from(heroDeckMap.values()).sort((a, b) => {
+      const nameA = a.hero?.name || '';
+      const nameB = b.hero?.name || '';
+      return nameA.localeCompare(nameB, undefined, { sensitivity: 'base' });
+    });
+
+    if (!heroOptions.length) {
+      const emptyMsg = document.createElement('p');
+      emptyMsg.textContent = 'No prebuilt decks are available right now. Start a random match instead?';
+      const actions = document.createElement('div');
+      actions.className = 'start-screen-actions';
+      const randomBtn = document.createElement('button');
+      randomBtn.type = 'button';
+      randomBtn.textContent = 'Start Random Game';
+      randomBtn.addEventListener('click', () => {
+        startRandomGameFromStartScreen();
+      });
+      actions.appendChild(randomBtn);
+      panel.append(emptyMsg, actions);
+    } else {
+      const grid = document.createElement('div');
+      grid.className = 'start-screen-grid';
+      heroOptions.forEach((option) => {
+        grid.appendChild(createHeroOption(option, { onSelect: handleHeroSelection }));
+      });
+      panel.appendChild(grid);
+    }
+  } else if (startFlowState.step === 'opponent') {
+    const heroDeckMap = computeHeroDeckMap();
+    const playerOption = heroDeckMap.get(startFlowState.selectedPlayerHeroId);
+    if (!playerOption) {
+      setStartScreenStep('hero', { selectedOpponentHeroId: null });
+      return;
+    }
+    const backBtn = document.createElement('button');
+    backBtn.type = 'button';
+    backBtn.className = 'start-screen-back';
+    backBtn.textContent = 'Back';
+    backBtn.addEventListener('click', () => {
+      setStartScreenStep('hero', { selectedOpponentHeroId: null });
+    });
+    const title = document.createElement('h2');
+    title.textContent = 'Choose your opponent';
+    const msg = document.createElement('p');
+    msg.textContent = `You will play as ${playerOption.hero?.name || 'your hero'}. Pick an opponent to challenge.`;
+    panel.append(backBtn, title, msg);
+
+    const heroOptions = Array.from(heroDeckMap.values()).sort((a, b) => {
+      const nameA = a.hero?.name || '';
+      const nameB = b.hero?.name || '';
+      return nameA.localeCompare(nameB, undefined, { sensitivity: 'base' });
+    });
+    const grid = document.createElement('div');
+    grid.className = 'start-screen-grid';
+    heroOptions.forEach((option) => {
+      grid.appendChild(createHeroOption(option, {
+        onSelect: handleOpponentSelection,
+        highlightSame: playerOption.hero?.id,
+      }));
+    });
+    const note = document.createElement('p');
+    note.className = 'start-screen-note';
+    note.textContent = 'Tip: Picking the same hero is allowed if you want a mirror match.';
+    panel.append(grid, note);
+  }
+
+  if (startFlowState.error) {
+    const errEl = document.createElement('p');
+    errEl.className = 'start-screen-error';
+    errEl.textContent = startFlowState.error;
+    panel.appendChild(errEl);
+  }
+
+  startScreensRoot.appendChild(panel);
+}
+
+function handleHeroSelection(heroId) {
+  if (!heroId) return;
+  const map = computeHeroDeckMap();
+  if (!map.has(heroId)) return;
+  setStartScreenStep('opponent', {
+    selectedPlayerHeroId: heroId,
+    selectedOpponentHeroId: null,
+  });
+}
+
+function handleOpponentSelection(heroId) {
+  if (!heroId) return;
+  finalizeNewGameSelection(heroId);
+}
+
+async function finalizeNewGameSelection(opponentHeroId) {
+  const map = computeHeroDeckMap();
+  const playerOption = map.get(startFlowState.selectedPlayerHeroId);
+  const opponentOption = map.get(opponentHeroId);
+  if (!playerOption || !opponentOption) {
+    await startRandomGameFromStartScreen();
+    return;
+  }
+  const payload = {
+    hero: playerOption.hero,
+    cards: playerOption.cards.slice(),
+    opponentDeck: {
+      hero: opponentOption.hero,
+      cards: opponentOption.cards.slice(),
+    },
+  };
+  try {
+    await startNewGame({ deckOverride: payload });
+    rerender();
+    setStartScreenStep('hidden', {
+      showContinue: true,
+      allowCancel: true,
+      origin: 'in-game',
+      selectedPlayerHeroId: null,
+      selectedOpponentHeroId: null,
+    });
+  } catch (err) {
+    console.error('Failed to start selected decks', err);
+    await startRandomGameFromStartScreen();
+  }
+}
+
+async function startRandomGameFromStartScreen() {
+  try {
+    await startNewGame();
+    rerender();
+  } catch (err) {
+    console.error('Failed to start random game', err);
+  } finally {
+    setStartScreenStep('hidden', {
+      showContinue: true,
+      allowCancel: true,
+      origin: 'in-game',
+      selectedPlayerHeroId: null,
+      selectedOpponentHeroId: null,
+    });
+  }
+}
+
+function handleContinue() {
+  setStartScreenStep('hidden', {
+    showContinue: true,
+    allowCancel: true,
+    origin: 'in-game',
+    selectedPlayerHeroId: null,
+    selectedOpponentHeroId: null,
+  });
+  if (typeof rerender === 'function') rerender();
+}
+
+function openInitialStartScreen() {
+  if (!startScreensRoot) return;
+  const showContinue = !!(startFlowState.showContinue || loadedFromSave);
+  const allowCancel = !!showContinue;
+  setStartScreenStep('initial', {
+    showContinue,
+    allowCancel,
+    origin: 'initial',
+    selectedPlayerHeroId: null,
+    selectedOpponentHeroId: null,
+  });
+}
+
+async function beginNewGameFlow(options = {}) {
+  const opts = options || {};
+  const fromInGame = !!opts.fromInGame;
+  const deckOverride = opts.deckOverride || null;
+
+  if (deckOverride?.hero && Array.isArray(deckOverride.cards) && deckOverride.cards.length === 60) {
+    try {
+      await startNewGame({ deckOverride });
+      rerender();
+    } finally {
+      setStartScreenStep('hidden', {
+        showContinue: true,
+        allowCancel: true,
+        origin: 'in-game',
+        selectedPlayerHeroId: null,
+        selectedOpponentHeroId: null,
+      });
+    }
+    return;
+  }
+
+  if (deckBuilderOpen) {
+    closeDeckBuilder({ showGame: false });
+  }
+
+  const showContinue = fromInGame ? true : !!(startFlowState.showContinue || loadedFromSave);
+  const baseUpdates = {
+    origin: fromInGame ? 'in-game' : 'initial',
+    allowCancel: fromInGame ? true : showContinue,
+    showContinue,
+    selectedPlayerHeroId: null,
+    selectedOpponentHeroId: null,
+  };
+
+  const needsDecks = !Array.isArray(availablePrebuiltDecks) || availablePrebuiltDecks.length === 0;
+  if (needsDecks) {
+    setStartScreenStep('loading', baseUpdates);
+    try {
+      await ensurePrebuiltDecksLoaded();
+    } catch (err) {
+      console.error('Failed to load prebuilt decks', err);
+      await startRandomGameFromStartScreen();
+      return;
+    }
+  }
+
+  if (!Array.isArray(availablePrebuiltDecks) || availablePrebuiltDecks.length === 0) {
+    await startRandomGameFromStartScreen();
+    return;
+  }
+
+  setStartScreenStep('hero', baseUpdates);
+}
 
 // Helpers to smooth AI thinking progress in the browser
 const nowMs = () => {
@@ -327,8 +740,6 @@ if (!sidebar.parentElement) root.appendChild(sidebar);
 sidebar.style.display = 'none';
 
 const deckState = { hero: null, cards: [], selectedPrebuiltDeck: null, selectedOpponentHeroId: null };
-let availablePrebuiltDecks = [];
-let prebuiltDecksPromise = null;
 
 function handleSelectPrebuilt(deckName) {
   const normalized = deckName || null;
@@ -466,6 +877,8 @@ useDeckBtn.addEventListener('click', async () => {
 });
 let logsOn = true;
 renderOptions(optsRoot, { onReset: async () => { deckState.cards.length = 0; deckState.hero = null; deckState.selectedPrebuiltDeck = null; deckState.selectedOpponentHeroId = null; rerenderDeck(); clearSavedGameState(); await game.reset(); saveGameState(game); rerender(); } });
+
+openInitialStartScreen();
 
 // Ensure logs mirror saved preference (defaults to false)
 setDebugLogging(!!game.state?.debug);
