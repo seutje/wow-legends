@@ -650,11 +650,13 @@ ul.zone-list li {
   padding: 1em;
   text-align: center;
   box-shadow: 0 24px 48px var(--color-shadow-strong);
+  font-size: 20px;
 }
 
 .game-over button {
   margin-top: 0.5em;
-  padding: 4px 6px;
+  padding: 10px;
+  font-size: 20px;
   border-radius: 999px;
   border: 1px solid var(--color-border-soft);
   background: linear-gradient(135deg, rgba(248, 210, 106, 0.95), rgba(192, 122, 26, 0.95));
