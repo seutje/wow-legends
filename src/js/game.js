@@ -1988,7 +1988,7 @@ export default class Game {
     }
     this.bus.emit('ai:thinking', { thinking: true });
 
-    let completed = false;
+    let thinkingEnded = false;
     try {
       const diff = this.state?.difficulty || this._defaultDifficulty;
       await this._takeTurnWithDifficultyAI(this.player, this.opponent, diff, {
@@ -2000,19 +2000,19 @@ export default class Game {
           this.state.aiProgress = 1;
         }
         await this._endAIThinking();
-        completed = true;
+        thinkingEnded = true;
         return true;
       }
-      await this.endTurn();
       await this._endAIThinking();
-      completed = true;
+      thinkingEnded = true;
+      await this.endTurn();
       return true;
     } finally {
-      if (!completed) {
+      if (!thinkingEnded) {
         await this._endAIThinking();
       }
     }
-}
+  }
 
   async endTurn() {
     // Tick down end-of-turn freeze for the player before handing control to AI
