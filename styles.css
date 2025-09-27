@@ -69,6 +69,7 @@ header .controls select {
   color: #e6f3ff;
   font-weight: 500;
   letter-spacing: 0.02em;
+  font-size: 20px;
 }
 
 header .controls select:focus-visible {
