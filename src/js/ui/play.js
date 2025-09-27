@@ -836,7 +836,7 @@ export function renderPlay(container, game, {
 
     let fullscreenBtn;
     fullscreenBtn = el('button', {
-      class: 'btn-fullscreen',
+      class: 'button-pill button-pill--secondary btn-fullscreen',
       type: 'button',
       onclick: async () => { await toggleFullscreen(fullscreenBtn); }
     }, 'Fullscreen');
@@ -851,7 +851,7 @@ export function renderPlay(container, game, {
     };
 
     controls = el('div', { class: 'controls' },
-      el('button', { class: 'btn-new-game', onclick: async (ev) => {
+      el('button', { class: 'button-pill button-pill--secondary btn-new-game', onclick: async (ev) => {
         const btn = ev?.currentTarget;
         if (btn) btn.disabled = true;
         try {
@@ -862,12 +862,12 @@ export function renderPlay(container, game, {
         }
       } }, 'New Game'),
       el('button', {
-        class: 'btn-deck-builder',
+        class: 'button-pill button-pill--secondary btn-deck-builder',
         onclick: handleDeckBuilderClick,
         'aria-pressed': deckBuilderOpen ? 'true' : 'false'
       }, deckBuilderOpen ? 'Back to game' : 'Deck Builder'),
-      el('button', { class: 'btn-hero-power', onclick: async () => { await game.useHeroPower(game.player); onUpdate?.(); } }, 'Hero Power'),
-      el('button', { class: 'btn-end-turn', onclick: async (ev) => {
+      el('button', { class: 'button-pill button-pill--primary btn-hero-power', onclick: async () => { await game.useHeroPower(game.player); onUpdate?.(); } }, 'Hero Power'),
+      el('button', { class: 'button-pill button-pill--primary btn-end-turn', onclick: async (ev) => {
         const btn = ev?.currentTarget;
         if (btn) btn.disabled = true;
         if (game?.state) {
@@ -883,7 +883,7 @@ export function renderPlay(container, game, {
           onUpdate?.();
         }
       } }, 'End Turn'),
-      el('button', { class: 'btn-autoplay', onclick: async (ev) => {
+      el('button', { class: 'button-pill button-pill--secondary btn-autoplay', onclick: async (ev) => {
         const btn = ev?.currentTarget;
         if (btn) btn.disabled = true;
         try {
@@ -908,8 +908,8 @@ export function renderPlay(container, game, {
     const aiHero = el(
       'div',
       { class: 'slot ai-hero' },
-      el('div', { class: 'hero-mana' }, `${game.resources.pool(e)}/${game.resources.available(e)} Mana`),
       buildCardEl(e.hero),
+      el('div', { class: 'hero-mana' }, `${game.resources.pool(e)}/${game.resources.available(e)} Mana`),
       buildAiHandIndicator(e.hand)
     );
     attachCardInteractions(aiHero.querySelector('.card-tooltip'), e.hero);
@@ -921,8 +921,8 @@ export function renderPlay(container, game, {
     const pHero = el(
       'div',
       { class: 'slot p-hero' },
-      el('div', { class: 'hero-mana' }, `${game.resources.pool(p)}/${game.resources.available(p)} Mana`),
-      buildCardEl(p.hero)
+      buildCardEl(p.hero),
+      el('div', { class: 'hero-mana' }, `${game.resources.pool(p)}/${game.resources.available(p)} Mana`)
     );
     attachCardInteractions(pHero.querySelector('.card-tooltip'), p.hero, async () => {
       await game.attack(game.player, game.player.hero);
