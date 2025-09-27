@@ -397,6 +397,7 @@ export default class Game {
 
     let forcedOpponentHero = null;
     let desiredOpponentHeroId = null;
+    let forcedOpponentDeck = null;
     if (playerDeck && playerDeck.opponentHeroId != null) {
       desiredOpponentHeroId = String(playerDeck.opponentHeroId);
       if (desiredOpponentHeroId) {
@@ -406,6 +407,60 @@ export default class Game {
     } else if (playerDeck && playerDeck.opponentHero && playerDeck.opponentHero.type === 'hero') {
       forcedOpponentHero = playerDeck.opponentHero;
       desiredOpponentHeroId = forcedOpponentHero?.id ? String(forcedOpponentHero.id) : null;
+    }
+    if (playerDeck && playerDeck.opponentDeck) {
+      const deck = playerDeck.opponentDeck || {};
+      const deckHeroId = typeof deck.hero === 'string'
+        ? deck.hero
+        : (typeof deck.heroId === 'string' ? deck.heroId : deck.hero?.id);
+      let deckHero = forcedOpponentHero;
+      if (!deckHero && deckHeroId) {
+        const heroCandidate = cardById.get(deckHeroId);
+        if (heroCandidate?.type === 'hero') deckHero = heroCandidate;
+      } else if (!deckHero && deck.hero && deck.hero.type === 'hero') {
+        deckHero = deck.hero;
+      }
+      if (deckHero) {
+        forcedOpponentHero = deckHero;
+        desiredOpponentHeroId = deckHero?.id ? String(deckHero.id) : desiredOpponentHeroId;
+        const normalizedCards = [];
+        const rawCards = Array.isArray(deck.cards) ? deck.cards : [];
+        for (const entry of rawCards) {
+          let cardData = null;
+          if (entry && typeof entry === 'object' && entry.type && entry.id) {
+            cardData = cardById.get(entry.id) || (entry.type !== 'hero' ? entry : null);
+          } else if (typeof entry === 'string') {
+            cardData = cardById.get(entry) || null;
+          }
+          if (cardData && cardData.type !== 'hero') {
+            normalizedCards.push(cardData);
+          }
+        }
+        forcedOpponentDeck = {
+          hero: deckHero,
+          cards: normalizedCards,
+        };
+      } else {
+        const normalizedCards = [];
+        const rawCards = Array.isArray(deck.cards) ? deck.cards : [];
+        for (const entry of rawCards) {
+          let cardData = null;
+          if (entry && typeof entry === 'object' && entry.type && entry.id) {
+            cardData = cardById.get(entry.id) || (entry.type !== 'hero' ? entry : null);
+          } else if (typeof entry === 'string') {
+            cardData = cardById.get(entry) || null;
+          }
+          if (cardData && cardData.type !== 'hero') {
+            normalizedCards.push(cardData);
+          }
+        }
+        if (normalizedCards.length) {
+          forcedOpponentDeck = {
+            hero: forcedOpponentHero,
+            cards: normalizedCards,
+          };
+        }
+      }
     }
     const opponentHeroForced = !!forcedOpponentHero;
     if (this.state) {
@@ -546,8 +601,13 @@ export default class Game {
     }
 
     // Assign opponent hero and library
-    let opponentDeckState = null;
-    if (opponentIsAI) {
+    let opponentDeckState = forcedOpponentDeck
+      ? {
+        hero: forcedOpponentDeck.hero,
+        cards: Array.isArray(forcedOpponentDeck.cards) ? forcedOpponentDeck.cards.slice() : [],
+      }
+      : null;
+    if (!opponentDeckState && opponentIsAI) {
       opponentDeckState = pickPrebuiltDeck(this.player.hero?.id);
     }
     if (!opponentDeckState) {
@@ -572,7 +632,10 @@ export default class Game {
       this.opponent.hero = new Hero(opponentHeroData);
       this.opponent.hero.owner = this.opponent;
     }
-    let opponentCards = Array.isArray(opponentDeckState.cards) ? opponentDeckState.cards : [];
+    let opponentCards = Array.isArray(opponentDeckState.cards) ? opponentDeckState.cards.slice() : [];
+    if (forcedOpponentDeck && Array.isArray(forcedOpponentDeck.cards) && forcedOpponentDeck.cards.length === 60) {
+      opponentCards = forcedOpponentDeck.cards.slice();
+    }
     if (opponentCards.length !== 60 && opponentDeckState.hero) {
       opponentDeckState.cards = [];
       fillDeckRandomly(opponentDeckState, this.allCards, rng);
