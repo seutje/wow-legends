@@ -56,17 +56,17 @@ describe('UI Play', () => {
     renderPlay(container, game);
 
     const enemyMana = container.querySelector('.ai-hero .hero-mana');
-    expect(enemyMana.textContent).toBe('7/4 Mana');
+    expect(enemyMana.textContent).toBe('7/4 Mana · Deck: 0');
     const playerMana = container.querySelector('.p-hero .hero-mana');
-    expect(playerMana.textContent).toBe('5/3 Mana');
+    expect(playerMana.textContent).toBe('5/3 Mana · Deck: 0');
 
     resources.pool.mockImplementation((owner) => (owner === player ? 6 : 8));
     resources.available.mockImplementation((owner) => (owner === player ? 4 : 5));
 
     renderPlay(container, game);
 
-    expect(container.querySelector('.ai-hero .hero-mana').textContent).toBe('8/5 Mana');
-    expect(container.querySelector('.p-hero .hero-mana').textContent).toBe('6/4 Mana');
+    expect(container.querySelector('.ai-hero .hero-mana').textContent).toBe('8/5 Mana · Deck: 0');
+    expect(container.querySelector('.p-hero .hero-mana').textContent).toBe('6/4 Mana · Deck: 0');
   });
 
   test('new game button appears before deck builder and triggers handler', async () => {
