@@ -3,6 +3,7 @@ import { renderDeckBuilder } from './ui/deckbuilder.js';
 import { renderOptions } from './ui/options.js';
 import { setDebugLogging } from './utils/logger.js';
 import { fillDeckRandomly } from './utils/deckbuilder.js';
+import { RNG } from './utils/rng.js';
 import { renderPlay } from './ui/play.js';
 import { renderStartScreen, RANDOM_HERO_ID } from './ui/startScreen.js';
 import { loadSettings, rehydrateDeck, saveLastDeck } from './utils/settings.js';
@@ -151,7 +152,14 @@ const startScreenState = {
   selectedOpponentDeck: null,
   hasSavedGame: loadedFromSave,
   loadingDecks: false,
+  pendingRandomSeed: null,
+  pendingRandomRng: null,
 };
+
+function clearPendingRandomSelection() {
+  startScreenState.pendingRandomSeed = null;
+  startScreenState.pendingRandomRng = null;
+}
 
 function setHasSavedGame(value) {
   const normalized = !!value;
@@ -167,15 +175,31 @@ function getDeckForHero(heroId) {
   return pool.find((deck) => deck?.hero?.id === heroId) || null;
 }
 
-function selectRandomDeck({ excludeHeroIds = [] } = {}) {
+function cloneDeck(deck) {
+  if (!deck) return null;
+  return {
+    name: deck.name || null,
+    hero: deck.hero || null,
+    cards: Array.isArray(deck.cards) ? deck.cards.slice() : [],
+  };
+}
+
+function selectRandomDeck({ excludeHeroIds = [], rng = null } = {}) {
   const pool = Array.isArray(availablePrebuiltDecks) ? availablePrebuiltDecks : [];
   if (!pool.length) return null;
   const exclude = new Set((excludeHeroIds || []).filter(Boolean));
   const filtered = pool.filter((deck) => deck?.hero?.id && !exclude.has(deck.hero.id));
   const candidates = filtered.length ? filtered : pool.filter((deck) => deck?.hero?.id);
   if (!candidates.length) return null;
-  const index = Math.floor(Math.random() * candidates.length);
-  return candidates[index] || null;
+  let index = 0;
+  const seededRng = rng && typeof rng.randomInt === 'function'
+    ? rng
+    : (game?.rng && typeof game.rng.randomInt === 'function' ? game.rng : null);
+  if (seededRng) index = seededRng.randomInt(0, candidates.length);
+  else index = Math.floor(Math.random() * candidates.length);
+  const selected = candidates[index] || null;
+  if (!selected) return null;
+  return cloneDeck(selected);
 }
 
 function rerenderStartScreen() {
@@ -212,6 +236,7 @@ function hideStartScreen() {
   startScreenState.selectedOpponentHeroId = null;
   startScreenState.selectedPlayerDeck = null;
   startScreenState.selectedOpponentDeck = null;
+  clearPendingRandomSelection();
   toggleGameVisible(true);
   rerenderStartScreen();
 }
@@ -223,6 +248,7 @@ function showInitialStartScreen() {
   startScreenState.selectedOpponentHeroId = null;
   startScreenState.selectedPlayerDeck = null;
   startScreenState.selectedOpponentDeck = null;
+  clearPendingRandomSelection();
   toggleGameVisible(false);
   rerenderStartScreen();
 }
@@ -235,6 +261,7 @@ async function openHeroSelection() {
   startScreenState.selectedPlayerDeck = null;
   startScreenState.selectedOpponentDeck = null;
   startScreenState.loadingDecks = !Array.isArray(availablePrebuiltDecks) || availablePrebuiltDecks.length === 0;
+  clearPendingRandomSelection();
   toggleGameVisible(false);
   rerenderStartScreen();
   if (startScreenState.loadingDecks) {
@@ -270,16 +297,21 @@ function handleHeroSelection(hero) {
   if (!hero) return;
   const isRandom = hero.id === RANDOM_HERO_ID || hero.isRandomOption;
   if (isRandom) {
-    const randomDeck = selectRandomDeck();
+    const seed = generateRandomSeed();
+    const rng = new RNG(seed);
+    const randomDeck = selectRandomDeck({ rng });
     if (!randomDeck) return;
     startScreenState.selectedHeroId = RANDOM_HERO_ID;
     startScreenState.selectedPlayerDeck = randomDeck;
+    startScreenState.pendingRandomSeed = seed;
+    startScreenState.pendingRandomRng = rng;
     startScreenState.selectedOpponentHeroId = null;
     startScreenState.selectedOpponentDeck = null;
     openOpponentSelection();
     return;
   }
   if (!hero.id) return;
+  clearPendingRandomSelection();
   const deck = getDeckForHero(hero.id);
   if (!deck) return;
   startScreenState.selectedHeroId = hero.id;
@@ -299,10 +331,18 @@ async function handleOpponentSelection(hero) {
   const isRandom = hero.id === RANDOM_HERO_ID || hero.isRandomOption;
   let opponentDeck = null;
   if (isRandom) {
-    opponentDeck = selectRandomDeck({ excludeHeroIds: [playerDeck.hero.id] })
-      || selectRandomDeck();
+    let rng = startScreenState.pendingRandomRng;
+    if (!rng || typeof rng.randomInt !== 'function') {
+      const seed = startScreenState.pendingRandomSeed ?? generateRandomSeed();
+      startScreenState.pendingRandomSeed = seed;
+      rng = new RNG(seed);
+      startScreenState.pendingRandomRng = rng;
+    }
+    opponentDeck = selectRandomDeck({ excludeHeroIds: [playerDeck.hero.id], rng })
+      || selectRandomDeck({ rng });
     startScreenState.selectedOpponentHeroId = RANDOM_HERO_ID;
   } else {
+    if (!startScreenState.pendingRandomSeed) clearPendingRandomSelection();
     opponentDeck = getDeckForHero(hero.id);
     startScreenState.selectedOpponentHeroId = hero.id;
   }
@@ -325,7 +365,8 @@ async function handleOpponentSelection(hero) {
     deckOverride.opponentHeroId = opponentHeroId || playerDeck.hero.id;
   }
   try {
-    await startNewGame({ deckOverride });
+    const seed = startScreenState.pendingRandomSeed;
+    await startNewGame(seed != null ? { deckOverride, seed } : { deckOverride });
     hideStartScreen();
   } catch {
     startScreenState.visible = true;
@@ -353,8 +394,10 @@ function generateRandomSeed() {
   return Math.floor(rand * 0x100000000) >>> 0;
 }
 
-async function startNewGame({ deckOverride = null } = {}) {
-  const seed = generateRandomSeed();
+async function startNewGame({ deckOverride = null, seed: providedSeed = null } = {}) {
+  const parsedSeed = Number(providedSeed);
+  const hasSeedOverride = Number.isFinite(parsedSeed);
+  const seed = hasSeedOverride ? (parsedSeed >>> 0) : generateRandomSeed();
   if (typeof game?.rng?.seed === 'function') {
     game.rng.seed(seed);
   }
