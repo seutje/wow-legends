@@ -962,6 +962,21 @@ ul.zone-list li {
   pointer-events: none;
 }
 
+.card-play-anim {
+  position: fixed;
+  pointer-events: none;
+  z-index: 902;
+  filter: drop-shadow(0 0 20px rgba(255, 240, 200, 0.6));
+  transform-origin: top left;
+  will-change: transform, opacity, filter;
+  opacity: 0;
+}
+
+.card-play-anim img,
+.card-play-anim .card-info {
+  pointer-events: none;
+}
+
 @keyframes attack-bump {
   0% { transform: translate3d(0, 0, 0) scale(1); }
   45% { transform: translate3d(3px, -4px, 0) scale(1.05); }

@@ -240,7 +240,9 @@ if (typeof document !== 'undefined') {
 
 const ATTACK_LAYER_ID = 'attack-anim-layer';
 const ATTACK_ANIM_FLAG = Symbol('attackAnimBound');
+const CARD_PLAY_ANIM_FLAG = Symbol('cardPlayAnimBound');
 const ATTACK_ANIM_DURATION_MS = 480;
+const CARD_PLAY_ANIM_DURATION_MS = 560;
 
 const requestFrame = (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function')
   ? window.requestAnimationFrame.bind(window)
@@ -372,6 +374,19 @@ function ensureAttackLayer() {
   return layer;
 }
 
+function findHeroNode(player, game) {
+  if (!player || typeof document === 'undefined') return null;
+  const hero = player.hero;
+  const heroKey = resolveDomCardKey(hero);
+  const keyMatch = heroKey ? findCardNodeByKey(heroKey) : null;
+  if (keyMatch) return keyMatch;
+  if (!game) return null;
+  const selector = player === game.player
+    ? '.slot.p-hero .card-tooltip'
+    : '.slot.ai-hero .card-tooltip';
+  return document.querySelector(selector);
+}
+
 function animateAttackFlight(attacker, defender) {
   if (typeof document === 'undefined') return;
   if (!attacker || !(attacker.type === 'ally' || attacker.type === 'hero')) return;
@@ -477,6 +492,90 @@ function ensureAttackAnimationSubscription(game) {
   };
   game.bus.on('attackCommitted', handler);
   game[ATTACK_ANIM_FLAG] = true;
+}
+
+function animateCardPlay(card, player, game) {
+  if (typeof document === 'undefined') return;
+  if (!card || !player) return;
+
+  const heroNode = findHeroNode(player, game);
+  if (!heroNode) return;
+
+  const heroRect = heroNode.getBoundingClientRect();
+  if (!heroRect?.width || !heroRect?.height) return;
+
+  const layer = ensureAttackLayer();
+  if (!layer) return;
+
+  const animCard = buildCardEl(card, { owner: player });
+  animCard.classList.add('card-play-anim');
+  animCard.setAttribute('aria-hidden', 'true');
+  const style = animCard.style;
+  style.position = 'fixed';
+  style.left = '0';
+  style.top = '0';
+  style.pointerEvents = 'none';
+  style.transformOrigin = 'top left';
+  layer.append(animCard);
+
+  const rawWidth = animCard.offsetWidth || animCard.clientWidth || 1;
+  const rawHeight = animCard.offsetHeight || animCard.clientHeight || 1;
+  style.width = `${rawWidth}px`;
+  style.height = `${rawHeight}px`;
+
+  const heroWidth = heroRect.width || rawWidth;
+  const heroHeight = heroRect.height || rawHeight;
+  let scaleX = heroWidth / rawWidth;
+  let scaleY = heroHeight / rawHeight;
+  if (!Number.isFinite(scaleX) || scaleX <= 0) scaleX = 1;
+  if (!Number.isFinite(scaleY) || scaleY <= 0) scaleY = 1;
+
+  const buildTransform = (dy, scaleMultiplier) => {
+    const sx = scaleX * scaleMultiplier;
+    const sy = scaleY * scaleMultiplier;
+    return `translate3d(${heroRect.left}px, ${heroRect.top + dy}px, 0) scale(${sx}, ${sy})`;
+  };
+
+  const liftDistance = -Math.min(Math.max(heroHeight * 0.75, 60), 160);
+  const useWAAPI = typeof animCard.animate === 'function';
+  const cleanup = () => { animCard.remove(); };
+
+  if (useWAAPI) {
+    const animation = animCard.animate([
+      { opacity: 0, transform: buildTransform(0, 0.9), filter: 'drop-shadow(0 0 0 rgba(255, 240, 200, 0))', offset: 0 },
+      { opacity: 1, transform: buildTransform(0, 1.06), filter: 'drop-shadow(0 0 24px rgba(255, 240, 200, 0.85))', offset: 0.28 },
+      { opacity: 0, transform: buildTransform(liftDistance, 0.86), filter: 'drop-shadow(0 -12px 36px rgba(255, 240, 200, 0))', offset: 1 }
+    ], { duration: CARD_PLAY_ANIM_DURATION_MS, easing: 'ease-out' });
+    animation.addEventListener('finish', cleanup, { once: true });
+    animation.addEventListener('cancel', cleanup, { once: true });
+  } else {
+    style.opacity = '0';
+    style.filter = 'drop-shadow(0 0 0 rgba(255, 240, 200, 0))';
+    style.transform = buildTransform(0, 0.9);
+    requestFrame(() => {
+      style.transition = `transform ${CARD_PLAY_ANIM_DURATION_MS}ms ease-out, opacity ${CARD_PLAY_ANIM_DURATION_MS}ms ease-out, filter ${CARD_PLAY_ANIM_DURATION_MS}ms ease-out`;
+      style.opacity = '1';
+      style.filter = 'drop-shadow(0 0 24px rgba(255, 240, 200, 0.85))';
+      style.transform = buildTransform(0, 1.06);
+      setTimeout(() => {
+        style.opacity = '0';
+        style.filter = 'drop-shadow(0 -12px 36px rgba(255, 240, 200, 0))';
+        style.transform = buildTransform(liftDistance, 0.86);
+        setTimeout(cleanup, CARD_PLAY_ANIM_DURATION_MS);
+      }, Math.floor(CARD_PLAY_ANIM_DURATION_MS * 0.45));
+    });
+  }
+}
+
+function ensureCardPlayAnimationSubscription(game) {
+  if (!game || !game.bus || typeof document === 'undefined') return;
+  if (game[CARD_PLAY_ANIM_FLAG]) return;
+  const handler = ({ player, card }) => {
+    if (!player || !card) return;
+    requestFrame(() => { animateCardPlay(card, player, game); });
+  };
+  game.bus.on('cardPlayed', handler);
+  game[CARD_PLAY_ANIM_FLAG] = true;
 }
 
 function zoneCards(title, cards, { clickCard, owner } = {}) {
@@ -824,6 +923,7 @@ export function renderPlay(container, game, {
   };
 
   ensureAttackAnimationSubscription(game);
+  ensureCardPlayAnimationSubscription(game);
 
   let headerEl = document.querySelector('header');
   if (!headerEl) {
