@@ -728,6 +728,14 @@ ul.zone-list li {
   opacity: calc(0.4 + var(--progress-pos, 0) * 0.45);
   pointer-events: none;
 }
+.ai-overlay .progress[data-mode='determinate']::before {
+  left: 0;
+  width: calc(max(6%, var(--progress-pos, 0) * 100%));
+  transform: none;
+  opacity: 0.95;
+  background: linear-gradient(180deg, rgba(240, 180, 65, 0.45) 0%, rgba(255, 226, 158, 0.95) 60%, rgba(240, 180, 65, 0.75) 100%);
+  transition: width 0.28s ease-out, opacity 0.28s ease-out;
+}
 .ai-overlay .progress::after {
   content: '';
   position: absolute;
@@ -739,6 +747,13 @@ ul.zone-list li {
   opacity: 0.32;
   mix-blend-mode: screen;
   transition: opacity 0.3s ease-out;
+}
+.ai-overlay .progress[data-mode='determinate']::after {
+  animation: none;
+  background: linear-gradient(120deg, rgba(255, 226, 158, 0.15) 0%, rgba(255, 226, 158, 0.35) 50%, rgba(255, 226, 158, 0.15) 100%);
+  background-size: 100% 100%;
+  background-position: 0 0;
+  opacity: 0.22;
 }
 .ai-overlay .progress[data-complete='1']::before {
   left: 50%;
