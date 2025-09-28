@@ -240,7 +240,9 @@ if (typeof document !== 'undefined') {
 
 const ATTACK_LAYER_ID = 'attack-anim-layer';
 const ATTACK_ANIM_FLAG = Symbol('attackAnimBound');
+const CARD_PLAY_ANIM_FLAG = Symbol('cardPlayAnimBound');
 const ATTACK_ANIM_DURATION_MS = 480;
+const CARD_PLAY_ANIM_DURATION_MS = 720;
 
 const requestFrame = (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function')
   ? window.requestAnimationFrame.bind(window)
@@ -468,6 +470,69 @@ function animateAttackFlight(attacker, defender) {
   }
 }
 
+function animateCardPlay(game, player, card) {
+  if (typeof document === 'undefined') return;
+  if (!game || !player || !card) return;
+
+  const isPlayerHero = player === game.player;
+  const isOpponentHero = player === game.opponent;
+  if (!isPlayerHero && !isOpponentHero) return;
+
+  const heroSelector = isPlayerHero ? '.slot.p-hero .card-tooltip' : '.slot.ai-hero .card-tooltip';
+  const heroNode = document.querySelector(heroSelector);
+  if (!heroNode) return;
+
+  const heroRect = heroNode.getBoundingClientRect();
+  if (!heroRect?.width || !heroRect?.height) return;
+
+  const layer = ensureAttackLayer();
+  if (!layer) return;
+
+  const flyer = buildCardEl(card, { owner: player });
+  flyer.classList.add('card-play-flyer');
+  const flyerStyle = flyer.style;
+  flyerStyle.position = 'fixed';
+  flyerStyle.left = `${heroRect.left}px`;
+  flyerStyle.top = `${heroRect.top}px`;
+  flyerStyle.width = `${heroRect.width}px`;
+  flyerStyle.height = `${heroRect.height}px`;
+  flyerStyle.pointerEvents = 'none';
+  flyerStyle.transformOrigin = 'center center';
+  flyerStyle.opacity = '0';
+  flyerStyle.transform = 'translate3d(0, 0, 0)';
+  layer.append(flyer);
+
+  const drift = -Math.max(60, Math.min(140, heroRect.height * 0.9));
+
+  const useWAAPI = typeof flyer.animate === 'function';
+  if (useWAAPI) {
+    const frames = [
+      { transform: 'translate3d(0, 12px, 0) scale(0.92)', opacity: 0, offset: 0 },
+      { transform: 'translate3d(0, 0, 0) scale(1)', opacity: 1, offset: 0.22 },
+      { transform: `translate3d(0, ${drift}px, 0) scale(0.88)`, opacity: 0, offset: 1 },
+    ];
+    const anim = flyer.animate(frames, { duration: CARD_PLAY_ANIM_DURATION_MS, easing: 'ease-out' });
+    const cleanup = () => { flyer.remove(); };
+    anim.addEventListener('finish', cleanup, { once: true });
+    anim.addEventListener('cancel', cleanup, { once: true });
+    setTimeout(cleanup, CARD_PLAY_ANIM_DURATION_MS + 160);
+  } else {
+    const ascendMs = Math.floor(CARD_PLAY_ANIM_DURATION_MS * 0.45);
+    const fadeMs = CARD_PLAY_ANIM_DURATION_MS - ascendMs;
+    flyerStyle.transition = `transform ${ascendMs}ms ease-out, opacity ${ascendMs}ms ease-out`;
+    requestFrame(() => {
+      flyerStyle.opacity = '1';
+      flyerStyle.transform = 'translate3d(0, -8px, 0) scale(1)';
+      setTimeout(() => {
+        flyerStyle.transition = `transform ${fadeMs}ms ease-in, opacity ${fadeMs}ms ease-in`;
+        flyerStyle.opacity = '0';
+        flyerStyle.transform = `translate3d(0, ${drift}px, 0) scale(0.9)`;
+      }, ascendMs);
+    });
+    setTimeout(() => { flyer.remove(); }, CARD_PLAY_ANIM_DURATION_MS + 120);
+  }
+}
+
 function ensureAttackAnimationSubscription(game) {
   if (!game || !game.bus || typeof document === 'undefined') return;
   if (game[ATTACK_ANIM_FLAG]) return;
@@ -477,6 +542,17 @@ function ensureAttackAnimationSubscription(game) {
   };
   game.bus.on('attackCommitted', handler);
   game[ATTACK_ANIM_FLAG] = true;
+}
+
+function ensureCardPlayAnimationSubscription(game) {
+  if (!game || !game.bus || typeof document === 'undefined') return;
+  if (game[CARD_PLAY_ANIM_FLAG]) return;
+  const handler = ({ player, card }) => {
+    if (!player || !card) return;
+    requestFrame(() => { animateCardPlay(game, player, card); });
+  };
+  game.bus.on('cardPlayed', handler);
+  game[CARD_PLAY_ANIM_FLAG] = true;
 }
 
 function zoneCards(title, cards, { clickCard, owner } = {}) {
@@ -824,6 +900,7 @@ export function renderPlay(container, game, {
   };
 
   ensureAttackAnimationSubscription(game);
+  ensureCardPlayAnimationSubscription(game);
 
   let headerEl = document.querySelector('header');
   if (!headerEl) {

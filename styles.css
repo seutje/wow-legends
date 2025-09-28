@@ -962,6 +962,19 @@ ul.zone-list li {
   pointer-events: none;
 }
 
+.card-play-flyer {
+  pointer-events: none;
+  z-index: 902;
+  filter: drop-shadow(0 0 18px rgba(255, 210, 128, 0.6));
+  opacity: 0;
+  transform: translate3d(0, 0, 0);
+}
+
+.card-play-flyer img,
+.card-play-flyer .card-info {
+  pointer-events: none;
+}
+
 @keyframes attack-bump {
   0% { transform: translate3d(0, 0, 0) scale(1); }
   45% { transform: translate3d(3px, -4px, 0) scale(1.05); }
