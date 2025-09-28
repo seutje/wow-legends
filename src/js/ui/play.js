@@ -431,6 +431,37 @@ function animateCardPlayed(game, player, card) {
   const layer = ensureAttackLayer();
   if (!layer) return;
 
+  const scaleHints = [];
+  const heroSlotWidth = heroSlot.offsetWidth || heroSlot.clientWidth || 0;
+  const heroSlotHeight = heroSlot.offsetHeight || heroSlot.clientHeight || 0;
+  if (heroRect.width && heroSlotWidth) scaleHints.push(heroRect.width / heroSlotWidth);
+  if (heroRect.height && heroSlotHeight) scaleHints.push(heroRect.height / heroSlotHeight);
+  const heroCardNode = heroSlot.querySelector('.card-tooltip');
+  if (heroCardNode) {
+    const heroCardRect = heroCardNode.getBoundingClientRect?.();
+    const heroCardWidth = heroCardNode.offsetWidth || heroCardNode.clientWidth || 0;
+    const heroCardHeight = heroCardNode.offsetHeight || heroCardNode.clientHeight || 0;
+    if (heroCardRect?.width && heroCardWidth) scaleHints.push(heroCardRect.width / heroCardWidth);
+    if (heroCardRect?.height && heroCardHeight) scaleHints.push(heroCardRect.height / heroCardHeight);
+  }
+
+  let heroScale = scaleHints.length ? scaleHints.reduce((sum, v) => sum + v, 0) / scaleHints.length : 1;
+  if (!Number.isFinite(heroScale) || heroScale <= 0) heroScale = 1;
+  heroScale = Math.min(Math.max(heroScale, 0.1), 4);
+
+  const round = (value, places = 4) => {
+    const factor = 10 ** places;
+    return Math.round(value * factor) / factor;
+  };
+  const buildTransform = (yOffset = 0, scaleMultiplier = 1) => {
+    const parts = ['translate3d(-50%, -50%, 0)'];
+    const adjustedY = round((yOffset || 0) * heroScale);
+    if (adjustedY) parts.push(`translate3d(0, ${adjustedY}px, 0)`);
+    const scaleValue = round(heroScale * scaleMultiplier);
+    if (Math.abs(scaleValue - 1) > 0.0001) parts.push(`scale(${scaleValue})`);
+    return parts.join(' ');
+  };
+
   let displayCardOverride = null;
   let useRandomArtPlaceholder = false;
   let hideStats = false;
@@ -460,21 +491,20 @@ function animateCardPlayed(game, player, card) {
   style.position = 'fixed';
   style.left = `${heroRect.left + heroRect.width / 2}px`;
   style.top = `${heroRect.top + heroRect.height / 2}px`;
-  style.transform = 'translate3d(-50%, -50%, 0)';
+  style.transform = buildTransform(0, 0.9);
   style.transformOrigin = 'center';
   style.opacity = '0';
   style.pointerEvents = 'none';
   style.willChange = 'opacity, transform';
   layer.append(cardEl);
 
-  const baseTransform = 'translate3d(-50%, -50%, 0)';
-  const liftTransform = `${baseTransform} translate3d(0, -96px, 0)`;
-  const peakTransform = `${baseTransform} translate3d(0, -36px, 0)`;
+  const peakTransform = buildTransform(-36, 1);
+  const liftTransform = buildTransform(-96, 1);
 
   if (typeof cardEl.animate === 'function') {
     const frames = [
-      { opacity: 0, transform: `${baseTransform} scale(0.9)` },
-      { opacity: 1, transform: `${peakTransform} scale(1)`, offset: 0.35 },
+      { opacity: 0, transform: buildTransform(0, 0.9) },
+      { opacity: 1, transform: peakTransform, offset: 0.35 },
       { opacity: 0, transform: liftTransform, offset: 1 },
     ];
     const anim = cardEl.animate(frames, { duration: CARD_PLAY_ANIM_DURATION_MS, easing: 'ease-out' });
