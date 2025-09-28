@@ -16,26 +16,41 @@ function el(tag, attrs = {}, ...children) {
 }
 
 // Build a static card element that uses the same visual as tooltips
-function buildCardEl(card, { owner } = {}) {
-  const tooltipCard = card.tokenSource || card.summonedBy || card;
+function buildCardEl(card, {
+  owner,
+  displayCardOverride = null,
+  useRandomArtPlaceholder = false,
+  hideStats = false,
+} = {}) {
+  const renderCard = displayCardOverride || card;
+  const tooltipCard = renderCard.tokenSource || renderCard.summonedBy || renderCard;
   const wrap = el('div', { class: 'card-tooltip' });
   // Track card type for removal animations, etc.
-  wrap.dataset.type = card.type;
+  wrap.dataset.type = renderCard.type;
 
-  const art = new Image();
-  art.className = 'card-art';
-  art.alt = tooltipCard.name;
-  art.onload = () => {};
-  {
-    let triedOptim = false;
-    art.onerror = () => {
-      if (!triedOptim) {
-        triedOptim = true;
-        art.src = `src/assets/art/${tooltipCard.id}-art.png`;
-      } else {
-        art.remove();
-      }
-    };
+  let artNode = null;
+  if (useRandomArtPlaceholder) {
+    artNode = el('div', {
+      class: 'card-art card-art--random',
+      'aria-hidden': 'true',
+    }, '?');
+  } else {
+    const art = new Image();
+    art.className = 'card-art';
+    art.alt = tooltipCard.name;
+    art.onload = () => {};
+    {
+      let triedOptim = false;
+      art.onerror = () => {
+        if (!triedOptim) {
+          triedOptim = true;
+          art.src = `src/assets/art/${tooltipCard.id}-art.png`;
+        } else {
+          art.remove();
+        }
+      };
+    }
+    artNode = art;
   }
 
   const frame = new Image();
@@ -45,24 +60,24 @@ function buildCardEl(card, { owner } = {}) {
   // Show the summoned unit's own name, but use summoner for art/text fallback
   const infoChildren = [
     // Show the actual card's type (e.g., 'ally' for summoned units)
-    el('div', { class: 'card-type' }, card.type),
-    el('h4', {}, card.name),
+    el('div', { class: 'card-type' }, renderCard.type),
+    el('h4', {}, renderCard.name),
     el('p', { class: 'card-text' }, tooltipCard.text)
   ];
   if (tooltipCard.keywords?.length) {
     infoChildren.push(el('p', { class: 'card-keywords' }, tooltipCard.keywords.join(', ')));
   }
   const info = el('div', { class: 'card-info' }, ...infoChildren);
-  wrap.append(art, frame, info);
+  wrap.append(artNode, frame, info);
 
-  if (tooltipCard.type === 'hero' && tooltipCard.data?.armor != null) {
+  if (!hideStats && tooltipCard.type === 'hero' && tooltipCard.data?.armor != null) {
     const armorEl = el('div', { class: 'stat armor' }, tooltipCard.data.armor);
     wrap.append(armorEl);
-  } else if (tooltipCard.cost != null) {
+  } else if (!hideStats && tooltipCard.cost != null) {
     wrap.append(el('div', { class: 'stat cost' }, tooltipCard.cost));
   }
   // Allies: attack/health from data
-  if (card.type === 'ally') {
+  if (!hideStats && card.type === 'ally') {
     if (card.data?.attack != null) wrap.append(el('div', { class: 'stat attack' }, card.data.attack));
     if (card.data?.health != null) {
       wrap.append(el('div', { class: 'stat health' }, card.data.health));
@@ -71,7 +86,7 @@ function buildCardEl(card, { owner } = {}) {
     }
   }
   // Hero: show current total attack and HP
-  if (card.type === 'hero') {
+  if (!hideStats && card.type === 'hero') {
     const heroAtk = (typeof card.totalAttack === 'function') ? card.totalAttack() : (card.data?.attack ?? 0);
     const heroHp = card.data?.health;
     if (heroAtk != null) wrap.append(el('div', { class: 'stat attack' }, heroAtk));
@@ -84,7 +99,7 @@ function buildCardEl(card, { owner } = {}) {
     renderSecretBadges(wrap, card);
   }
   // Equipment: show attack and durability similar to ally stats
-  if (card.type === 'equipment') {
+  if (!hideStats && card.type === 'equipment') {
     // Find live equipped instance for current owner to reflect durability changes
     let eqAttack = card.attack;
     let eqDurability = card.durability;
@@ -102,7 +117,9 @@ function buildCardEl(card, { owner } = {}) {
     if (typeof eqDurability === 'number') wrap.dataset.prevDurability = String(eqDurability);
   }
 
-  art.src = `src/assets/optim/${tooltipCard.id}-art.png`;
+  if (!useRandomArtPlaceholder && artNode && artNode.tagName === 'IMG') {
+    artNode.src = `src/assets/optim/${tooltipCard.id}-art.png`;
+  }
   // Apply initial status indicators (divine shield, frozen, windfury, stealth)
   applyStatusIndicators(wrap, card);
   return wrap;
@@ -240,7 +257,9 @@ if (typeof document !== 'undefined') {
 
 const ATTACK_LAYER_ID = 'attack-anim-layer';
 const ATTACK_ANIM_FLAG = Symbol('attackAnimBound');
+const CARD_PLAY_ANIM_FLAG = Symbol('cardPlayAnimBound');
 const ATTACK_ANIM_DURATION_MS = 480;
+const CARD_PLAY_ANIM_DURATION_MS = 820;
 
 const requestFrame = (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function')
   ? window.requestAnimationFrame.bind(window)
@@ -372,6 +391,114 @@ function ensureAttackLayer() {
   return layer;
 }
 
+function findHeroSlotForPlayer(game, player) {
+  if (!game || typeof document === 'undefined') return null;
+  const board = document.querySelector('.board');
+  if (!board) return null;
+  if (!player) return null;
+  let selector = null;
+  if (player === game.player) selector = '.slot.p-hero';
+  else if (player === game.opponent) selector = '.slot.ai-hero';
+  if (!selector) return null;
+  const node = board.querySelector(selector);
+  if (node) return node;
+  const heroId = player?.hero ? resolveDomCardKey(player.hero) : null;
+  if (!heroId) return null;
+  const heroNode = findCardNodeByKey(heroId);
+  return heroNode?.closest?.('.slot.ai-hero, .slot.p-hero') || null;
+}
+
+function shouldObscureSecretCard(game, player, card) {
+  if (!game || !player || !card) return false;
+  if (player === game.player) return false;
+  const keywords = Array.isArray(card.keywords) ? card.keywords : [];
+  const isSecret = keywords.includes('Secret');
+  if (!isSecret) return false;
+  if (player === game.opponent) return true;
+  if (game.player && player !== game.player) return true;
+  return false;
+}
+
+function animateCardPlayed(game, player, card) {
+  if (typeof document === 'undefined') return;
+  if (!card) return;
+
+  const heroSlot = findHeroSlotForPlayer(game, player);
+  if (!heroSlot) return;
+  const heroRect = heroSlot.getBoundingClientRect();
+  if (!heroRect?.width || !heroRect?.height) return;
+
+  const layer = ensureAttackLayer();
+  if (!layer) return;
+
+  let displayCardOverride = null;
+  let useRandomArtPlaceholder = false;
+  let hideStats = false;
+  if (shouldObscureSecretCard(game, player, card)) {
+    displayCardOverride = {
+      id: '__secret__placeholder__',
+      type: 'Secret',
+      name: 'Secret',
+      text: 'Secret.',
+      keywords: [],
+    };
+    useRandomArtPlaceholder = true;
+    hideStats = true;
+  }
+
+  const cardEl = buildCardEl(card, {
+    owner: player,
+    displayCardOverride,
+    useRandomArtPlaceholder,
+    hideStats,
+  });
+  if (useRandomArtPlaceholder) {
+    cardEl.classList.add('card-tooltip--secret-placeholder');
+  }
+  cardEl.classList.add('card-play-float');
+  const style = cardEl.style;
+  style.position = 'fixed';
+  style.left = `${heroRect.left + heroRect.width / 2}px`;
+  style.top = `${heroRect.top + heroRect.height / 2}px`;
+  style.transform = 'translate3d(-50%, -50%, 0)';
+  style.transformOrigin = 'center';
+  style.opacity = '0';
+  style.pointerEvents = 'none';
+  style.willChange = 'opacity, transform';
+  layer.append(cardEl);
+
+  const baseTransform = 'translate3d(-50%, -50%, 0)';
+  const liftTransform = `${baseTransform} translate3d(0, -96px, 0)`;
+  const peakTransform = `${baseTransform} translate3d(0, -36px, 0)`;
+
+  if (typeof cardEl.animate === 'function') {
+    const frames = [
+      { opacity: 0, transform: `${baseTransform} scale(0.9)` },
+      { opacity: 1, transform: `${peakTransform} scale(1)`, offset: 0.35 },
+      { opacity: 0, transform: liftTransform, offset: 1 },
+    ];
+    const anim = cardEl.animate(frames, { duration: CARD_PLAY_ANIM_DURATION_MS, easing: 'ease-out' });
+    const cleanup = () => { cardEl.remove(); };
+    anim.addEventListener('finish', cleanup, { once: true });
+    anim.addEventListener('cancel', cleanup, { once: true });
+  } else {
+    const fadeInDuration = Math.floor(CARD_PLAY_ANIM_DURATION_MS * 0.35);
+    const holdDuration = Math.floor(CARD_PLAY_ANIM_DURATION_MS * 0.2);
+    const fadeOutDuration = CARD_PLAY_ANIM_DURATION_MS - fadeInDuration - holdDuration;
+    requestFrame(() => {
+      style.transition = `opacity ${fadeInDuration}ms ease-out, transform ${fadeInDuration}ms ease-out`;
+      style.opacity = '1';
+      style.transform = peakTransform;
+      setTimeout(() => {
+        style.transition = `opacity ${fadeOutDuration}ms ease-in, transform ${fadeOutDuration}ms ease-in`;
+        style.opacity = '0';
+        style.transform = liftTransform;
+      }, fadeInDuration + holdDuration);
+    });
+  }
+  setTimeout(() => { cardEl.remove(); }, CARD_PLAY_ANIM_DURATION_MS + 200);
+}
+
 function animateAttackFlight(attacker, defender) {
   if (typeof document === 'undefined') return;
   if (!attacker || !(attacker.type === 'ally' || attacker.type === 'hero')) return;
@@ -477,6 +604,17 @@ function ensureAttackAnimationSubscription(game) {
   };
   game.bus.on('attackCommitted', handler);
   game[ATTACK_ANIM_FLAG] = true;
+}
+
+function ensureCardPlayAnimationSubscription(game) {
+  if (!game || !game.bus || typeof document === 'undefined') return;
+  if (game[CARD_PLAY_ANIM_FLAG]) return;
+  const handler = ({ player, card }) => {
+    if (!card) return;
+    requestFrame(() => { animateCardPlayed(game, player, card); });
+  };
+  game.bus.on('cardPlayed', handler);
+  game[CARD_PLAY_ANIM_FLAG] = true;
 }
 
 function zoneCards(title, cards, { clickCard, owner } = {}) {
@@ -824,6 +962,7 @@ export function renderPlay(container, game, {
   };
 
   ensureAttackAnimationSubscription(game);
+  ensureCardPlayAnimationSubscription(game);
 
   let headerEl = document.querySelector('header');
   if (!headerEl) {
