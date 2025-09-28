@@ -241,6 +241,8 @@ if (typeof document !== 'undefined') {
 const ATTACK_LAYER_ID = 'attack-anim-layer';
 const ATTACK_ANIM_FLAG = Symbol('attackAnimBound');
 const ATTACK_ANIM_DURATION_MS = 480;
+const CARD_PLAY_ANIM_DURATION_MS = 720;
+const DEFAULT_PLAYED_CARD_SCALE = 0.78;
 
 const requestFrame = (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function')
   ? window.requestAnimationFrame.bind(window)
@@ -372,6 +374,63 @@ function ensureAttackLayer() {
   return layer;
 }
 
+function findHeroNodeForPlayer(game, player) {
+  if (typeof document === 'undefined') return null;
+  if (!player) return null;
+  const heroKey = resolveDomCardKey(player.hero);
+  if (heroKey) {
+    const heroNode = findCardNodeByKey(heroKey);
+    if (heroNode) return heroNode;
+  }
+  const boardRoot = document.querySelector('.board');
+  if (!boardRoot) return null;
+  if (player === game?.player) return boardRoot.querySelector('.slot.p-hero .card-tooltip');
+  if (player === game?.opponent) return boardRoot.querySelector('.slot.ai-hero .card-tooltip');
+  return null;
+}
+
+function animateCardPlayFx(game, player, card) {
+  if (typeof document === 'undefined') return;
+  if (!player || !card) return;
+  const heroNode = findHeroNodeForPlayer(game, player);
+  if (!heroNode) return;
+
+  const heroRect = heroNode.getBoundingClientRect();
+  if (!heroRect?.width || !heroRect?.height) return;
+
+  const layer = ensureAttackLayer();
+  if (!layer) return;
+
+  const wrap = document.createElement('div');
+  wrap.className = 'played-card-fx';
+  const centerX = heroRect.left + heroRect.width / 2;
+  const centerY = heroRect.top + heroRect.height / 2;
+  wrap.style.left = `${centerX}px`;
+  wrap.style.top = `${centerY}px`;
+  wrap.style.setProperty('--played-card-scale', String(DEFAULT_PLAYED_CARD_SCALE));
+  wrap.style.setProperty('--played-card-duration', `${CARD_PLAY_ANIM_DURATION_MS}ms`);
+
+  const cardVisual = buildCardEl(card, { owner: player });
+  cardVisual.classList.add('played-card-fx__card');
+  cardVisual.style.pointerEvents = 'none';
+  wrap.append(cardVisual);
+  layer.append(wrap);
+
+  requestFrame(() => {
+    const heroWidth = heroRect.width || 0;
+    const cardRect = cardVisual.getBoundingClientRect();
+    if (heroWidth > 0 && cardRect?.width > 0) {
+      let scale = heroWidth / cardRect.width;
+      if (!Number.isFinite(scale)) scale = DEFAULT_PLAYED_CARD_SCALE;
+      const clamped = Math.max(0.58, Math.min(0.92, scale));
+      wrap.style.setProperty('--played-card-scale', clamped.toFixed(3));
+    }
+  });
+
+  const cleanupDelay = CARD_PLAY_ANIM_DURATION_MS + 200;
+  setTimeout(() => { wrap.remove(); }, cleanupDelay);
+}
+
 function animateAttackFlight(attacker, defender) {
   if (typeof document === 'undefined') return;
   if (!attacker || !(attacker.type === 'ally' || attacker.type === 'hero')) return;
@@ -475,7 +534,12 @@ function ensureAttackAnimationSubscription(game) {
     if (!attacker || !(attacker.type === 'ally' || attacker.type === 'hero')) return;
     requestFrame(() => { animateAttackFlight(attacker, defender); });
   };
+  const cardPlayHandler = ({ player: evtPlayer, card }) => {
+    if (!evtPlayer || !card) return;
+    requestFrame(() => { animateCardPlayFx(game, evtPlayer, card); });
+  };
   game.bus.on('attackCommitted', handler);
+  game.bus.on('cardPlayed', cardPlayHandler);
   game[ATTACK_ANIM_FLAG] = true;
 }
 

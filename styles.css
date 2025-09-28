@@ -962,6 +962,38 @@ ul.zone-list li {
   pointer-events: none;
 }
 
+.played-card-fx {
+  position: fixed;
+  pointer-events: none;
+  z-index: 902;
+  transform-origin: center;
+  animation: played-card-rise var(--played-card-duration, 720ms) ease-out forwards;
+  filter: drop-shadow(0 0 16px rgba(255, 220, 128, 0.5));
+}
+
+.played-card-fx__card,
+.played-card-fx__card * {
+  pointer-events: none !important;
+}
+
+.played-card-fx__card {
+  will-change: transform, opacity;
+}
+
+@keyframes played-card-rise {
+  0% {
+    opacity: 0;
+    transform: translate3d(-50%, -10%, 0) scale(var(--played-card-scale, 0.78));
+  }
+  18% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(-50%, -160%, 0) scale(calc(var(--played-card-scale, 0.78) * 0.9));
+  }
+}
+
 @keyframes attack-bump {
   0% { transform: translate3d(0, 0, 0) scale(1); }
   45% { transform: translate3d(3px, -4px, 0) scale(1.05); }
