@@ -642,11 +642,13 @@ describe('UI Play', () => {
     playerHeroEl.dispatchEvent(new PointerEvent('pointerup', { pointerType: 'touch', bubbles: true, cancelable: true }));
     await Promise.resolve();
     expect(playerHeroEl.dataset.touchPreview).toBeUndefined();
-    expect(attack).not.toHaveBeenCalled();
+    expect(attack).toHaveBeenCalledTimes(1);
+    expect(attack).toHaveBeenCalledWith(game.player, game.player.hero);
 
     playerHeroEl.dispatchEvent(new PointerEvent('pointerup', { pointerType: 'mouse', bubbles: true, cancelable: true }));
     await Promise.resolve();
-    expect(attack).toHaveBeenCalledWith(game.player, game.player.hero);
+    expect(attack).toHaveBeenCalledTimes(2);
+    expect(attack).toHaveBeenLastCalledWith(game.player, game.player.hero);
 
     nowSpy.mockRestore();
   });
