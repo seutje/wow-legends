@@ -204,13 +204,14 @@ function attachCardInteractions(node, card, clickCard) {
       const now = getNow();
       const isPreviewed = touchPreviewCardEl === node;
       const isFriendlyFieldAlly = state.card?.type === 'ally' && !!node.closest('.p-field');
+      const isFriendlyHero = state.card?.type === 'hero' && !!node.closest('.slot.p-hero');
       const isPlayerHandCard = !!node.closest('.p-hand');
       const canActivate = typeof state.clickCard === 'function';
       state.lastTap = now;
       if (isPreviewed) {
         clearTouchPreview(node);
         state.lastTap = 0;
-        if (canActivate && (isFriendlyFieldAlly || isPlayerHandCard)) await state.clickCard(state.card);
+        if (canActivate && (isFriendlyFieldAlly || isFriendlyHero || isPlayerHandCard)) await state.clickCard(state.card);
         return;
       }
       setTouchPreview(node);
