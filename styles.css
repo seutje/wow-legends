@@ -962,6 +962,17 @@ ul.zone-list li {
   pointer-events: none;
 }
 
+.card-play-float {
+  pointer-events: none;
+  z-index: 902;
+  filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.45));
+}
+
+.card-play-float img,
+.card-play-float .card-info {
+  pointer-events: none;
+}
+
 @keyframes attack-bump {
   0% { transform: translate3d(0, 0, 0) scale(1); }
   45% { transform: translate3d(3px, -4px, 0) scale(1.05); }

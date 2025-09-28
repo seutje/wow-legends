@@ -240,7 +240,9 @@ if (typeof document !== 'undefined') {
 
 const ATTACK_LAYER_ID = 'attack-anim-layer';
 const ATTACK_ANIM_FLAG = Symbol('attackAnimBound');
+const CARD_PLAY_ANIM_FLAG = Symbol('cardPlayAnimBound');
 const ATTACK_ANIM_DURATION_MS = 480;
+const CARD_PLAY_ANIM_DURATION_MS = 820;
 
 const requestFrame = (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function')
   ? window.requestAnimationFrame.bind(window)
@@ -372,6 +374,80 @@ function ensureAttackLayer() {
   return layer;
 }
 
+function findHeroSlotForPlayer(game, player) {
+  if (!game || typeof document === 'undefined') return null;
+  const board = document.querySelector('.board');
+  if (!board) return null;
+  if (!player) return null;
+  let selector = null;
+  if (player === game.player) selector = '.slot.p-hero';
+  else if (player === game.opponent) selector = '.slot.ai-hero';
+  if (!selector) return null;
+  const node = board.querySelector(selector);
+  if (node) return node;
+  const heroId = player?.hero ? resolveDomCardKey(player.hero) : null;
+  if (!heroId) return null;
+  const heroNode = findCardNodeByKey(heroId);
+  return heroNode?.closest?.('.slot.ai-hero, .slot.p-hero') || null;
+}
+
+function animateCardPlayed(game, player, card) {
+  if (typeof document === 'undefined') return;
+  if (!card) return;
+
+  const heroSlot = findHeroSlotForPlayer(game, player);
+  if (!heroSlot) return;
+  const heroRect = heroSlot.getBoundingClientRect();
+  if (!heroRect?.width || !heroRect?.height) return;
+
+  const layer = ensureAttackLayer();
+  if (!layer) return;
+
+  const cardEl = buildCardEl(card, { owner: player });
+  cardEl.classList.add('card-play-float');
+  const style = cardEl.style;
+  style.position = 'fixed';
+  style.left = `${heroRect.left + heroRect.width / 2}px`;
+  style.top = `${heroRect.top + heroRect.height / 2}px`;
+  style.transform = 'translate3d(-50%, -50%, 0)';
+  style.transformOrigin = 'center';
+  style.opacity = '0';
+  style.pointerEvents = 'none';
+  style.willChange = 'opacity, transform';
+  layer.append(cardEl);
+
+  const baseTransform = 'translate3d(-50%, -50%, 0)';
+  const liftTransform = `${baseTransform} translate3d(0, -96px, 0)`;
+  const peakTransform = `${baseTransform} translate3d(0, -36px, 0)`;
+
+  if (typeof cardEl.animate === 'function') {
+    const frames = [
+      { opacity: 0, transform: `${baseTransform} scale(0.9)` },
+      { opacity: 1, transform: `${peakTransform} scale(1)`, offset: 0.35 },
+      { opacity: 0, transform: liftTransform, offset: 1 },
+    ];
+    const anim = cardEl.animate(frames, { duration: CARD_PLAY_ANIM_DURATION_MS, easing: 'ease-out' });
+    const cleanup = () => { cardEl.remove(); };
+    anim.addEventListener('finish', cleanup, { once: true });
+    anim.addEventListener('cancel', cleanup, { once: true });
+  } else {
+    const fadeInDuration = Math.floor(CARD_PLAY_ANIM_DURATION_MS * 0.35);
+    const holdDuration = Math.floor(CARD_PLAY_ANIM_DURATION_MS * 0.2);
+    const fadeOutDuration = CARD_PLAY_ANIM_DURATION_MS - fadeInDuration - holdDuration;
+    requestFrame(() => {
+      style.transition = `opacity ${fadeInDuration}ms ease-out, transform ${fadeInDuration}ms ease-out`;
+      style.opacity = '1';
+      style.transform = peakTransform;
+      setTimeout(() => {
+        style.transition = `opacity ${fadeOutDuration}ms ease-in, transform ${fadeOutDuration}ms ease-in`;
+        style.opacity = '0';
+        style.transform = liftTransform;
+      }, fadeInDuration + holdDuration);
+    });
+  }
+  setTimeout(() => { cardEl.remove(); }, CARD_PLAY_ANIM_DURATION_MS + 200);
+}
+
 function animateAttackFlight(attacker, defender) {
   if (typeof document === 'undefined') return;
   if (!attacker || !(attacker.type === 'ally' || attacker.type === 'hero')) return;
@@ -477,6 +553,17 @@ function ensureAttackAnimationSubscription(game) {
   };
   game.bus.on('attackCommitted', handler);
   game[ATTACK_ANIM_FLAG] = true;
+}
+
+function ensureCardPlayAnimationSubscription(game) {
+  if (!game || !game.bus || typeof document === 'undefined') return;
+  if (game[CARD_PLAY_ANIM_FLAG]) return;
+  const handler = ({ player, card }) => {
+    if (!card) return;
+    requestFrame(() => { animateCardPlayed(game, player, card); });
+  };
+  game.bus.on('cardPlayed', handler);
+  game[CARD_PLAY_ANIM_FLAG] = true;
 }
 
 function zoneCards(title, cards, { clickCard, owner } = {}) {
@@ -824,6 +911,7 @@ export function renderPlay(container, game, {
   };
 
   ensureAttackAnimationSubscription(game);
+  ensureCardPlayAnimationSubscription(game);
 
   let headerEl = document.querySelector('header');
   if (!headerEl) {
