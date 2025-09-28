@@ -12,7 +12,7 @@ import { saveGameState, loadSavedGameState, clearSavedGameState } from './utils/
 
 function qs(sel) { return document.querySelector(sel); }
 
-function startLoadingOverlay(message = 'Loading game data…') {
+function startLoadingOverlay(message = 'Loading game data…', options = null) {
   if (typeof document === 'undefined') return null;
   const parent = document.body || document.documentElement;
   if (!parent) return null;
@@ -27,6 +27,12 @@ function startLoadingOverlay(message = 'Loading game data…') {
   const progressEl = document.createElement('div');
   progressEl.className = 'progress';
   progressEl.dataset.complete = '0';
+  const opts = options && typeof options === 'object' ? options : {};
+  const determinate = !!opts.determinate;
+  if (determinate) {
+    progressEl.dataset.mode = 'determinate';
+    progressEl.style.setProperty('--progress-pos', '0');
+  }
   const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
   let progressPos = 0.12;
   progressEl.style.setProperty('--progress-pos', progressPos.toFixed(4));
@@ -41,6 +47,7 @@ function startLoadingOverlay(message = 'Loading game data…') {
   let direction = 1;
   const hasRAF = typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function';
   const hasCancelRAF = typeof window !== 'undefined' && typeof window.cancelAnimationFrame === 'function';
+  let autoAnimate = !determinate;
   const schedule = (cb) => {
     if (hasRAF) return window.requestAnimationFrame(cb);
     return setTimeout(cb, 80);
@@ -54,7 +61,7 @@ function startLoadingOverlay(message = 'Loading game data…') {
   };
   const step = () => {
     frameId = 0;
-    if (done) return;
+    if (done || !autoAnimate) return;
     progressPos += direction * 0.012;
     if (progressPos >= max || progressPos <= min) {
       direction *= -1;
@@ -63,7 +70,7 @@ function startLoadingOverlay(message = 'Loading game data…') {
     progressEl.style.setProperty('--progress-pos', progressPos.toFixed(4));
     frameId = schedule(step);
   };
-  frameId = schedule(step);
+  if (autoAnimate) frameId = schedule(step);
 
   return {
     finish(success = true) {
@@ -80,6 +87,18 @@ function startLoadingOverlay(message = 'Loading game data…') {
       } else {
         overlay.remove();
       }
+    },
+    setProgress(value) {
+      if (!determinate || done) return;
+      const numeric = Number(value);
+      if (!Number.isFinite(numeric)) return;
+      autoAnimate = false;
+      if (frameId) {
+        cancel(frameId);
+        frameId = 0;
+      }
+      const clamped = clamp(numeric, 0, 1);
+      progressEl.style.setProperty('--progress-pos', clamped.toFixed(4));
     },
   };
 }
@@ -200,6 +219,65 @@ function selectRandomDeck({ excludeHeroIds = [], rng = null } = {}) {
   const selected = candidates[index] || null;
   if (!selected) return null;
   return cloneDeck(selected);
+}
+
+function preloadCardArt(card) {
+  if (!card || !card.id || typeof Image === 'undefined') {
+    return Promise.resolve();
+  }
+  return new Promise((resolve) => {
+    const img = new Image();
+    let resolved = false;
+    let triedOptim = false;
+    const cleanup = () => {
+      if (resolved) return;
+      resolved = true;
+      resolve();
+    };
+    img.onload = cleanup;
+    img.onerror = () => {
+      if (!triedOptim) {
+        triedOptim = true;
+        img.src = `src/assets/art/${card.id}-art.png`;
+      } else {
+        cleanup();
+      }
+    };
+    try {
+      img.src = `src/assets/optim/${card.id}-art.png`;
+    } catch {
+      cleanup();
+    }
+  });
+}
+
+function collectInitialDeckCards(deckOverride) {
+  if (!deckOverride) return [];
+  const cards = [];
+  const seen = new Set();
+  const addCard = (card) => {
+    if (!card || !card.id || seen.has(card.id)) return;
+    seen.add(card.id);
+    cards.push(card);
+  };
+  const playerCards = Array.isArray(deckOverride.cards) ? deckOverride.cards.slice(0, 4) : [];
+  for (const card of playerCards) addCard(card);
+  let opponentDeck = deckOverride.opponentDeck || null;
+  if (!opponentDeck && deckOverride.opponentHeroId) {
+    opponentDeck = getDeckForHero(deckOverride.opponentHeroId);
+  }
+  const opponentCards = Array.isArray(opponentDeck?.cards) ? opponentDeck.cards.slice(0, 4) : [];
+  for (const card of opponentCards) addCard(card);
+  return cards;
+}
+
+async function preloadCardArtList(cards, { onCardLoaded = null } = {}) {
+  if (!Array.isArray(cards) || cards.length === 0) return;
+  await Promise.all(cards.map((card) => (
+    preloadCardArt(card)
+      .catch(() => {})
+      .finally(() => { if (typeof onCardLoaded === 'function') onCardLoaded(); })
+  )));
 }
 
 function rerenderStartScreen() {
@@ -364,12 +442,52 @@ async function handleOpponentSelection(hero) {
   if (!deckOverride.opponentHeroId) {
     deckOverride.opponentHeroId = opponentHeroId || playerDeck.hero.id;
   }
+  const previousState = {
+    selectedHeroId: startScreenState.selectedHeroId,
+    selectedPlayerDeck: startScreenState.selectedPlayerDeck,
+    selectedOpponentHeroId: startScreenState.selectedOpponentHeroId,
+    selectedOpponentDeck: startScreenState.selectedOpponentDeck,
+    pendingRandomSeed: startScreenState.pendingRandomSeed,
+    pendingRandomRng: startScreenState.pendingRandomRng,
+  };
+  startScreenState.visible = false;
+  rerenderStartScreen();
+  toggleGameVisible(true);
+  const preloadCards = collectInitialDeckCards(deckOverride);
+  const totalSteps = preloadCards.length + 1;
+  let completed = 0;
+  const overlay = startLoadingOverlay('Preparing decks…', { determinate: true });
+  const updateProgress = () => {
+    if (!overlay || typeof overlay.setProgress !== 'function') return;
+    const ratio = totalSteps > 0 ? (completed / totalSteps) : 1;
+    overlay.setProgress(ratio);
+  };
+  updateProgress();
   try {
+    await preloadCardArtList(preloadCards, {
+      onCardLoaded: () => {
+        completed += 1;
+        updateProgress();
+      },
+    });
     const seed = startScreenState.pendingRandomSeed;
     await startNewGame(seed != null ? { deckOverride, seed } : { deckOverride });
+    completed += 1;
+    updateProgress();
+    overlay?.finish(true);
     hideStartScreen();
   } catch {
+    overlay?.finish(false);
     startScreenState.visible = true;
+    startScreenState.step = 'opponent';
+    startScreenState.selectedHeroId = previousState.selectedHeroId;
+    startScreenState.selectedPlayerDeck = previousState.selectedPlayerDeck;
+    startScreenState.selectedOpponentHeroId = previousState.selectedOpponentHeroId;
+    startScreenState.selectedOpponentDeck = previousState.selectedOpponentDeck;
+    startScreenState.pendingRandomSeed = previousState.pendingRandomSeed;
+    startScreenState.pendingRandomRng = previousState.pendingRandomRng;
+    startScreenState.loadingDecks = false;
+    toggleGameVisible(false);
     rerenderStartScreen();
   }
 }
