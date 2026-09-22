@@ -157,7 +157,7 @@ export function aggregateComparisons(events) {
 
 export function normalizeCounterfactualCollection(raw) {
   const clean = sanitizeForDisplay(object(raw, 'Counterfactual analysis'));
-  if (clean.schemaVersion !== 1 || clean.analysisType !== 'counterfactual-mcts-collection'
+  if (![1, 2].includes(clean.schemaVersion) || clean.analysisType !== 'counterfactual-mcts-collection'
     || !Array.isArray(clean.analyses)) throw new EvaluationDataError('Unsupported counterfactual analysis file');
   return clean;
 }

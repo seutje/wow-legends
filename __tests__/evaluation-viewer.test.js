@@ -68,7 +68,9 @@ describe('evaluation viewer UI', () => {
       sampling: { strategy: 'stratified', eligiblePositions: 20, eligibleMatches: 10,
         sampledMatches: 8, actionTypes: { 'play-card': 1 } }, analyses: [{
       schemaVersion: 1, analysisType: 'counterfactual-mcts', matchId: 'match-1', decisionIndex: 0,
-      selectedActionType: 'play-card', evaluator: { iterations: 5000, rolloutDepth: 20, repeats: 3,
+      selectedActionType: 'play-card', disagreement: { jevChoiceClass: 'attack-face', neuralChoiceClass: 'attack-minion',
+        jevStrategic: 'face-pressure', neuralStrategic: 'board-control' },
+      evaluator: { iterations: 5000, rolloutDepth: 20, repeats: 3,
         policyGuidance: 'none', baseSeed: 123, informationMode: 'perfect' },
       candidates: [
         { actionId: 'a0', description: 'Play Fireball', selectedBy: ['jev'], estimatedValue: 0.42, stdDev: 0.04, runs: [{}, {}, {}] },
@@ -82,5 +84,8 @@ describe('evaluation viewer UI', () => {
     expect(text(root)).toContain('Deep MCTS estimate');
     expect(text(root)).toContain('+0.42 ± 0.04');
     expect(text(root)).toContain('information mode perfect. Jev input mode: player-visible');
+    const filter = root.querySelector('.controls select'); filter.value = 'face-vs-trade';
+    filter.dispatchEvent(new Event('change'));
+    expect(root.querySelectorAll('.timeline button')).toHaveLength(1);
   });
 });

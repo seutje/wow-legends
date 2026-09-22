@@ -48,6 +48,8 @@ describe('counterfactual analysis data', () => {
     ] }];
     const raw = { schemaVersion: 1, analysisType: 'counterfactual-mcts-collection', analyses };
     expect(normalizeCounterfactualCollection(raw).analyses).toHaveLength(2);
+    expect(normalizeCounterfactualCollection({ ...raw, schemaVersion: 2,
+      diagnostics: { tacticalPairs: [] } }).diagnostics).toEqual({ tacticalPairs: [] });
     expect(counterfactualSummary(analyses, 0.05)).toMatchObject({ positionsAnalyzed: 2, jevHigher: 1, approximatelyTied: 1, neuralHigher: 0 });
     expect(() => normalizeCounterfactualCollection({ schemaVersion: 2 })).toThrow('Unsupported');
   });

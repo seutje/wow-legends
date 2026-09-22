@@ -2,8 +2,9 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseDecisionJsonl, normalizeEvaluationRun } from '../src/js/evaluation/data.js';
-import { evaluateCounterfactualDecision } from '../src/js/systems/ai-counterfactual.js';
+import { COUNTERFACTUAL_EVALUATOR_VERSION, evaluateCounterfactualDecision } from '../src/js/systems/ai-counterfactual.js';
 import { createSampleManifest, sampleCounterfactualPositions, SAMPLING_STRATEGIES } from './counterfactual-sampling.mjs';
+import { aggregateCounterfactualDiagnostics } from '../src/js/systems/ai-counterfactual-diagnostics.js';
 
 export function parseCounterfactualArgs(argv) {
   const valueKeys = new Set(['input', 'decisions', 'output', 'game', 'decision', 'iterations', 'depth', 'repeats', 'seed', 'limit',
@@ -35,6 +36,32 @@ export function formatSamplingPreview(metadata) {
     `Requested limit: ${metadata.requestedLimit ?? 'all'}`, `Max per match: ${metadata.maxPerMatch ?? 'none'}`, '',
     `Selected positions: ${metadata.selectedPositions}`, `Matches represented: ${metadata.sampledMatches}`, '', 'Action types:'];
   for (const [type, count] of Object.entries(metadata.actionTypes).sort()) lines.push(`  ${type}: ${count}`);
+  return `${lines.join('\n')}\n`;
+}
+
+const signed = value => Number.isFinite(value) ? `${value >= 0 ? '+' : ''}${value.toFixed(2)}` : '—';
+export function formatTacticalDiagnostics(diagnostics) {
+  const lines = ['', 'TACTICAL DISAGREEMENTS'];
+  for (const pair of diagnostics.tacticalPairs.slice(0, 12)) lines.push('',
+    `Jev ${pair.jevChoice} vs Neural ${pair.neuralChoice}`,
+    `  positions: ${pair.count}`, `  Jev higher: ${pair.jevEstimatedHigher}`,
+    `  Neural higher: ${pair.neuralEstimatedHigher}`, `  median delta: ${signed(pair.medianValueDifference)}`);
+  lines.push('', 'FACE / TRADE DIAGNOSTICS');
+  for (const [label, pair] of Object.entries(diagnostics.faceVsTrade)) lines.push(
+    `  ${label}: ${pair.count} positions (Jev higher ${pair.jevEstimatedHigher}, Neural higher ${pair.neuralEstimatedHigher}, median ${signed(pair.medianValueDifference)})`);
+  const end = diagnostics.jevEndTurn;
+  lines.push('', 'JEV END-TURN DIAGNOSTICS', `positions: ${end.positions}`,
+    `with playable card remaining: ${end.withPlayableCardRemaining}`,
+    `with legal attack remaining: ${end.withLegalAttackRemaining}`,
+    `with hero power remaining: ${end.withHeroPowerRemaining}`,
+    `with zero non-end legal actions: ${end.withZeroNonEndLegalActions}`,
+    `median remaining mana: ${end.medianRemainingMana ?? '—'}`, `median value gap: ${signed(end.medianValueGap)}`);
+  lines.push('', 'JEV HERO-POWER DIAGNOSTICS', `positions: ${diagnostics.jevHeroPower.positions}`);
+  for (const [group, values] of Object.entries(diagnostics.jevHeroPower.alternatives)) lines.push(
+    `  Neural ${group}: ${values.count} (Jev higher ${values.jevHigher}, Neural higher ${values.neuralHigher}, median ${signed(values.medianValueGap)})`);
+  lines.push('', 'LETHAL DIAGNOSTICS', `positions with legal lethal: ${diagnostics.lethal.positionsWithLegalLethal}`,
+    `Jev-only lethal: ${diagnostics.lethal.jevOnlyLethal}`, `Neural-only lethal: ${diagnostics.lethal.neuralOnlyLethal}`, '',
+    `Repeat values identical: ${diagnostics.repeatStability.identicalRepeatValues}/${diagnostics.repeatStability.candidates}`);
   return `${lines.join('\n')}\n`;
 }
 
@@ -78,7 +105,8 @@ export async function analyzeCounterfactualRun(options) {
       && previous.analysisConfig?.repeats === config.repeats
       && previous.analysisConfig?.baseSeed === config.baseSeed
       && !!previous.analysisConfig?.fullSim === config.fullSim
-      && previous.analysisConfig?.candidateMode === config.candidateMode) cached = previous.analyses || [];
+      && previous.analysisConfig?.candidateMode === config.candidateMode
+      && previous.analysisConfig?.evaluatorVersion === COUNTERFACTUAL_EVALUATOR_VERSION) cached = previous.analyses || [];
   } catch {}
   const analyses = [];
   for (let index = 0; index < targets.length; index++) {
@@ -88,13 +116,16 @@ export async function analyzeCounterfactualRun(options) {
     if (existing) { analyses.push(existing); process.stdout.write(`Cached ${index + 1}/${targets.length}: ${event.matchId} decision ${event.decisionIndex + 1}\n`); continue; }
     process.stdout.write(`Analyzing ${index + 1}/${targets.length}: ${event.matchId} decision ${event.decisionIndex + 1}\n`);
     try { analyses.push(await evaluateCounterfactualDecision({ event, config })); }
-    catch (error) { analyses.push({ schemaVersion: 1, analysisType: 'counterfactual-mcts', matchId: event.matchId,
+    catch (error) { analyses.push({ schemaVersion: 2, analysisType: 'counterfactual-mcts', matchId: event.matchId,
       decisionIndex: event.decisionIndex, status: 'error', errorType: error.message.includes('do not match') ? 'reconstruction-mismatch' : 'analysis-failed', message: error.message }); }
   }
-  const output = { schemaVersion: 1, analysisType: 'counterfactual-mcts-collection',
+  const diagnostics = aggregateCounterfactualDiagnostics(analyses);
+  const output = { schemaVersion: 2, analysisType: 'counterfactual-mcts-collection',
     evaluationSchemaVersion: run.schemaVersion, sampling: sampled.metadata,
-    analysisConfig: { ...config, policyGuidance: 'none', informationMode: 'perfect' }, analyses };
+    analysisConfig: { ...config, evaluatorVersion: COUNTERFACTUAL_EVALUATOR_VERSION,
+      policyGuidance: 'none', informationMode: 'perfect' }, diagnostics, analyses };
   await writeFile(options.output, `${JSON.stringify(output, null, 2)}\n`);
+  process.stdout.write(formatTacticalDiagnostics(diagnostics));
   process.stdout.write(`Wrote ${analyses.length} analyses to ${options.output}\n`);
   return output;
 }

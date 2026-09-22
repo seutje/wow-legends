@@ -23,7 +23,9 @@ export const FREEZE_WEIGHT = -2;
 // Overload is generally bad for the AI (less resources next turn).
 export const AI_OVERLOAD_WEIGHT = -1;
 export const PLAYER_OVERLOAD_WEIGHT = 1;
-export const WIN_CONDITION_BONUS = 1000;
+export const WIN_CONDITION_BONUS = 1000000;
+export const NON_TERMINAL_VALUE_MAX = WIN_CONDITION_BONUS - 1;
+export const NON_TERMINAL_VALUE_MIN = -NON_TERMINAL_VALUE_MAX;
 export const ENEMY_ENRAGED_BASE_PENALTY = 20;
 export const ENEMY_ENRAGED_ATTACK_WEIGHT = 8;
 
@@ -101,9 +103,6 @@ export function evaluateGameState({
   score += countFrozen(opponent) * -FREEZE_WEIGHT; // frozen enemy is good -> subtract negative
   score += countFrozen(player) * FREEZE_WEIGHT;
 
-  if (oppHealth <= 0) score += WIN_CONDITION_BONUS;
-  if (aiHealth <= 0) score -= WIN_CONDITION_BONUS;
-
   const toMap = (value) => {
     if (!value) return new Map();
     if (value instanceof Map) return value;
@@ -129,7 +128,10 @@ export function evaluateGameState({
     }
   }
 
-  return score;
+  if (oppHealth <= 0 && aiHealth > 0) return WIN_CONDITION_BONUS;
+  if (aiHealth <= 0 && oppHealth > 0) return -WIN_CONDITION_BONUS;
+  if (aiHealth <= 0 && oppHealth <= 0) return 0;
+  return Math.max(NON_TERMINAL_VALUE_MIN, Math.min(NON_TERMINAL_VALUE_MAX, score));
 }
 
 export default evaluateGameState;
