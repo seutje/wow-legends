@@ -17,6 +17,8 @@ import { fillDeckRandomly } from './utils/deckbuilder.js';
 import { getCardInstanceId, matchesCardIdentifier } from './utils/card.js';
 import { chooseStartingPlayerKey } from './utils/turnOrder.js';
 import { removeOverflowAllies } from './utils/allies.js';
+import { createDecisionState, getLegalActions } from './systems/ai-actions.js';
+import { actionSignature } from './systems/ai-signatures.js';
 
 const DEFAULT_AI_ACTION_DELAY_MS = 1000;
 const DEFAULT_AI_THINKING_SETTLE_MS = 1000;
@@ -1792,6 +1794,54 @@ export default class Game {
     // Stealth is lost when a unit attacks
     if (card?.keywords?.includes?.('Stealth')) {
       card.keywords = card.keywords.filter(k => k !== 'Stealth');
+    }
+    return true;
+  }
+
+  // Apply one canonical action using the same methods as human play.
+  async applyDecision(player, opponent, action) {
+    if (!action || !player || !opponent || !this._isParticipant(player) || !this._isParticipant(opponent)) return false;
+    if (this.isGameOver()) return false;
+    if (action.end) return !action.attack && !action.card && !action.usePower;
+    if (action.attack) {
+      if (action.card || action.usePower || !action.attack.attackerId) return false;
+      return this.attack(player, action.attack.attackerId, action.attack.targetId ?? null);
+    }
+    if (!action.card && !action.usePower) return false;
+    if (action.card) {
+      const cardRef = getCardInstanceId(action.card) ?? action.card;
+      if (!await this.playFromHand(player, cardRef)) return false;
+      if (this.isGameOver()) return true;
+    }
+    if (action.usePower) return this.useHeroPower(player);
+    return true;
+  }
+
+  // Agents implement async chooseAction(state, actions). The engine supplies the
+  // full legal list and executes its own matching object, never an agent payload.
+  async runAgentTurn({ agent, player, opponent, skipStart = false } = {}) {
+    if (!agent || typeof agent.chooseAction !== 'function' || !this._isParticipant(player)
+      || !this._isParticipant(opponent) || this.isGameOver()) return false;
+    if (!skipStart) {
+      this.resources.startTurn(player);
+      if (this.isGameOver()) return false;
+      const drawn = player.library.draw(1);
+      if (drawn[0]) player.hand.add(drawn[0]);
+    }
+    while (!this.isGameOver() && this._isParticipant(player) && this._isParticipant(opponent)) {
+      const state = createDecisionState({
+        game: this, player, opponent, pool: this.resources.pool(player),
+        turn: this.turns.turn,
+        powerAvailable: !!player.hero?.active?.length && !player.hero.powerUsed,
+      });
+      const actions = getLegalActions(state);
+      const legalBySignature = new Map(actions.map(action => [actionSignature(action), action]));
+      const selected = await agent.chooseAction(state, actions);
+      if (this.isGameOver() || !this._isParticipant(player) || !this._isParticipant(opponent)) break;
+      const canonical = selected ? legalBySignature.get(actionSignature(selected)) : null;
+      if (!canonical) return false;
+      if (canonical.end) break;
+      if (!await this.applyDecision(player, opponent, canonical)) return false;
     }
     return true;
   }

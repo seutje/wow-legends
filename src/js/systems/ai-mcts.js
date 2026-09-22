@@ -2550,7 +2550,9 @@ export class MCTS_AI {
       // Apply chosen action to real game state
       if (action.attack) {
         let ok = false;
-        if (this.game && typeof this.game.attack === 'function') {
+        if (this.game && typeof this.game.applyDecision === 'function') {
+          ok = await this.game.applyDecision(player, opponent, action);
+        } else if (this.game && typeof this.game.attack === 'function') {
           ok = await this.game.attack(player, action.attack.attackerId, action.attack.targetId ?? null);
         } else {
           const stateView = {
@@ -2572,7 +2574,13 @@ export class MCTS_AI {
         }
       }
       if (action.card) {
-        if (this.game && typeof this.game.playFromHand === 'function') {
+        if (this.game && typeof this.game.applyDecision === 'function') {
+          const ok = await this.game.applyDecision(player, opponent, { ...action, usePower: false });
+          if (!ok) {
+            this._clearLastTree();
+            break;
+          }
+        } else if (this.game && typeof this.game.playFromHand === 'function') {
           const cardRef = getCardInstanceId(action.card) ?? action.card;
           const ok = await this.game.playFromHand(player, cardRef);
           if (!ok) {
@@ -2606,7 +2614,13 @@ export class MCTS_AI {
         break;
       }
       if (action.usePower) {
-        if (this.game && typeof this.game.useHeroPower === 'function') {
+        if (this.game && typeof this.game.applyDecision === 'function') {
+          const ok = await this.game.applyDecision(player, opponent, { card: null, usePower: true, end: false });
+          if (!ok) {
+            this._clearLastTree();
+            break;
+          }
+        } else if (this.game && typeof this.game.useHeroPower === 'function') {
           const ok = await this.game.useHeroPower(player);
           if (!ok) {
             this._clearLastTree();
