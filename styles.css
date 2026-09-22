@@ -1119,3 +1119,64 @@ ul.zone-list li {
     grid-template-columns: 1fr;
   }
 }
+
+/* OpenRouter key setup stays out of the main controls. */
+header .controls .jev-open[hidden],
+header .controls .jev-retry[hidden],
+header .controls .jev-key-dialog:not([open]) {
+  display: none;
+}
+
+header .controls .jev-key-dialog {
+  position: fixed;
+  inset: 0;
+  width: min(460px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  margin: auto;
+  padding: 24px;
+  border: 1px solid var(--color-border-soft);
+  border-radius: 16px;
+  background: #302014;
+  color: var(--color-text-primary);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.55);
+  z-index: 2000;
+}
+
+header .controls .jev-key-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.65);
+}
+
+header .controls .jev-key-dialog h2 {
+  margin: 0 0 16px;
+}
+
+header .controls .jev-key-dialog label {
+  display: block;
+  margin-bottom: 8px;
+}
+
+header .controls .jev-key-dialog .jev-key {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border-soft);
+  border-radius: 8px;
+  background: rgba(56, 34, 14, 0.85);
+  color: var(--color-text-primary);
+  font: inherit;
+}
+
+header .controls .jev-key-dialog p {
+  line-height: 1.4;
+}
+
+header .controls .jev-dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+header .controls .jev-error,
+header .controls .jev-dialog-error {
+  color: #f8a799;
+}

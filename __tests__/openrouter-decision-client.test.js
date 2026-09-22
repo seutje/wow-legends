@@ -41,7 +41,7 @@ test.each([
   await expect(client.decide(payload)).rejects.toMatchObject({ code });
 });
 
-test.each([[401, 'authentication'], [403, 'authentication'], [402, 'insufficient_credits'],
+test.each([[401, 'authentication'], [403, 'forbidden'], [402, 'insufficient_credits'],
   [429, 'rate_limit'], [500, 'provider_error']])('normalizes HTTP %i', async (status, code) => {
   const client = new OpenRouterDecisionClient({ apiKey: 'fake-secret',
     fetchImpl: async () => mockResponse({ error: { message: 'fake-secret' } }, status) });
@@ -64,4 +64,21 @@ test('generic remote agent accepts OpenRouter client without provider coupling',
   const agent = new RemoteDecisionAgent({ client });
   const action = { end: true };
   expect(await agent.chooseAction({ player: {}, opponent: {}, turn: 1, pool: 0 }, [action])).toBe(action);
+});
+
+
+test('default fetch keeps the browser global as its receiver', async () => {
+  const original = globalThis.fetch;
+  const fetchMock = jest.fn(function () {
+    if (this !== globalThis) throw new TypeError('Illegal invocation');
+    return Promise.resolve(mockResponse(success));
+  });
+  globalThis.fetch = fetchMock;
+  try {
+    const client = new OpenRouterDecisionClient({ apiKey: 'fake-secret' });
+    await expect(client.decide(payload)).resolves.toMatchObject({ actionId: 'a1' });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  } finally {
+    globalThis.fetch = original;
+  }
 });

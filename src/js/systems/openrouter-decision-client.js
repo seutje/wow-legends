@@ -1,4 +1,4 @@
-// Server-side/local tooling only: never instantiate with a secret in browser code.
+// A caller supplies the key at runtime. Never bundle a development key into browser code.
 const ENDPOINT = 'https://openrouter.ai/api/alpha/decisions';
 const DEFAULT_MODEL = '~typesafe/jev-latest';
 const OBJECTIVE = "Choose the legal action that best improves the active player's probability of ultimately winning the game.";
@@ -13,7 +13,7 @@ export class OpenRouterDecisionError extends Error {
 }
 
 export class OpenRouterDecisionClient {
-  constructor({ apiKey, model = DEFAULT_MODEL, timeoutMs = 15000, fetchImpl = globalThis.fetch } = {}) {
+  constructor({ apiKey, model = DEFAULT_MODEL, timeoutMs = 15000, fetchImpl = globalThis.fetch?.bind(globalThis) } = {}) {
     if (!apiKey || typeof apiKey !== 'string') {
       throw new OpenRouterDecisionError('OpenRouter API key is required', { code: 'missing_api_key' });
     }
@@ -52,8 +52,9 @@ export class OpenRouterDecisionClient {
       });
       const data = await response.json().catch(() => null);
       if (!response.ok) {
-        const code = response.status === 401 || response.status === 403 ? 'authentication'
-          : response.status === 402 ? 'insufficient_credits'
+        const code = response.status === 401 ? 'authentication'
+          : response.status === 403 ? 'forbidden'
+            : response.status === 402 ? 'insufficient_credits'
             : response.status === 429 ? 'rate_limit' : 'provider_error';
         // Provider error text can echo request headers; keep errors safe and bounded.
         throw new OpenRouterDecisionError(`OpenRouter decision request failed (HTTP ${response.status})`,

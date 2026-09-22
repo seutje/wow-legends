@@ -979,7 +979,8 @@ export function renderPlay(container, game, {
   onOpenDeckBuilder,
   onToggleDeckBuilder,
   onNewGame,
-  deckBuilderOpen = false
+  deckBuilderOpen = false,
+  jevSession = null
 } = {}) {
   const p = game.player; const e = game.opponent;
   const debugEnabled = !!(game.state?.debug);
@@ -1026,6 +1027,62 @@ export function renderPlay(container, game, {
       }
     }, ...diffOptions.map(opt => el('option', { value: opt, selected: currentDifficulty === opt }, opt.charAt(0).toUpperCase() + opt.slice(1))));
     diffSelect.value = currentDifficulty;
+
+    const agentSelect = el('select', { class: 'select-opponent-agent',
+      onchange: event => {
+        if (game.state) game.state.opponentAgent = event.target.value;
+        onUpdate?.();
+      } },
+    el('option', { value: 'local' }, 'Local AI'),
+    el('option', { value: 'jev' }, 'Jev'));
+    agentSelect.value = game.state?.opponentAgent === 'jev' ? 'jev' : 'local';
+
+    const keyInput = el('input', { class: 'jev-key', id: 'jev-key-input', type: 'password',
+      autocomplete: 'off', spellcheck: 'false' });
+    const keyDialogError = el('p', { class: 'jev-dialog-error', role: 'alert' });
+    const keyDialog = el('dialog', { class: 'jev-key-dialog', 'aria-labelledby': 'jev-key-title',
+      'aria-describedby': 'jev-key-explanation',
+      onclose: () => { keyInput.value = ''; keyDialogError.textContent = ''; } },
+    el('h2', { id: 'jev-key-title' }, 'Set OpenRouter key'),
+    el('label', { for: 'jev-key-input' }, 'OpenRouter API key'),
+    keyInput,
+    el('p', { id: 'jev-key-explanation' },
+      'Your key is sent directly from this browser to OpenRouter and is not stored by this site.'),
+    keyDialogError,
+    el('div', { class: 'jev-dialog-actions' },
+      el('button', { type: 'button', class: 'button-pill button-pill--primary jev-save',
+        onclick: () => {
+          if (!keyInput.value.trim()) {
+            keyDialogError.textContent = 'Enter an OpenRouter API key.';
+            return;
+          }
+          jevSession?.setKey(keyInput.value);
+          keyInput.value = '';
+          if (typeof keyDialog.close === 'function') keyDialog.close();
+          else keyDialog.removeAttribute('open');
+          onUpdate?.();
+        } }, 'Save key'),
+      el('button', { type: 'button', class: 'button-pill button-pill--secondary jev-clear',
+        onclick: () => {
+          jevSession?.clearKey();
+          keyInput.value = '';
+          if (typeof keyDialog.close === 'function') keyDialog.close();
+          else keyDialog.removeAttribute('open');
+          onUpdate?.();
+        } }, 'Clear key'),
+      el('button', { type: 'button', class: 'button-pill button-pill--secondary jev-cancel',
+        onclick: () => {
+          keyInput.value = '';
+          if (typeof keyDialog.close === 'function') keyDialog.close();
+          else keyDialog.removeAttribute('open');
+        } }, 'Cancel')));
+    const openKeyDialog = () => {
+      keyInput.value = '';
+      keyDialogError.textContent = '';
+      if (typeof keyDialog.showModal === 'function') keyDialog.showModal();
+      else keyDialog.setAttribute('open', '');
+      keyInput.focus();
+    };
 
     let fullscreenBtn;
     fullscreenBtn = el('button', {
@@ -1087,6 +1144,16 @@ export function renderPlay(container, game, {
         }
       } }, 'Autoplay'),
       el('label', { class: 'lbl-difficulty' }, 'Difficulty: ', diffSelect),
+      el('label', {}, 'Opponent AI: ', agentSelect),
+      el('button', { type: 'button', class: 'button-pill button-pill--secondary jev-open',
+        onclick: openKeyDialog }, 'Set OpenRouter key'),
+      keyDialog,
+      el('div', { class: 'jev-error', role: 'alert' }),
+      el('button', { type: 'button', class: 'button-pill button-pill--secondary jev-retry',
+        onclick: async event => {
+          event.currentTarget.disabled = true;
+          try { await game.retryOpponentAgentTurn(); } finally { onUpdate?.(); }
+        } }, 'Retry opponent decision'),
       fullscreenBtn
     );
     headerEl.append(controls);
@@ -1167,7 +1234,8 @@ export function renderPlay(container, game, {
   const heroPowerBtn = controls.querySelector('.btn-hero-power');
   if (heroPowerBtn) heroPowerBtn.disabled = !!(game.state?.aiThinking || game.player.hero.powerUsed || game.resources.pool(game.player) < 2 || game.player.hero.data.freezeTurns > 0);
   const endTurnBtn = controls.querySelector('.btn-end-turn');
-  if (endTurnBtn) endTurnBtn.disabled = !!(game.state?.aiThinking);
+  if (endTurnBtn) endTurnBtn.disabled = !!(game.state?.aiThinking || !isPlayerTurn
+    || (game.state?.opponentAgent === 'jev' && !jevSession?.configured));
   const autoplayBtn = controls.querySelector('.btn-autoplay');
   if (autoplayBtn) autoplayBtn.disabled = !!(game.state?.aiThinking || !isPlayerTurn);
   const newGameBtn = controls.querySelector('.btn-new-game');
@@ -1180,6 +1248,26 @@ export function renderPlay(container, game, {
   }
   const sel = controls.querySelector('select.select-difficulty');
   if (sel) sel.disabled = !!(game.state?.aiThinking);
+  const agentSelect = controls.querySelector('.select-opponent-agent');
+  if (agentSelect) {
+    agentSelect.value = game.state?.opponentAgent === 'jev' ? 'jev' : 'local';
+    agentSelect.disabled = !!game.state?.aiThinking;
+  }
+  const jevOpen = controls.querySelector('.jev-open');
+  if (jevOpen) jevOpen.hidden = game.state?.opponentAgent !== 'jev';
+  const jevError = controls.querySelector('.jev-error');
+  const errorMessages = { missing_api_key: 'OpenRouter key required.',
+    authentication: 'OpenRouter rejected the API key (HTTP 401). Re-enter the key and retry.',
+    forbidden: 'OpenRouter denied this key for the request (HTTP 403).', insufficient_credits: 'OpenRouter credits are insufficient.',
+    rate_limit: 'OpenRouter rate limit reached.', timeout: 'Jev decision timed out.',
+    network_failure: 'Could not reach OpenRouter.', malformed_response: 'Jev returned a malformed response.',
+    missing_decision: 'Jev returned no move.', invalid_action: 'Jev returned an invalid move.',
+    provider_error: 'OpenRouter request failed.',
+    interrupted: 'Opponent turn was interrupted by a page reload.' };
+  if (jevError) jevError.textContent = game.agentFailure ? errorMessages[game.agentFailure] || errorMessages.provider_error : '';
+  const retry = controls.querySelector('.jev-retry');
+  if (retry) retry.hidden = !(game.agentFailure && game.turns?.activePlayer === game.opponent);
+  if (retry) retry.disabled = !!game.state?.aiThinking;
 
   // Update mana displays
   const aiManaEl = board.querySelector('.ai-hero .hero-mana');
@@ -1232,12 +1320,13 @@ export function renderPlay(container, game, {
   const thinking = !!(game.state?.aiThinking);
   let aiOverlay = container.querySelector('.ai-overlay');
   if (thinking) {
-    const progress = Math.max(0, Math.min(1, game.state?.aiProgress ?? 0));
+    const jevThinking = game.state?.opponentAgent === 'jev' && game.turns?.activePlayer === game.opponent;
+    const progress = jevThinking ? 0 : Math.max(0, Math.min(1, game.state?.aiProgress ?? 0));
     const progressStr = progress.toFixed(4);
     if (!aiOverlay) {
       aiOverlay = el('div', { class: 'ai-overlay' },
         el('div', { class: 'panel' },
-          el('p', { class: 'msg' }, 'AI is thinking...'),
+          el('p', { class: 'msg' }, jevThinking ? jevSession?.status || 'Jev is thinking…' : 'AI is thinking...'),
           el('div', {
             class: 'progress',
             style: `--progress-pos: ${progressStr}`,
@@ -1247,8 +1336,11 @@ export function renderPlay(container, game, {
       );
       container.append(aiOverlay);
     } else {
+      const msgEl = aiOverlay.querySelector('.msg');
+      if (msgEl) msgEl.textContent = jevThinking ? jevSession?.status || 'Jev is thinking…' : 'AI is thinking...';
       const progressEl = aiOverlay.querySelector('.progress');
       if (progressEl) {
+        progressEl.hidden = jevThinking;
         progressEl.style.setProperty('--progress-pos', progressStr);
         progressEl.dataset.complete = progress >= 0.999 ? '1' : '0';
       }

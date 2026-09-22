@@ -1,4 +1,5 @@
 import Game from './game.js';
+import JevSession from './systems/jev-session.js';
 import { renderDeckBuilder } from './ui/deckbuilder.js';
 import { renderOptions } from './ui/options.js';
 import { setDebugLogging } from './utils/logger.js';
@@ -108,6 +109,13 @@ const statusEl = qs('#status');
 const mainEl = qs('main');
 
 const game = new Game(root);
+const jevSession = new JevSession();
+game.opponentAgentFactory = () => {
+  return jevSession.createAgent({
+    onStatus: status => game.bus.emit('ai:status', { status }),
+    onDecision: decision => game.bus.emit('ai:decision', { agent: 'jev', ...decision }),
+  });
+};
 const loadingOverlay = startLoadingOverlay('Loading game data…');
 let initSucceeded = false;
 let deckBuilderOpen = false;
@@ -139,6 +147,11 @@ try {
 let loadedFromSave = false;
 try {
   loadedFromSave = loadSavedGameState(game);
+  if (loadedFromSave && game.turns.activePlayer === game.opponent
+    && game.state?.aiPending?.type !== 'mcts') {
+    game.state.aiThinking = false;
+    game.agentFailure = 'interrupted';
+  }
 } catch {}
 
 // Expose for quick dev console hooks
@@ -523,6 +536,7 @@ async function startNewGame({ deckOverride = null, seed: providedSeed = null } =
   setHasSavedGame(false);
   clearSavedGameState();
   const hasDeck = deck?.hero && Array.isArray(deck.cards) && deck.cards.length === 60;
+  jevSession.resetGame();
   await game.reset(hasDeck ? deck : null);
   saveGameState(game);
   setHasSavedGame(true);
@@ -545,7 +559,8 @@ const rerender = () => {
     onUpdate: rerender,
     onToggleDeckBuilder: toggleDeckBuilder,
     deckBuilderOpen,
-    onNewGame: handleNewGameRequest
+    onNewGame: handleNewGameRequest,
+    jevSession
   });
   saveGameState(game);
 };
@@ -620,7 +635,7 @@ const animateAiProgressFill = (durationMs, startProgress) => {
 };
 
 // Reflect AI thinking/progress to UI state and trigger rerenders
-game.bus.on('ai:thinking', ({ thinking }) => {
+game.bus.on('ai:thinking', ({ thinking, agent }) => {
   const now = nowMs();
   if (thinking) {
     aiThinkingStartedAt = now;
@@ -630,6 +645,14 @@ game.bus.on('ai:thinking', ({ thinking }) => {
       game.state.aiThinking = true;
       game.state.aiProgress = 0;
     }
+    rerender();
+    return;
+  }
+
+  if (agent === 'jev') {
+    clearAiThinkingHoldTimer();
+    cancelAiProgressFill();
+    if (game.state) game.state.aiThinking = false;
     rerender();
     return;
   }
@@ -662,6 +685,9 @@ game.bus.on('ai:thinking', ({ thinking }) => {
   }
   rerender();
 });
+
+game.bus.on('ai:status', () => rerender());
+game.bus.on('ai:failed', () => rerender());
 
 game.bus.on('ai:progress', ({ progress }) => {
   if (!game.state) return;

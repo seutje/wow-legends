@@ -205,6 +205,9 @@ export default class Game {
       winner: null,
       lastOpponentHeroId: null,
     };
+    this.opponentAgentFactory = null; // runtime-only; never serialized
+    this.agentFailure = null;
+    this._opponentTurnRunning = false;
     this._nnModelPromise = null;
     this._aiDeckTemplates = null;
     this._playerDeckTemplates = null;
@@ -313,10 +316,10 @@ export default class Game {
     await this._waitMs(delay);
   }
 
-  async _endAIThinking() {
+  async _endAIThinking({ agent = null } = {}) {
     await this._waitForAiThinkingSettle();
     if (this.state) this.state.aiThinking = false;
-    this.bus.emit('ai:thinking', { thinking: false });
+    this.bus.emit('ai:thinking', { thinking: false, agent });
   }
 
   _closeActionTargetScope({ discard = false } = {}) {
@@ -2000,6 +2003,7 @@ export default class Game {
   }
 
   async _executeOpponentTurn({ skipSetup = false, preserveTurn = false } = {}) {
+    if (this._opponentTurnRunning) return false;
     if (!skipSetup) {
       this.turns.setActivePlayer(this.opponent);
       this.turns.startTurn();
@@ -2007,12 +2011,48 @@ export default class Game {
     }
 
     const diff = this.state?.difficulty || this._defaultDifficulty;
-    await this._takeTurnWithDifficultyAI(this.opponent, this.player, diff, { trackPending: true });
+    if (this._opponentTurnRunning) return false;
+    this._opponentTurnRunning = true;
+    let completed = true;
+    try {
+      if (this.state?.opponentAgent === 'jev') {
+        if (this.state) this.state.aiThinking = true;
+        this.bus.emit('ai:thinking', { thinking: true, agent: 'jev' });
+        try {
+          if (typeof this.opponentAgentFactory !== 'function') {
+            const error = new Error('Jev agent is not configured');
+            error.code = 'missing_api_key';
+            throw error;
+          }
+          completed = await this.runAgentTurn({ agent: this.opponentAgentFactory(),
+            player: this.opponent, opponent: this.player, skipStart: true });
+          this.agentFailure = completed ? null : 'invalid_action';
+        } catch (error) {
+          this.agentFailure = typeof error?.code === 'string' ? error.code : 'provider_error';
+          completed = false;
+        } finally {
+          await this._endAIThinking({ agent: 'jev' });
+        }
+      } else {
+        await this._takeTurnWithDifficultyAI(this.opponent, this.player, diff, { trackPending: true });
+        this.agentFailure = null;
+      }
+    } finally {
+      this._opponentTurnRunning = false;
+    }
 
-    if (this.isGameOver()) return;
+    if (!completed) { this.bus.emit('ai:failed', { code: this.agentFailure }); return false; }
+    if (this.isGameOver()) return true;
 
     await this._finalizeOpponentTurn({ preserveTurn });
     if (preserveTurn) this._pendingTurnIncrement = true;
+    return true;
+  }
+
+  async retryOpponentAgentTurn() {
+    if (this._opponentTurnRunning || this.state?.aiThinking || this.isGameOver()
+      || this.turns.activePlayer !== this.opponent || !this.agentFailure) return false;
+    return this._executeOpponentTurn({ skipSetup: true });
   }
 
   async cleanupDeaths(player, killer) {
@@ -2065,6 +2105,7 @@ export default class Game {
   }
 
   async endTurn() {
+    if (this._opponentTurnRunning) return;
     // Tick down end-of-turn freeze for the player before handing control to AI
     {
       const p = this.player;
@@ -2208,6 +2249,7 @@ export default class Game {
   }
 
   async reset(playerDeck = null) {
+    this.agentFailure = null;
     this.state.frame = 0;
     this.state.startedAt = 0;
     this.state.matchOver = false;
