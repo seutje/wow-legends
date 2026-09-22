@@ -481,18 +481,6 @@ export class NeuralAI {
     this.model = resolveModel(model);
   }
 
-  _legalActions(state) {
-    const actions = [];
-    const p = state.player; const pool = state.pool;
-    const canPower = p.hero?.active?.length && state.powerAvailable && pool >= 2;
-    if (canPower) actions.push({ card: null, usePower: true, end: false });
-    for (const c of p.hand.cards) {
-      if ((c.cost || 0) <= pool) actions.push({ card: c, usePower: false, end: false });
-    }
-    actions.push({ card: null, usePower: false, end: true });
-    return actions;
-  }
-
   _score(state, action) {
     const s = stateFeatures({
       kind: 'live',
@@ -513,8 +501,10 @@ export class NeuralAI {
     return y;
   }
 
-  _chooseAction(state) {
-    const actions = this._legalActions(state);
+  async chooseAction(state, legalActions) {
+    // The current neural action features have no attack or target encoding.
+    // Its existing combat heuristic runs after this action phase.
+    const actions = legalActions.filter(action => !action.attack && !(action.card && action.usePower));
     let best = actions[0];
     let bestV = -Infinity;
     let bestNonEnd = null;
@@ -550,43 +540,7 @@ export class NeuralAI {
   async takeTurn(player, opponent = null, options = {}) {
     const { skipStart = false } = options;
     if (this._shouldAbortTurn(player, opponent)) return false;
-    if (!skipStart) {
-      this.resources.startTurn(player);
-      if (this._shouldAbortTurn(player, opponent)) return false;
-      const drawn = player.library.draw(1);
-      if (drawn[0]) player.hand.add(drawn[0]);
-      if (this._shouldAbortTurn(player, opponent)) return false;
-    }
-
-    let powerAvailable = !!(player.hero?.active?.length) && !player.hero.powerUsed;
-    while (true) {
-      if (this._shouldAbortTurn(player, opponent)) break;
-      const pool = this.resources.pool(player);
-      const state = {
-        kind: 'live',
-        game: this.game,
-        resources: this.resources,
-        player,
-        opponent,
-        powerAvailable,
-        pool,
-      };
-      const action = this._chooseAction(state);
-      if (!action || action.end) break;
-      if (action.card) {
-        const cardRef = getCardInstanceId(action.card) ?? action.card;
-        const ok = await (this.game?.playFromHand?.(player, cardRef) ?? false);
-        if (!ok) break;
-        if (this._shouldAbortTurn(player, opponent)) break;
-      }
-      if (action.usePower) {
-        const ok = await (this.game?.useHeroPower?.(player) ?? false);
-        if (!ok) break;
-        powerAvailable = false;
-        if (this._shouldAbortTurn(player, opponent)) break;
-      }
-      powerAvailable = !!(player.hero?.active?.length) && !player.hero.powerUsed;
-    }
+    if (!await this.game?.runAgentTurn({ agent: this, player, opponent, skipStart })) return false;
 
     if (this._shouldAbortTurn(player, opponent)) return true;
     this.combat.clear();

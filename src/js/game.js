@@ -17,6 +17,8 @@ import { fillDeckRandomly } from './utils/deckbuilder.js';
 import { getCardInstanceId, matchesCardIdentifier } from './utils/card.js';
 import { chooseStartingPlayerKey } from './utils/turnOrder.js';
 import { removeOverflowAllies } from './utils/allies.js';
+import { createDecisionState, getLegalActions } from './systems/ai-actions.js';
+import { actionSignature } from './systems/ai-signatures.js';
 
 const DEFAULT_AI_ACTION_DELAY_MS = 1000;
 const DEFAULT_AI_THINKING_SETTLE_MS = 1000;
@@ -203,6 +205,9 @@ export default class Game {
       winner: null,
       lastOpponentHeroId: null,
     };
+    this.opponentAgentFactory = null; // runtime-only; never serialized
+    this.agentFailure = null;
+    this._opponentTurnRunning = false;
     this._nnModelPromise = null;
     this._aiDeckTemplates = null;
     this._playerDeckTemplates = null;
@@ -311,10 +316,10 @@ export default class Game {
     await this._waitMs(delay);
   }
 
-  async _endAIThinking() {
+  async _endAIThinking({ agent = null } = {}) {
     await this._waitForAiThinkingSettle();
     if (this.state) this.state.aiThinking = false;
-    this.bus.emit('ai:thinking', { thinking: false });
+    this.bus.emit('ai:thinking', { thinking: false, agent });
   }
 
   _closeActionTargetScope({ discard = false } = {}) {
@@ -702,7 +707,8 @@ export default class Game {
 
     this.opponent.library.shuffle(rng);
 
-    const startingKey = chooseStartingPlayerKey(this.rng);
+    const startingKey = this.opts?.startingPlayer === 'player' || this.opts?.startingPlayer === 'opponent'
+      ? this.opts.startingPlayer : chooseStartingPlayerKey(this.rng);
     const startingPlayer = startingKey === 'player' ? this.player : this.opponent;
     const waitingPlayer = startingKey === 'player' ? this.opponent : this.player;
     if (this.state) {
@@ -1796,6 +1802,54 @@ export default class Game {
     return true;
   }
 
+  // Apply one canonical action using the same methods as human play.
+  async applyDecision(player, opponent, action) {
+    if (!action || !player || !opponent || !this._isParticipant(player) || !this._isParticipant(opponent)) return false;
+    if (this.isGameOver()) return false;
+    if (action.end) return !action.attack && !action.card && !action.usePower;
+    if (action.attack) {
+      if (action.card || action.usePower || !action.attack.attackerId) return false;
+      return this.attack(player, action.attack.attackerId, action.attack.targetId ?? null);
+    }
+    if (!action.card && !action.usePower) return false;
+    if (action.card) {
+      const cardRef = getCardInstanceId(action.card) ?? action.card;
+      if (!await this.playFromHand(player, cardRef)) return false;
+      if (this.isGameOver()) return true;
+    }
+    if (action.usePower) return this.useHeroPower(player);
+    return true;
+  }
+
+  // Agents implement async chooseAction(state, actions). The engine supplies the
+  // full legal list and executes its own matching object, never an agent payload.
+  async runAgentTurn({ agent, player, opponent, skipStart = false } = {}) {
+    if (!agent || typeof agent.chooseAction !== 'function' || !this._isParticipant(player)
+      || !this._isParticipant(opponent) || this.isGameOver()) return false;
+    if (!skipStart) {
+      this.resources.startTurn(player);
+      if (this.isGameOver()) return false;
+      const drawn = player.library.draw(1);
+      if (drawn[0]) player.hand.add(drawn[0]);
+    }
+    while (!this.isGameOver() && this._isParticipant(player) && this._isParticipant(opponent)) {
+      const state = createDecisionState({
+        game: this, player, opponent, pool: this.resources.pool(player),
+        turn: this.turns.turn,
+        powerAvailable: !!player.hero?.active?.length && !player.hero.powerUsed,
+      });
+      const actions = getLegalActions(state);
+      const legalBySignature = new Map(actions.map(action => [actionSignature(action), action]));
+      const selected = await agent.chooseAction(state, actions);
+      if (this.isGameOver() || !this._isParticipant(player) || !this._isParticipant(opponent)) break;
+      const canonical = selected ? legalBySignature.get(actionSignature(selected)) : null;
+      if (!canonical) return false;
+      if (canonical.end) break;
+      if (!await this.applyDecision(player, opponent, canonical)) return false;
+    }
+    return true;
+  }
+
   async _runSimpleAITurn(actor, defender) {
     if (!actor || !defender) return;
     const participantsActive = () => this._isParticipant(actor) && this._isParticipant(defender);
@@ -1950,6 +2004,7 @@ export default class Game {
   }
 
   async _executeOpponentTurn({ skipSetup = false, preserveTurn = false } = {}) {
+    if (this._opponentTurnRunning) return false;
     if (!skipSetup) {
       this.turns.setActivePlayer(this.opponent);
       this.turns.startTurn();
@@ -1957,12 +2012,48 @@ export default class Game {
     }
 
     const diff = this.state?.difficulty || this._defaultDifficulty;
-    await this._takeTurnWithDifficultyAI(this.opponent, this.player, diff, { trackPending: true });
+    if (this._opponentTurnRunning) return false;
+    this._opponentTurnRunning = true;
+    let completed = true;
+    try {
+      if (this.state?.opponentAgent === 'jev') {
+        if (this.state) this.state.aiThinking = true;
+        this.bus.emit('ai:thinking', { thinking: true, agent: 'jev' });
+        try {
+          if (typeof this.opponentAgentFactory !== 'function') {
+            const error = new Error('Jev agent is not configured');
+            error.code = 'missing_api_key';
+            throw error;
+          }
+          completed = await this.runAgentTurn({ agent: this.opponentAgentFactory(),
+            player: this.opponent, opponent: this.player, skipStart: true });
+          this.agentFailure = completed ? null : 'invalid_action';
+        } catch (error) {
+          this.agentFailure = typeof error?.code === 'string' ? error.code : 'provider_error';
+          completed = false;
+        } finally {
+          await this._endAIThinking({ agent: 'jev' });
+        }
+      } else {
+        await this._takeTurnWithDifficultyAI(this.opponent, this.player, diff, { trackPending: true });
+        this.agentFailure = null;
+      }
+    } finally {
+      this._opponentTurnRunning = false;
+    }
 
-    if (this.isGameOver()) return;
+    if (!completed) { this.bus.emit('ai:failed', { code: this.agentFailure }); return false; }
+    if (this.isGameOver()) return true;
 
     await this._finalizeOpponentTurn({ preserveTurn });
     if (preserveTurn) this._pendingTurnIncrement = true;
+    return true;
+  }
+
+  async retryOpponentAgentTurn() {
+    if (this._opponentTurnRunning || this.state?.aiThinking || this.isGameOver()
+      || this.turns.activePlayer !== this.opponent || !this.agentFailure) return false;
+    return this._executeOpponentTurn({ skipSetup: true });
   }
 
   async cleanupDeaths(player, killer) {
@@ -2015,6 +2106,7 @@ export default class Game {
   }
 
   async endTurn() {
+    if (this._opponentTurnRunning) return;
     // Tick down end-of-turn freeze for the player before handing control to AI
     {
       const p = this.player;
@@ -2158,6 +2250,7 @@ export default class Game {
   }
 
   async reset(playerDeck = null) {
+    this.agentFailure = null;
     this.state.frame = 0;
     this.state.startedAt = 0;
     this.state.matchOver = false;

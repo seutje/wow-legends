@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "config": { "agentA": "jev", "agentB": "neural-mcts", "deckA": "deck1", "deckB": "deck1", "baseSeed": 123, "mirrored": true, "informationMode": "player", "jevModel": "~typesafe/jev-latest" },
+  "completedGames": 1,
+  "failedGames": 1,
+  "agents": { "A": { "id": "jev", "wins": 1, "losses": 0, "decisions": 2, "avgDecisionLatencyMs": 420 }, "B": { "id": "neural-mcts", "wins": 0, "losses": 1, "decisions": 0, "avgDecisionLatencyMs": 10 } },
+  "games": [
+    { "matchId": "match-1", "seed": 123, "agentA": "jev", "agentB": "neural-mcts", "startingPlayer": "A", "status": "completed", "winner": "A", "turns": 8 },
+    { "matchId": "match-2", "seed": 123, "agentA": "jev", "agentB": "neural-mcts", "startingPlayer": "B", "status": "error", "errorType": "remote-decision-failed", "winner": null, "turns": 2 }
+  ]
+}

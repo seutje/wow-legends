@@ -9,14 +9,16 @@
     "dev:watch": "node tools/dev-watch.mjs",
     "live-reload": "node tools/live-reload.mjs",
     "dev": "npm run dev:watch & npm run dev:serve",
+    "build": "node tools/build-static.mjs",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --setupFilesAfterEnv=./jest.setup.js",
     "test:coverage": "npm run test -- --coverage",
     "simulate": "node tools/simulate.mjs",
     "ingest": "node tools/cards-ingest.mjs",
-    "lint": "eslint . --ext .js,.mjs && echo ESLint scanned $(git ls-files '*.js' '*.mjs' | wc -l) JS files && htmlhint index.html",
+    "lint": "eslint . --ext .js,.mjs && echo ESLint scanned $(git ls-files '*.js' '*.mjs' | wc -l) JS files && htmlhint index.html evaluation.html",
     "train": "node tools/train.mjs",
     "optim": "node tools/optim.mjs",
-    "eval": "node tools/eval.mjs"
+    "eval": "node tools/eval.mjs",
+    "analyze:counterfactuals": "node tools/analyze-counterfactuals.mjs"
   },
   "keywords": [],
   "author": "AI Agents",

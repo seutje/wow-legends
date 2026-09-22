@@ -19,14 +19,13 @@ yarn-debug.log*
 yarn-error.log*
 
 # Local Env Files
-.env*.local
 .env
+.env.*
+!.env.example
 
 # WSL
 *:Zone.Identifier
 
 # Temporary snapshots
 /data/models/model_gen_*.json
-
-# Evals
-/data/evaluations/*
+/data/evaluations/
