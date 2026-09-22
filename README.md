@@ -52,6 +52,8 @@ Developer Notes
   - Game orchestrator: `src/js/game.js`
   - Browser entry: `src/js/main.js`
 - Tests: `__tests__/*`, run with `npm test` or `npm run test:coverage`.
+- Local Jev decision client: `OpenRouterDecisionClient` in `src/js/systems/openrouter-decision-client.js` implements `decide(payload)` for `RemoteDecisionAgent`. It sends the serialized state and legal actions to OpenRouter’s native Decisions API (`/api/alpha/decisions`) as one typed choice question. The default model alias is `~typesafe/jev-latest` (the alias accepted by this endpoint). Instantiate only in local Node/server tooling with `new OpenRouterDecisionClient({ apiKey: process.env.OPENROUTER_API_KEY })`. This static browser build has no secret-backed Jev gameplay integration.
+- Opt-in live check: set `OPENROUTER_API_KEY` in a local `.env` file or process environment, then run `node tools/test-openrouter-jev.mjs`. This makes one paid request. `.env` and `.env.*` are ignored, except `.env.example`; The harness loads `.env` using Node’s built-in `loadEnvFile`; a process environment value takes precedence.
 - Train Nightmare AI:
   - `npm run train -- <population> <generations> <reset> <opponent>` — evolutionary RL saves the best model to `data/models/best.json`. The optional `<opponent>` defaults to `mcts`, or set `best`/`mcts@<iterations>` to start against the saved NN or a weaker MCTS baseline.
   - Add `--curriculum gentle` to ramp from a light MCTS opponent toward the requested baseline automatically. Custom schedules use comma-separated `<scoreThreshold>:<opponent>` entries, e.g. `--curriculum "0:mcts@1500,1.2:mcts@4000,2.0:best"`.
