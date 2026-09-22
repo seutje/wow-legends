@@ -3,6 +3,7 @@ import { selectTargets } from './targeting.js';
 import { isTargetable } from './keywords.js';
 import { evaluateGameState, WIN_CONDITION_BONUS } from './ai-heuristics.js';
 import { actionSignature } from './ai-signatures.js';
+import { createDecisionState, getLegalActions } from './ai-actions.js';
 import Card from '../entities/card.js';
 import Game from '../game.js';
 import Player from '../entities/player.js';
@@ -1624,27 +1625,28 @@ export class MCTS_AI {
   }
 
   _legalActions(state) {
-    const actions = [];
     const p = state.player;
     const pool = state.pool;
     const enteredSet = this._collectEnteredThisTurn(p, state.turn, state.enteredThisTurn);
     state.enteredThisTurn = enteredSet;
     const heroPowerAvailable = this._heroPowerAvailable(p, { statePowerAvailable: state.powerAvailable });
-    const canPower = heroPowerAvailable && pool >= 2
-      && !this._effectsAreUseless(p.hero.active, p, { pool, turn: state.turn, powerAvailable: heroPowerAvailable });
-    if (canPower) actions.push({ card: null, usePower: true, end: false });
-    for (const c of p.hand.cards) {
-      const cost = c.cost || 0;
-      if (pool < cost) continue;
-      if (this._effectsAreUseless(c.effects, p, { pool, turn: state.turn, card: c, powerAvailable: heroPowerAvailable })) continue;
-      actions.push({ card: c, usePower: false, end: false });
-      if (canPower && pool - cost >= 2) actions.push({ card: c, usePower: true, end: false });
-    }
-    const attackActions = this._enumerateAttackActionsFor(p, state.opponent, state.turn, enteredSet);
-    for (const attack of attackActions) actions.push(attack);
-    // Always allow ending action phase (proceed to attacks)
-    actions.push({ card: null, usePower: false, end: true });
-    return actions;
+    const legal = getLegalActions(createDecisionState({ ...state, powerAvailable: heroPowerAvailable }));
+    return this._pruneActionsForSearch(legal, state);
+  }
+
+  _pruneActionsForSearch(actions, state) {
+    // Search optimization only: the shared generator retains every legal target
+    // and actions whose effect MCTS considers strategically useless.
+    const { player, opponent, pool, turn, enteredThisTurn } = state;
+    const powerAvailable = this._heroPowerAvailable(player, { statePowerAvailable: state.powerAvailable });
+    const preferred = this._enumerateAttackActionsFor(player, opponent, turn, enteredThisTurn);
+    const attackKeys = new Set(preferred.map(actionSignature));
+    return actions.filter(action => {
+      if (action.attack) return attackKeys.has(actionSignature(action));
+      if (action.usePower && this._effectsAreUseless(player.hero?.active, player, { pool, turn, powerAvailable })) return false;
+      if (action.card && this._effectsAreUseless(action.card.effects, player, { pool, turn, card: action.card, powerAvailable })) return false;
+      return true;
+    });
   }
 
   _applyAction(state, action) {
@@ -2114,31 +2116,17 @@ export class MCTS_AI {
   }
 
   _legalActionsSim(sim, me) {
-    const actions = [];
     if (!sim || !me) {
-      actions.push({ card: null, usePower: false, end: true });
-      return actions;
+      return [{ card: null, usePower: false, end: true }];
     }
     const pool = sim.resources.pool(me);
     const turn = typeof sim.turns?.turn === 'number' ? sim.turns.turn : 0;
-    const heroPowerAvailable = this._heroPowerAvailable(me);
     me.__mctsPool = pool;
-    const canPower = heroPowerAvailable && pool >= 2
-      && !this._effectsAreUseless(me.hero?.active, me, { pool, turn, powerAvailable: heroPowerAvailable });
-    if (canPower) actions.push({ card: null, usePower: true, end: false });
     const enteredSet = this._collectEnteredThisTurn(me, turn, sim?.enteredThisTurn);
     sim.enteredThisTurn = enteredSet;
-    for (const c of me.hand.cards) {
-      const cost = c.cost || 0;
-      if (pool < cost) continue;
-      if (this._effectsAreUseless(c.effects, me, { pool, turn, card: c, powerAvailable: heroPowerAvailable })) continue;
-      actions.push({ card: c, usePower: false, end: false });
-      if (canPower && pool - cost >= 2) actions.push({ card: c, usePower: true, end: false });
-    }
-    const attackActions = this._enumerateAttackActionsFor(me, sim.opponent, turn, enteredSet);
-    for (const attack of attackActions) actions.push(attack);
-    actions.push({ card: null, usePower: false, end: true });
-    return actions;
+    const state = createDecisionState({ player: me, opponent: sim.opponent, pool, turn,
+      powerAvailable: this._heroPowerAvailable(me), enteredThisTurn: enteredSet });
+    return this._pruneActionsForSearch(getLegalActions(state), state);
   }
 
   _cloneSim(sim) {
