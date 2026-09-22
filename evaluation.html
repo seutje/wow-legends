@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WoW Legends · Evaluation Viewer</title>
+  <link rel="stylesheet" href="evaluation.css" />
+</head>
+<body>
+  <header class="analysis-header">
+    <div><a href="./index.html">WoW Legends</a><span>Decision comparison viewer</span></div>
+    <label class="file-button">Load evaluation files
+      <input id="evaluation-files" type="file" multiple accept=".json,.jsonl,application/json" />
+    </label>
+  </header>
+  <main id="evaluation-root">
+    <section class="empty-state">
+      <h1>Inspect an evaluation run</h1>
+      <p>Select a summary JSON file and its decision JSONL file. A full JSON export with embedded decisions also works. Files stay in this browser.</p>
+      <label class="file-button file-button--large">Choose files
+        <input type="file" data-evaluation-files multiple accept=".json,.jsonl,application/json" />
+      </label>
+    </section>
+  </main>
+  <script type="module" src="./src/js/evaluation/viewer.js"></script>
+</body>
+</html>

@@ -22,6 +22,9 @@ describe('agent evaluation', () => {
     expect(event.selectedActionSignature).toEqual(expect.any(String));
     expect(event.description).toEqual(expect.any(String));
     expect(event.latencyMs).toEqual(expect.any(Number));
+    expect(event.decisionInput.state.opponent.hand).toBeUndefined();
+    expect(event.decisionInput.actions).toHaveLength(event.legalActionCount);
+    expect(event.legalActions[0].signature).toEqual(expect.any(String));
   });
 
   test('mirrors the starting side with the same seed and aggregates games', async () => {

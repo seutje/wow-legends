@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import Game from '../src/js/game.js';
 import { RNG } from '../src/js/utils/rng.js';
 import { actionSignature } from '../src/js/systems/ai-signatures.js';
-import { serializeLegalActions } from '../src/js/systems/ai-serialization.js';
+import { serializeDecisionState, serializeLegalActions } from '../src/js/systems/ai-serialization.js';
 import RemoteDecisionAgent from '../src/js/systems/ai-remote.js';
 import NeuralAI, { NeuralPolicyValueModel, loadModelFromDiskOrFetch } from '../src/js/systems/ai-nn.js';
 import MCTS_AI from '../src/js/systems/ai-mcts.js';
@@ -115,7 +115,11 @@ function summarizeNeural(evaluator, state, actions, serialized, selectedId) {
   const policy = Object.fromEntries(actions.map((action, index) => [serialized[index].id,
     safeNumber(evaluated.policy?.get(actionSignature(action))) ?? 0]));
   const topId = Object.keys(policy).reduce((best, id) => policy[id] > policy[best] ? id : best);
-  return { topActionId: topId, policy, agreement: topId === selectedId };
+  const actionValues = evaluated.actionValues instanceof Map
+    ? Object.fromEntries(actions.map((action, index) => [serialized[index].id,
+      safeNumber(evaluated.actionValues.get(actionSignature(action))) ?? 0])) : null;
+  return { topActionId: topId, policy, ...(actionValues ? { actionValues } : {}),
+    agreement: topId === selectedId };
 }
 
 export async function runMatch({ agentA = 'basic', agentB = 'basic', deckA = 'deck1', deckB = deckA,
@@ -173,7 +177,13 @@ export async function runMatch({ agentA = 'basic', agentB = 'basic', deckA = 'de
       const event = { matchId, turn: game.turns.turn, playerId: side, agent: agentId(specs[side]),
         legalActionCount: actions.length, selectedActionId: chosen.id,
         selectedActionSignature: actionSignature(selected), selectedActionType: actionType(selected, chosen),
-        description: chosen.description, latencyMs };
+        description: chosen.description, latencyMs,
+        decisionInput: {
+          state: serializeDecisionState(state, { informationMode: 'player', legalActions: actions }),
+          actions: serialized,
+        },
+        legalActions: serialized.map((action, actionIndex) => ({ ...action,
+          signature: actionSignature(actions[actionIndex]) })) };
       if (metadata) event.metadata = metadata;
       if (agentId(specs[side]) === 'jev') {
         if (evaluator) event.neuralComparison = summarizeNeural(evaluator, state, actions, serialized, chosen.id);
@@ -274,7 +284,7 @@ export async function runSeries({ games = 2, baseSeed = 1, mirror = true, ...opt
   for (const stats of Object.values(agents)) {
     if (stats.decisions) stats.avgDecisionLatencyMs = stats.totalDecisionLatencyMs / stats.decisions;
   }
-  return { config: { agentA: agentNames.A, agentB: agentNames.B, deckA: deckId(options.deckA || 'deck1'),
+  return { schemaVersion: 1, config: { agentA: agentNames.A, agentB: agentNames.B, deckA: deckId(options.deckA || 'deck1'),
     deckB: deckId(options.deckB || options.deckA || 'deck1'), games, baseSeed, mirrored: mirror,
     informationMode: 'player', maxTurns: options.maxTurns ?? 40, maxDecisions: options.maxDecisions ?? 1000,
     compareNeural: !!options.compareNeural, compareMctsEvery: options.compareMctsEvery ?? 0,
