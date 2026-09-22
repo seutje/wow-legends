@@ -1,7 +1,8 @@
 import { readFile } from 'node:fs/promises';
 import { actionRows, aggregateComparisons, decisionAgreement, EvaluationDataError,
   jensenShannonDivergence, normalizeEvaluationRun, parseDecisionJsonl, parseEvaluationJson,
-  probabilityComparison, sanitizeForDisplay } from '../src/js/evaluation/data.js';
+  probabilityComparison, sanitizeForDisplay, counterfactualSummary,
+  normalizeCounterfactualCollection } from '../src/js/evaluation/data.js';
 
 const fixture = async name => readFile(new URL(`./fixtures/${name}`, import.meta.url), 'utf8');
 
@@ -35,6 +36,20 @@ describe('evaluation data loader', () => {
     const clean = sanitizeForDisplay({ state: { apiKey: 'secret', Authorization: 'Bearer secret', safe: 'ok' }, headers: { x: 1 } });
     expect(clean).toEqual({ state: { apiKey: '[redacted]', Authorization: '[redacted]', safe: 'ok' }, headers: '[redacted]' });
     expect(JSON.stringify(clean)).not.toContain('secret');
+  });
+});
+
+describe('counterfactual analysis data', () => {
+  test('validates and aggregates neutral threshold classifications', () => {
+    const analyses = [{ matchId: 'm1', selectedActionType: 'attack', candidates: [
+      { selectedBy: ['jev'], estimatedValue: 0.4 }, { selectedBy: ['neural'], estimatedValue: 0.2 },
+    ] }, { matchId: 'm2', selectedActionType: 'end-turn', candidates: [
+      { selectedBy: ['jev'], estimatedValue: 0.21 }, { selectedBy: ['neural'], estimatedValue: 0.2 },
+    ] }];
+    const raw = { schemaVersion: 1, analysisType: 'counterfactual-mcts-collection', analyses };
+    expect(normalizeCounterfactualCollection(raw).analyses).toHaveLength(2);
+    expect(counterfactualSummary(analyses, 0.05)).toMatchObject({ positionsAnalyzed: 2, jevHigher: 1, approximatelyTied: 1, neuralHigher: 0 });
+    expect(() => normalizeCounterfactualCollection({ schemaVersion: 2 })).toThrow('Unsupported');
   });
 });
 

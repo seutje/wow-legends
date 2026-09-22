@@ -1,4 +1,5 @@
-import { actionRows, aggregateComparisons, decisionAgreement, jensenShannonDivergence,
+import { actionRows, aggregateComparisons, counterfactualSummary, decisionAgreement, jensenShannonDivergence,
+  normalizeCounterfactualCollection,
   normalizeEvaluationRun, parseDecisionJsonl, parseEvaluationJson, probabilityComparison,
   sanitizeForDisplay } from './data.js';
 
@@ -38,8 +39,9 @@ function stateSide(title, side, own) {
 }
 
 export function createEvaluationViewer(root) {
-  const state = { run: null, gameIndex: 0, decisionIndex: 0, filter: 'all', gameFilter: 'all', search: '', sort: 'selected' };
-  const api = { load(summary, decisions = null) { state.run = normalizeEvaluationRun(summary, decisions); state.gameIndex = 0; state.decisionIndex = 0; render(); return state.run; }, state };
+  const state = { run: null, counterfactuals: [], analysisDifferenceThreshold: 0.05, gameIndex: 0, decisionIndex: 0, filter: 'all', gameFilter: 'all', search: '', sort: 'selected' };
+  const api = { load(summary, decisions = null) { state.run = normalizeEvaluationRun(summary, decisions); state.gameIndex = 0; state.decisionIndex = 0; render(); return state.run; },
+    loadCounterfactuals(raw) { state.counterfactuals = normalizeCounterfactualCollection(raw).analyses; render(); }, state };
 
   function filteredGames() {
     const games = state.run.games;
@@ -95,6 +97,7 @@ export function createEvaluationViewer(root) {
     for (const side of ['A', 'B']) { const position = run.startingPosition?.[side]; if (position) metrics.append(metric(`${agentForSide(run, side)} first`, `${position.wins ?? 0} / ${position.games ?? 0}`)); }
     summary.append(metrics);
     if (aggregate.compared) { const types = el('div', 'config'); for (const [type, values] of Object.entries(aggregate.actionTypes)) types.append(el('span', 'chip', `${type}: ${values.agreements} agree / ${values.disagreements} disagree`)); summary.append(types); }
+    if (state.counterfactuals.length) { const cf = counterfactualSummary(state.counterfactuals, state.analysisDifferenceThreshold); const title = el('h3', '', 'Deep MCTS counterfactual estimates'); summary.append(title); const cfMetrics = el('div', 'summary-grid'); cfMetrics.append(metric('Positions analyzed', cf.positionsAnalyzed), metric('Jev-selected estimated higher', cf.jevHigher), metric('Neural-selected estimated higher', cf.neuralHigher), metric('Within threshold', cf.approximatelyTied), metric('Mean value difference', number(cf.meanDifference)), metric('Median value difference', number(cf.medianDifference))); summary.append(cfMetrics, el('p', 'muted', `Descriptive results from the configured evaluator; close threshold ±${cf.threshold}.`)); }
     const config = el('div', 'config'); for (const [key, value] of Object.entries(run.config || {})) if (value != null && typeof value !== 'object') config.append(el('span', 'chip', `${key}: ${value}`)); summary.append(config); viewer.append(summary);
     const workspace = el('div', 'workspace'); const gamePanel = el('section', 'panel'); gamePanel.append(el('h3', '', 'Games'));
     const gameSelect = document.createElement('select'); gameSelect.innerHTML = '<option value="all">All games</option><option value="completed">Without errors</option><option value="jev-wins">Jev wins</option><option value="jev-losses">Jev losses</option><option value="jev-first">Jev first</option><option value="jev-second">Jev second</option>'; gameSelect.value = state.gameFilter; gameSelect.onchange = () => { state.gameFilter = gameSelect.value; render(); }; gamePanel.append(gameSelect);
@@ -111,10 +114,13 @@ export function createEvaluationViewer(root) {
     const navigation = el('div', 'navigation'); for (const [label, fn] of [['← Previous', -1], ['Next →', 1]]) { const b = el('button', '', label); b.onclick = () => { const list = game.decisionEvents; state.decisionIndex = (state.decisionIndex + fn + list.length) % list.length; render(); }; navigation.append(b); } const previous = el('button', '', 'Previous disagreement'); previous.onclick = () => moveDisagreement(-1); const next = el('button', '', 'Next disagreement'); next.onclick = () => moveDisagreement(1); navigation.append(previous, next); wrap.append(navigation);
     const outcome = el('p', 'muted', `Game result: ${game.winner ? agentForSide(state.run, game.winner) : game.status} · ${Math.max(0, (game.turns || event.turn) - event.turn)} turns after this decision`); wrap.append(outcome);
     if (!event.decisionInput) { wrap.append(el('div', 'error-banner', 'This legacy decision has no serialized position or legal-action snapshot. Choice metadata remains available.')); return wrap; }
+    const analysis = state.counterfactuals.find(item => item.matchId === event.matchId && item.decisionIndex === event.decisionIndex);
+    if (analysis) { const panel = el('div', 'panel'); panel.append(el('h3', '', 'Deep MCTS analysis')); if (analysis.status === 'error') panel.append(el('div', 'error-banner', analysis.message || analysis.errorType)); else { const jev = analysis.candidates?.find(candidate => candidate.selectedBy?.includes('jev')); const neural = analysis.candidates?.find(candidate => candidate.selectedBy?.includes('neural')); for (const candidate of analysis.candidates || []) panel.append(metric(`${candidate.selectedBy.join(' + ') || 'Candidate'} · ${candidate.description}`, `${candidate.estimatedValue >= 0 ? '+' : ''}${number(candidate.estimatedValue)}${candidate.runs?.length > 1 ? ` ± ${number(candidate.stdDev)}` : ''}`)); if (jev && neural) { const difference = jev.estimatedValue - neural.estimatedValue; const label = difference > state.analysisDifferenceThreshold ? 'Jev-selected action estimated higher' : difference < -state.analysisDifferenceThreshold ? 'Neural-selected action estimated higher' : 'Values very close'; panel.append(metric(label, `${difference >= 0 ? '+' : ''}${number(difference)}`)); } const cfg = analysis.evaluator || {}; panel.append(el('p', 'muted', `Iterations ${cfg.iterations} · depth ${cfg.rolloutDepth} · repeats ${cfg.repeats} · ${cfg.fullSim ? 'full simulation' : 'lightweight simulation'} · policy guidance ${cfg.policyGuidance} · seed ${cfg.baseSeed} · information mode ${cfg.informationMode}. Jev input mode: player-visible.`)); } wrap.append(panel); }
     const layout = el('div', 'decision-layout'); const position = el('div'); position.append(el('h3', '', 'Player-visible position')); const columns = el('div', 'state-columns'); columns.append(stateSide('Active player', event.decisionInput.state?.player, true), stateSide('Opponent', event.decisionInput.state?.opponent, false)); position.append(columns); const raw = document.createElement('details'); raw.append(el('summary', '', 'Agent reasoning inputs (raw JSON)')); const pre = el('pre', '', JSON.stringify(sanitizeForDisplay(event.decisionInput), null, 2)); raw.append(pre); position.append(raw); layout.append(position);
     const comparison = el('div'); comparison.append(el('h3', '', 'Legal actions')); const pc = probabilityComparison(event); const divergence = jensenShannonDivergence(event); const facts = el('div', 'metric-grid'); if (pc.jevChoice) facts.append(metric("NN probability on Jev's choice", percent(pc.jevChoice.neural))); if (pc.neuralChoice) facts.append(metric("Jev probability on NN's choice", percent(pc.neuralChoice.jev))); if (pc.topChoiceGap !== null) facts.append(metric('Jev top-choice gap', percent(pc.topChoiceGap))); if (divergence !== null) facts.append(metric('JS divergence', number(divergence))); comparison.append(facts);
     const sort = document.createElement('select'); sort.innerHTML = '<option value="selected">Selected, then Jev</option><option value="jev">Jev probability</option><option value="neural">Neural policy</option><option value="mcts">MCTS metric</option><option value="type">Action type</option><option value="original">Original order</option>'; sort.value = state.sort; sort.onchange = () => { state.sort = sort.value; render(); }; comparison.append(sort);
     let rows = actionRows(event); const score = row => row.mcts?.visits ?? row.mcts?.value ?? -Infinity; rows = [...rows].sort((a, b) => state.sort === 'original' ? a.originalIndex - b.originalIndex : state.sort === 'type' ? a.type.localeCompare(b.type) : state.sort === 'neural' ? (b.neuralProbability ?? -1) - (a.neuralProbability ?? -1) : state.sort === 'mcts' ? score(b) - score(a) : state.sort === 'jev' ? (b.jevProbability ?? -1) - (a.jevProbability ?? -1) : Number(b.selectedByAgent || b.selectedByNeural || b.selectedByMcts) - Number(a.selectedByAgent || a.selectedByNeural || a.selectedByMcts) || (b.jevProbability ?? -1) - (a.jevProbability ?? -1));
+    const cfById = new Map((analysis?.candidates || []).map(candidate => [candidate.actionId, candidate]));
     const hasJev = rows.some(row => row.jevProbability !== null); const hasNeural = rows.some(row => row.neuralProbability !== null); const hasNeuralValue = rows.some(row => row.neuralValue !== null); const hasMcts = rows.some(row => row.mcts) || !!event.mctsComparison;
     const actionColumns = [{ label: 'Action', cell: row => el('td', '', row.description) }, { label: 'Type', cell: row => el('td', '', row.type) }];
     const probCell = (value, kind) => { const td = document.createElement('td'); const content = el('div', 'probability'); content.append(el('span', '', percent(value))); const bar = el('span', `bar ${kind === 'jev' ? 'bar--jev' : ''}`); const fill = document.createElement('i'); fill.style.width = `${Math.max(0, Math.min(1, value || 0)) * 100}%`; bar.append(fill); content.append(bar); td.append(content); return td; };
@@ -122,6 +128,7 @@ export function createEvaluationViewer(root) {
     if (hasNeural) actionColumns.push({ label: 'Neural policy', cell: row => probCell(row.neuralProbability, 'neural') });
     if (hasNeuralValue) actionColumns.push({ label: 'NN value', cell: row => el('td', '', number(row.neuralValue)) });
     if (hasMcts) actionColumns.push({ label: 'MCTS metrics', cell: row => el('td', '', row.mcts ? JSON.stringify(row.mcts) : row.selectedByMcts ? 'Recommended' : '—') });
+    if (analysis) actionColumns.push({ label: 'Deep MCTS estimate', cell: row => { const candidate = cfById.get(row.id); return el('td', '', candidate ? `${candidate.estimatedValue >= 0 ? '+' : ''}${number(candidate.estimatedValue)}${candidate.runs?.length > 1 ? ` ± ${number(candidate.stdDev)}` : ''}` : '—'); } });
     actionColumns.push({ label: 'Selected by', cell: row => { const markers = [row.selectedByJev ? 'Jev' : null, row.selectedByAgent && !row.selectedByJev ? event.agent : null, row.selectedByNeural ? 'Neural' : null, row.selectedByMcts ? 'MCTS' : null].filter(Boolean); return el('td', 'selection-tags', markers.join(', ') || '—'); } });
     const tableWrap = el('div', 'action-table-wrap'); const table = document.createElement('table'); const head = document.createElement('thead'); const hr = document.createElement('tr'); actionColumns.forEach(column => hr.append(el('th', '', column.label))); head.append(hr); table.append(head); const body = document.createElement('tbody'); const details = el('div', 'action-details hidden'); rows.forEach(row => { const tr = el('tr', 'action-row'); actionColumns.forEach(column => tr.append(column.cell(row))); tr.onclick = () => { body.querySelectorAll('tr').forEach(item => item.setAttribute('aria-selected', 'false')); tr.setAttribute('aria-selected', 'true'); details.classList.remove('hidden'); details.textContent = `ID: ${row.id}\nSignature: ${row.signature || '—'}\nType: ${row.type}\n${row.description}\nJev: ${percent(row.jevProbability)} · Neural policy: ${percent(row.neuralProbability)} · NN value: ${number(row.neuralValue)}${row.mcts ? ` · MCTS: ${JSON.stringify(row.mcts)}` : ''}`; }; body.append(tr); }); table.append(body); tableWrap.append(table); comparison.append(tableWrap, details); layout.append(comparison); wrap.append(layout); return wrap;
   }
@@ -130,19 +137,22 @@ export function createEvaluationViewer(root) {
 }
 
 export async function loadEvaluationFiles(files) {
-  const list = [...files]; const summaryFile = list.find(file => file.name.toLowerCase().endsWith('.json'));
+  const list = [...files]; const jsonFiles = list.filter(file => file.name.toLowerCase().endsWith('.json'));
   const decisionsFile = list.find(file => file.name.toLowerCase().endsWith('.jsonl'));
-  if (!summaryFile) throw new Error('Select an evaluation summary JSON file.');
-  const summary = parseEvaluationJson(await summaryFile.text());
+  const parsed = await Promise.all(jsonFiles.map(async file => ({ file, data: parseEvaluationJson(await file.text()) })));
+  const summaryEntry = parsed.find(entry => entry.data.analysisType !== 'counterfactual-mcts-collection');
+  const counterfactualEntry = parsed.find(entry => entry.data.analysisType === 'counterfactual-mcts-collection');
+  if (!summaryEntry) throw new Error('Select an evaluation summary JSON file.');
+  const summary = summaryEntry.data;
   const decisions = decisionsFile ? parseDecisionJsonl(await decisionsFile.text()) : null;
-  return { summary, decisions };
+  return { summary, decisions, counterfactuals: counterfactualEntry?.data || null };
 }
 
 export function initializeEvaluationViewer(doc = document) {
   const root = doc.querySelector('#evaluation-root'); if (!root) return null;
   const viewer = createEvaluationViewer(root);
   const inputs = doc.querySelectorAll('#evaluation-files, [data-evaluation-files]');
-  const handle = async event => { try { const data = await loadEvaluationFiles(event.target.files); viewer.load(data.summary, data.decisions); } catch (error) { root.innerHTML = ''; root.append(el('div', 'error-banner', error.message)); } };
+  const handle = async event => { try { const data = await loadEvaluationFiles(event.target.files); viewer.load(data.summary, data.decisions); if (data.counterfactuals) viewer.loadCounterfactuals(data.counterfactuals); } catch (error) { root.innerHTML = ''; root.append(el('div', 'error-banner', error.message)); } };
   inputs.forEach(input => input.addEventListener('change', handle)); return viewer;
 }
 

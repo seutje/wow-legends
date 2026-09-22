@@ -60,4 +60,23 @@ describe('evaluation viewer UI', () => {
     expect(raw).not.toContain('Bearer secret');
     expect(text(root)).toContain('Selected byPlay Fireball');
   });
+
+  test('loads counterfactual estimates into the decision and action table', async () => {
+    const { summary, events } = await loadFixture();
+    const viewer = createEvaluationViewer(root); viewer.load(summary, events);
+    viewer.loadCounterfactuals({ schemaVersion: 1, analysisType: 'counterfactual-mcts-collection', analyses: [{
+      schemaVersion: 1, analysisType: 'counterfactual-mcts', matchId: 'match-1', decisionIndex: 0,
+      selectedActionType: 'play-card', evaluator: { iterations: 5000, rolloutDepth: 20, repeats: 3,
+        policyGuidance: 'none', baseSeed: 123, informationMode: 'perfect' },
+      candidates: [
+        { actionId: 'a0', description: 'Play Fireball', selectedBy: ['jev'], estimatedValue: 0.42, stdDev: 0.04, runs: [{}, {}, {}] },
+        { actionId: 'a1', description: 'End turn', selectedBy: ['neural'], estimatedValue: 0.18, stdDev: 0.03, runs: [{}, {}, {}] },
+      ],
+    }] });
+    expect(text(root)).toContain('Deep MCTS analysis');
+    expect(text(root)).toContain('Jev-selected action estimated higher+0.24');
+    expect(text(root)).toContain('Deep MCTS estimate');
+    expect(text(root)).toContain('+0.42 ± 0.04');
+    expect(text(root)).toContain('information mode perfect. Jev input mode: player-visible');
+  });
 });

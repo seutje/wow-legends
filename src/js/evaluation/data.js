@@ -58,7 +58,7 @@ function validateEvent(event, index) {
     object(event.decisionInput, `Decision ${index + 1} input`);
     if (!Array.isArray(event.decisionInput.actions)) throw new EvaluationDataError(`Decision ${index + 1} has invalid legal actions`);
   }
-  return sanitizeForDisplay(event);
+  return event;
 }
 
 export function normalizeEvaluationRun(summaryRaw, decisionEventsRaw = null) {
@@ -80,7 +80,9 @@ export function normalizeEvaluationRun(summaryRaw, decisionEventsRaw = null) {
   const games = summary.games.map((raw, index) => {
     const game = sanitizeForDisplay(object(raw, `Game ${index + 1}`));
     if (typeof game.matchId !== 'string' || !game.matchId) throw new EvaluationDataError(`Game ${index + 1} is missing matchId`);
-    return { ...game, index, decisionEvents: byMatch.get(game.matchId) || game.decisionEvents || [] };
+    const decisionEvents = byMatch.get(game.matchId) || game.decisionEvents || [];
+    return { ...game, index, decisionEvents: decisionEvents.map((event, decisionIndex) => ({ ...event,
+      decisionIndex: Number.isInteger(event.decisionIndex) ? event.decisionIndex : decisionIndex })) };
   });
   return { ...summary, schemaVersion: version, legacy: version === 0, games,
     decisionEvents: games.flatMap(game => game.decisionEvents) };
@@ -151,4 +153,34 @@ export function aggregateComparisons(events) {
   }
   return { compared: compared.length, agreements, disagreements: compared.length - agreements,
     actionTypes, averageJensenShannon: divergenceCount ? divergenceTotal / divergenceCount : null };
+}
+
+export function normalizeCounterfactualCollection(raw) {
+  const clean = sanitizeForDisplay(object(raw, 'Counterfactual analysis'));
+  if (clean.schemaVersion !== 1 || clean.analysisType !== 'counterfactual-mcts-collection'
+    || !Array.isArray(clean.analyses)) throw new EvaluationDataError('Unsupported counterfactual analysis file');
+  return clean;
+}
+
+export function counterfactualSummary(analyses, threshold = 0.05) {
+  const differences = []; const actionTypes = {};
+  for (const analysis of analyses || []) {
+    if (analysis.status === 'error') continue;
+    const jev = analysis.candidates?.find(candidate => candidate.selectedBy?.includes('jev'));
+    const neural = analysis.candidates?.find(candidate => candidate.selectedBy?.includes('neural'));
+    if (!jev || !neural) continue;
+    const difference = jev.estimatedValue - neural.estimatedValue; differences.push(difference);
+    const type = analysis.selectedActionType || 'unknown';
+    actionTypes[type] ||= { jevHigher: 0, neuralHigher: 0, approximatelyTied: 0 };
+    actionTypes[type][difference > threshold ? 'jevHigher' : difference < -threshold ? 'neuralHigher' : 'approximatelyTied']++;
+  }
+  const sorted = [...differences].sort((a, b) => a - b);
+  return { positionsAnalyzed: differences.length,
+    jevHigher: differences.filter(value => value > threshold).length,
+    neuralHigher: differences.filter(value => value < -threshold).length,
+    approximatelyTied: differences.filter(value => Math.abs(value) <= threshold).length,
+    meanDifference: differences.length ? differences.reduce((sum, value) => sum + value, 0) / differences.length : null,
+    medianDifference: sorted.length ? sorted.length % 2 ? sorted[(sorted.length - 1) / 2]
+      : (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2 : null,
+    threshold, actionTypes };
 }

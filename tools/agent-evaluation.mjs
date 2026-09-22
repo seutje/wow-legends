@@ -7,6 +7,8 @@ import { serializeDecisionState, serializeLegalActions } from '../src/js/systems
 import RemoteDecisionAgent from '../src/js/systems/ai-remote.js';
 import NeuralAI, { NeuralPolicyValueModel, loadModelFromDiskOrFetch } from '../src/js/systems/ai-nn.js';
 import MCTS_AI from '../src/js/systems/ai-mcts.js';
+import { captureGameState } from '../src/js/utils/savegame.js';
+import { positionFingerprint } from '../src/js/systems/ai-counterfactual.js';
 
 export const EVALUATION_AGENT_IDS = Object.freeze(['basic', 'mcts', 'neural', 'neural-mcts', 'jev']);
 const MODEL_IDS = new Set(EVALUATION_AGENT_IDS);
@@ -167,6 +169,7 @@ export async function runMatch({ agentA = 'basic', agentB = 'basic', deckA = 'de
     const wrapped = Object.fromEntries(['A', 'B'].map(side => [side, { async chooseAction(state, actions) {
       if (events.length >= maxDecisions) throw new Error('decision_limit');
       const { actions: serialized } = serializeLegalActions(actions, state);
+      const analysisSnapshot = captureGameState(game);
       const start = now();
       const selected = await agents[side].chooseAction(state, actions);
       const latencyMs = now() - start;
@@ -175,6 +178,7 @@ export async function runMatch({ agentA = 'basic', agentB = 'basic', deckA = 'de
       const chosen = serialized[index];
       const metadata = safeMetadata(agents[side].takeMetadata?.(), new Set(serialized.map(item => item.id)));
       const event = { matchId, turn: game.turns.turn, playerId: side, agent: agentId(specs[side]),
+        decisionIndex: events.length,
         legalActionCount: actions.length, selectedActionId: chosen.id,
         selectedActionSignature: actionSignature(selected), selectedActionType: actionType(selected, chosen),
         description: chosen.description, latencyMs,
@@ -183,7 +187,10 @@ export async function runMatch({ agentA = 'basic', agentB = 'basic', deckA = 'de
           actions: serialized,
         },
         legalActions: serialized.map((action, actionIndex) => ({ ...action,
-          signature: actionSignature(actions[actionIndex]) })) };
+          signature: actionSignature(actions[actionIndex]) })),
+        analysisSnapshot,
+        positionFingerprint: positionFingerprint(analysisSnapshot),
+        analysisInformationMode: 'perfect' };
       if (metadata) event.metadata = metadata;
       if (agentId(specs[side]) === 'jev') {
         if (evaluator) event.neuralComparison = summarizeNeural(evaluator, state, actions, serialized, chosen.id);
