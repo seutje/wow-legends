@@ -64,7 +64,9 @@ describe('evaluation viewer UI', () => {
   test('loads counterfactual estimates into the decision and action table', async () => {
     const { summary, events } = await loadFixture();
     const viewer = createEvaluationViewer(root); viewer.load(summary, events);
-    viewer.loadCounterfactuals({ schemaVersion: 1, analysisType: 'counterfactual-mcts-collection', analyses: [{
+    viewer.loadCounterfactuals({ schemaVersion: 1, analysisType: 'counterfactual-mcts-collection',
+      sampling: { strategy: 'stratified', eligiblePositions: 20, eligibleMatches: 10,
+        sampledMatches: 8, actionTypes: { 'play-card': 1 } }, analyses: [{
       schemaVersion: 1, analysisType: 'counterfactual-mcts', matchId: 'match-1', decisionIndex: 0,
       selectedActionType: 'play-card', evaluator: { iterations: 5000, rolloutDepth: 20, repeats: 3,
         policyGuidance: 'none', baseSeed: 123, informationMode: 'perfect' },
@@ -74,6 +76,8 @@ describe('evaluation viewer UI', () => {
       ],
     }] });
     expect(text(root)).toContain('Deep MCTS analysis');
+    expect(text(root)).toContain('Sampling strategystratified');
+    expect(text(root)).toContain('Matches represented8 / 10');
     expect(text(root)).toContain('Jev-selected action estimated higher+0.24');
     expect(text(root)).toContain('Deep MCTS estimate');
     expect(text(root)).toContain('+0.42 ± 0.04');

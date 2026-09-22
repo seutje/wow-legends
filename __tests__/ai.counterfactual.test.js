@@ -1,6 +1,7 @@
 import { evaluateCounterfactualDecision, positionFingerprint } from '../src/js/systems/ai-counterfactual.js';
+import { fileURLToPath } from 'node:url';
 import { runMatch } from '../tools/agent-evaluation.mjs';
-import { parseCounterfactualArgs } from '../tools/analyze-counterfactuals.mjs';
+import { analyzeCounterfactualRun, parseCounterfactualArgs } from '../tools/analyze-counterfactuals.mjs';
 
 const attackAgent = { id: 'jev', async chooseAction(_state, actions) { return actions.find(action => action.attack) || actions.find(action => action.end); } };
 
@@ -54,6 +55,20 @@ describe('counterfactual MCTS analysis', () => {
   test('CLI defaults constrain batch size and exhaustive analysis is explicit', () => {
     const options = parseCounterfactualArgs(['--input', 'run.json', '--disagreements-only']);
     expect(options.limit).toBe(10); expect(options.candidateMode).toBe('selected-agents-only');
+    expect(options.sampling).toBe('stratified'); expect(options.samplingSeed).toBe(1);
     expect(parseCounterfactualArgs(['--input', 'run.json', '--all-actions']).candidateMode).toBe('all');
+    expect(parseCounterfactualArgs(['--input', 'run.json', '--sampling', 'chronological', '--sampling-seed', '9',
+      '--max-per-match', '3', '--action-types', 'attack,end-turn', '--dry-run']))
+      .toMatchObject({ sampling: 'chronological', samplingSeed: 9, maxPerMatch: 3,
+        actionTypes: ['attack', 'end-turn'], dryRun: true });
+  });
+
+  test('dry run filters before sampling and does not require engine snapshots', async () => {
+    const input = fileURLToPath(new URL('./fixtures/evaluation-run.json', import.meta.url));
+    const decisions = fileURLToPath(new URL('./fixtures/evaluation-decisions.jsonl', import.meta.url));
+    const result = await analyzeCounterfactualRun(parseCounterfactualArgs(['--input', input,
+      '--decisions', decisions, '--disagreements-only', '--action-type', 'play-card', '--dry-run']));
+    expect(result.sampling).toMatchObject({ eligiblePositions: 1, selectedPositions: 1, sampledMatches: 1 });
+    expect(result.positions[0]).toMatchObject({ matchId: 'match-1', decisionIndex: 0, selectedActionType: 'play-card' });
   });
 });
