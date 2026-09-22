@@ -707,7 +707,8 @@ export default class Game {
 
     this.opponent.library.shuffle(rng);
 
-    const startingKey = chooseStartingPlayerKey(this.rng);
+    const startingKey = this.opts?.startingPlayer === 'player' || this.opts?.startingPlayer === 'opponent'
+      ? this.opts.startingPlayer : chooseStartingPlayerKey(this.rng);
     const startingPlayer = startingKey === 'player' ? this.player : this.opponent;
     const waitingPlayer = startingKey === 'player' ? this.opponent : this.player;
     if (this.state) {

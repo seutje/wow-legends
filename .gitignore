@@ -28,3 +28,4 @@ yarn-error.log*
 
 # Temporary snapshots
 /data/models/model_gen_*.json
+/data/evaluations/
