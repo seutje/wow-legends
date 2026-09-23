@@ -26,6 +26,7 @@ test('credentials stay outside settings, game state, and remote payload; clear b
     } };
   } });
   const game = setup();
+  game.opponent.hand.add(new Card({ name: 'Free Scout', type: 'ally', cost: 0 }));
   expect(session.configured).toBe(false);
   session.setKey(` ${fakeKey} `);
   game.opponentAgentFactory = () => session.createAgent();
@@ -62,15 +63,16 @@ test('Jev makes sequential card, attack, and end-turn choices through canonical 
   const before = game.player.hero.data.health;
   expect(await game._executeOpponentTurn({ skipSetup: true })).toBe(true);
   expect(game.player.hero.data.health).toBe(before - 3);
-  expect(seen).toHaveLength(3);
+  expect(seen).toHaveLength(2);
   expect(seen[1]).toContain('attack');
-  expect(session.requestsThisGame).toBe(3);
-  expect(events).toHaveLength(3);
+  expect(session.requestsThisGame).toBe(2);
+  expect(events).toHaveLength(2);
   expect(game.turns.activePlayer).toBe(game.player);
 });
 
 test('failure stops safely, explicit retry resumes, and local AI remains selectable', async () => {
   const game = setup();
+  game.opponent.hand.add(new Card({ name: 'Free Scout', type: 'ally', cost: 0 }));
   let calls = 0;
   const session = new JevSession({ clientFactory: () => ({ decide: async payload => {
     calls++;
@@ -95,6 +97,7 @@ test('failure stops safely, explicit retry resumes, and local AI remains selecta
 
 test('in-flight opponent request cannot be duplicated', async () => {
   const game = setup();
+  game.opponent.hand.add(new Card({ name: 'Free Scout', type: 'ally', cost: 0 }));
   let release;
   const pending = new Promise(resolve => { release = resolve; });
   const decide = jest.fn(async payload => { await pending; return { actionId: payload.actions.find(a => a.type === 'end-turn').id }; });
@@ -128,6 +131,8 @@ test('clearing a key during a turn blocks the next decision', async () => {
   const game = setup();
   game.opponent.hand.add(new Card({ name: 'Scout', type: 'ally', cost: 0,
     data: { attack: 1, health: 1 } }));
+  game.opponent.hand.add(new Card({ name: 'Second Scout', type: 'ally', cost: 0,
+    data: { attack: 1, health: 1 } }));
   const session = new JevSession({ clientFactory: () => ({ decide: async payload => {
     session.clearKey();
     return { actionId: payload.actions.find(a => a.type === 'play-card').id };
@@ -152,4 +157,3 @@ test.each([
   await expect(session.createAgent().client.decide({ actions: [{ id: 'a0' }] }))
     .resolves.toEqual({ actionId: 'a0' });
 });
-

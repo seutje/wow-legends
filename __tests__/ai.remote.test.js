@@ -103,12 +103,13 @@ test('remote-style agent plays a complete turn through serialized IDs', async ()
   expect(game.player.hand.cards).not.toContain(charger);
   expect(game.player.battlefield.cards).toContain(charger);
   expect(game.opponent.hero.data.health).toBe(before - 3);
-  expect(seen).toHaveLength(3);
+  expect(seen).toHaveLength(2);
   expect(seen[1].state.player.board.some(card => card.name === 'Swift Raider')).toBe(true);
 });
 
 test('game turn loop awaits a delayed local decision client', async () => {
   const { game } = setup();
+  game.player.hand.add(new Card({ name: 'Free Scout', type: 'ally', cost: 0 }));
   const client = { decide: jest.fn(async payload => {
     await new Promise(resolve => setTimeout(resolve, 5));
     return { actionId: payload.actions.find(action => action.type === 'end-turn').id };
@@ -116,4 +117,16 @@ test('game turn loop awaits a delayed local decision client', async () => {
   const agent = new RemoteDecisionAgent({ client });
   expect(await game.runAgentTurn({ agent, player: game.player, opponent: game.opponent, skipStart: true })).toBe(true);
   expect(client.decide).toHaveBeenCalledTimes(1);
+});
+
+test('game turn loop skips inference when ending the turn is the only legal action', async () => {
+  const { game } = setup();
+  game.player.hand.cards.length = 0;
+  game.player.battlefield.cards.length = 0;
+  const agent = { chooseAction: jest.fn() };
+
+  expect(await game.runAgentTurn({
+    agent, player: game.player, opponent: game.opponent, skipStart: true,
+  })).toBe(true);
+  expect(agent.chooseAction).not.toHaveBeenCalled();
 });

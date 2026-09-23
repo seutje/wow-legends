@@ -52,7 +52,8 @@ describe('agent evaluation', () => {
       action.end ? 'end-turn' : `other-${index}`, action.end ? 0 : 1,
     ])) }) };
     const result = await runMatch({ agentA: 'jev', agentB: basic, client, neuralEvaluator: evaluator,
-      compareNeural: true, maxTurns: 2, seed: 5 });
+      compareNeural: true, maxTurns: 2, seed: 5,
+      configureGame: game => game.resources._pool.set(game.player, 10) });
     expect(result.status).toBe('limit');
     const remoteEvent = result.decisionEvents.find(event => event.agent === 'jev');
     expect(remoteEvent.selectedActionType).toBe('end-turn');
@@ -73,7 +74,8 @@ describe('agent evaluation', () => {
   test('records remote errors without awarding a win or exposing error text', async () => {
     const fakeKey = 'sk-test-secret-12345';
     const client = { apiKey: fakeKey, async decide() { throw new Error(fakeKey); } };
-    const result = await runMatch({ agentA: 'jev', agentB: basic, client, maxTurns: 2 });
+    const result = await runMatch({ agentA: 'jev', agentB: basic, client, maxTurns: 2,
+      configureGame: game => game.resources._pool.set(game.player, 10) });
     expect(result.status).toBe('error');
     expect(result.errorType).toBe('remote-decision-failed');
     expect(result.winner).toBeNull();

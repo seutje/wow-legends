@@ -73,13 +73,14 @@ test('runAgentTurn executes canonical matches and stops at end after multiple de
   expect(applied).toHaveLength(2);
   expect(applied[0].card).toBe(first);
   expect(applied[1].card).toBe(second);
-  expect(agent.chooseAction).toHaveBeenCalledTimes(3);
+  expect(agent.chooseAction).toHaveBeenCalledTimes(2);
 });
 
 test('runAgentTurn rejects unknown actions and stops after failure or game over', async () => {
   const game = setup();
   const args = { player: game.player, opponent: game.opponent, skipStart: true };
   const apply = jest.spyOn(game, 'applyDecision');
+  game.player.hand.add(new Card({ type: 'ally', name: 'First Scout', cost: 0 }));
   expect(await game.runAgentTurn({ ...args, agent: { chooseAction: async () => ({ attack: { attackerId: 'fake' } }) } })).toBe(false);
   expect(apply).not.toHaveBeenCalled();
 

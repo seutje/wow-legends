@@ -1839,6 +1839,7 @@ export default class Game {
         powerAvailable: !!player.hero?.active?.length && !player.hero.powerUsed,
       });
       const actions = getLegalActions(state);
+      if (actions.length === 1 && actions[0].end) break;
       const legalBySignature = new Map(actions.map(action => [actionSignature(action), action]));
       const selected = await agent.chooseAction(state, actions);
       if (this.isGameOver() || !this._isParticipant(player) || !this._isParticipant(opponent)) break;

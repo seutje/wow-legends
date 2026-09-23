@@ -70,17 +70,15 @@ describe('counterfactual MCTS analysis', () => {
     expect(result.sequencing.nonEndLegalActionCount).toBeGreaterThan(0);
   });
 
-  test('records a legitimate end turn with no remaining legal action', async () => {
+  test('does not record a decision when end turn is the only legal action', async () => {
     const match = await runMatch({ agentA: endAgent, agentB: 'basic', maxTurns: 1, seed: 45,
       configureGame(game) {
         game.player.hand.cards = []; game.player.battlefield.cards = [];
         game.player.hero.powerUsed = true; game.player.hero.data.attack = 0;
         game.resources._pool.set(game.player, 0);
       } });
-    const result = await evaluateCounterfactualDecision({ event: match.decisionEvents[0],
-      config: { iterations: 2, rolloutDepth: 1, baseSeed: 2 } });
-    expect(result.sequencing).toMatchObject({ nonEndLegalActionCount: 0, hadPlayableCard: false,
-      hadAvailableAttack: false, hadHeroPowerAvailable: false });
+    expect(match.decisionEvents).toHaveLength(0);
+    expect(match.decisions.A).toBe(0);
   });
 
   test('records standalone hero-power sequencing alternatives', async () => {
